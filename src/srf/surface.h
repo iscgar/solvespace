@@ -312,7 +312,7 @@ public:
     void BlendRowOrCol(bool row, int this_ij, SSurface *a, int a_ij,
                                               SSurface *b, int b_ij);
     double DepartureFromCoplanar() const;
-    void SplitInHalf(bool byU, SSurface *sa, SSurface *sb);
+    void SplitInHalf(bool byU, SSurface *sa, SSurface *sb) const;
     void AllPointsIntersecting(Vector a, Vector b,
                                std::vector<SInter> *l,
                                bool asSegment, bool trimmed, bool inclTangent);
