@@ -3,6 +3,7 @@
 //
 // Copyright 2008-2013 Jonathan Westhues.
 //-----------------------------------------------------------------------------
+#include <cstdarg>
 #include "solvespace.h"
 
 namespace SolveSpace {

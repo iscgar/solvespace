@@ -1,6 +1,9 @@
-#include "solvespace.h"
 #include "slvs.h"
 #include <emscripten/bind.h>
+
+#include "solvespace.h"
+
+using namespace SolveSpace;
 
 EMSCRIPTEN_BINDINGS(slvs) {
   emscripten::constant("C_POINTS_COINCIDENT",   SLVS_C_POINTS_COINCIDENT);

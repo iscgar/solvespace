@@ -1,5 +1,10 @@
-#include "solvespace.h"
+#include <cstdarg>
+#include <cstdio>
+
 #include <mimalloc.h>
+
+#include "util.h"
+#include "platform.h"
 
 namespace SolveSpace {
 namespace Platform {

@@ -7,6 +7,9 @@
 #ifndef SOLVESPACE_PLATFORM_H
 #define SOLVESPACE_PLATFORM_H
 
+#include <string>
+#include <vector>
+
 namespace SolveSpace {
 namespace Platform {
 

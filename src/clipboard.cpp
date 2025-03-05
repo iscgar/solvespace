@@ -6,6 +6,8 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
+namespace SolveSpace {
+
 void SolveSpaceUI::Clipboard::Clear() {
     c.Clear();
     r.Clear();
@@ -523,3 +525,4 @@ void TextWindow::ShowPasteTransformed() {
     Printf(true, "(or %Fl%Ll%fcancel operation%E)", &ScreenHome);
 }
 
+} // namespace SolveSpace
