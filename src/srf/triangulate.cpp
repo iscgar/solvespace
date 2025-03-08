@@ -38,7 +38,7 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
         // List all of the edges, for testing whether bridges work.
         SEdgeList el = {};
         top->MakeEdgesInto(&el);
-        List<Vector> vl = {};
+        std::vector<Vector> vl;
 
         // And now find all of its holes. Note that we will also find any
         // outer contours that lie entirely within this contour, and any
@@ -88,7 +88,6 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
 //        dbp("finished ear clippping: %d ms", (int)(GetMilliseconds() - in));
         merged.l.Clear();
         el.Clear();
-        vl.Clear();
 
         // Careful, need to free the points within the contours, and not just
         // the contours themselves. This was a tricky memory leak.
@@ -102,7 +101,7 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
 }
 
 bool SContour::BridgeToContour(SContour *sc,
-                               SEdgeList *avoidEdges, List<Vector> *avoidPts)
+                               SEdgeList *avoidEdges, std::vector<Vector> *avoidPts)
 {
     bool withbridge = true;
 
@@ -143,7 +142,7 @@ bool SContour::BridgeToContour(SContour *sc,
         thisp = WRAP(i+thiso, l.n-1);
         a = l[thisp].p;
 
-        const Vector *f = std::find_if(avoidPts->begin(), avoidPts->end(), [&a](const Vector &v) {
+        const auto f = std::find_if(avoidPts->begin(), avoidPts->end(), [&a](const Vector &v) {
             return v.Equals(a);
         });
         if(f != avoidPts->end()) continue;
@@ -165,7 +164,7 @@ bool SContour::BridgeToContour(SContour *sc,
         thisp = WRAP(i+thiso, l.n);
         a = l[thisp].p;
 
-        const Vector *f = std::find_if(avoidPts->begin(), avoidPts->end(), [&a](const Vector &v) {
+        const auto f = std::find_if(avoidPts->begin(), avoidPts->end(), [&a](const Vector &v) {
             return v.Equals(a);
         });
         if(f != avoidPts->end()) continue;
@@ -174,7 +173,7 @@ bool SContour::BridgeToContour(SContour *sc,
             scp = WRAP(j+sco, (sc->l.n - 1));
             b = sc->l[scp].p;
 
-            const Vector *f = std::find_if(avoidPts->begin(), avoidPts->end(), [&b](const Vector &v) {
+            const auto f = std::find_if(avoidPts->begin(), avoidPts->end(), [&b](const Vector &v) {
                 return v.Equals(b);
             });
             if(f != avoidPts->end()) continue;
@@ -214,9 +213,9 @@ haveEdge:
     // things right if two bridges come from the same point
     if(withbridge) {
         avoidEdges->AddEdge(a, b);
-        avoidPts->Add(&a);
+        avoidPts->push_back(a);
     }
-    avoidPts->Add(&b);
+    avoidPts->push_back(b);
 
     l.Clear();
     l = merged.l;
