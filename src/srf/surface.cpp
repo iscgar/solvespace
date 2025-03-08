@@ -6,7 +6,7 @@
 //-----------------------------------------------------------------------------
 #include "../solvespace.h"
 
-SSurface SSurface::FromExtrusionOf(SBezier *sb, Vector t0, Vector t1) {
+SSurface SSurface::FromExtrusionOf(const SBezier *sb, Vector t0, Vector t1) {
     SSurface ret = {};
 
     ret.degm = sb->deg;
@@ -65,7 +65,7 @@ bool SSurface::IsCylinder(Vector *axis, Vector *center, double *r,
 
 // Create a surface patch by revolving and possibly translating a curve.
 // Works for sections up to but not including 180 degrees.
-SSurface SSurface::FromRevolutionOf(SBezier *sb, Vector pt, Vector axis, double thetas,
+SSurface SSurface::FromRevolutionOf(const SBezier *sb, Vector pt, Vector axis, double thetas,
                                     double thetaf, double dists,
                                     double distf) { // s is start, f is finish
     SSurface ret = {};
@@ -159,10 +159,9 @@ SSurface SSurface::FromTransformationOf(SSurface *a, Vector t, Quaternion q, dou
     }
 
     if(includingTrims) {
-        STrimBy *stb;
         ret.trim.ReserveMore(a->trim.n);
-        for(stb = a->trim.First(); stb; stb = a->trim.NextAfter(stb)) {
-            STrimBy n = *stb;
+        for(const STrimBy &stb : a->trim) {
+            STrimBy n = stb;
             if(needScale) {
                 n.start  = n.start.ScaledBy(scale);
                 n.finish = n.finish.ScaledBy(scale);
@@ -218,7 +217,7 @@ bool SSurface::LineEntirelyOutsideBbox(Vector a, Vector b, bool asSegment) const
 // to the curve sc.
 //-----------------------------------------------------------------------------
 void SSurface::MakeTrimEdgesInto(SEdgeList *sel, MakeAs flags,
-                                 SCurve *sc, STrimBy *stb)
+                                 SCurve *sc, const STrimBy *stb)
 {
     Vector prev = Vector::From(0, 0, 0);
     bool inCurve = false, empty = true;
@@ -267,9 +266,8 @@ void SSurface::MakeTrimEdgesInto(SEdgeList *sel, MakeAs flags,
 void SSurface::MakeEdgesInto(SShell *shell, SEdgeList *sel, MakeAs flags,
                              SShell *useCurvesFrom)
 {
-    STrimBy *stb;
-    for(stb = trim.First(); stb; stb = trim.NextAfter(stb)) {
-        SCurve *sc = shell->curve.FindById(stb->curve);
+    for(const STrimBy &stb : trim) {
+        SCurve *sc = shell->curve.FindById(stb.curve);
 
         // We have the option to use the curves from another shell; this
         // is relevant when generating the coincident edges while doing the
@@ -279,7 +277,7 @@ void SSurface::MakeEdgesInto(SShell *shell, SEdgeList *sel, MakeAs flags,
             sc = useCurvesFrom->curve.FindById(sc->newH);
         }
 
-        MakeTrimEdgesInto(sel, flags, sc, stb);
+        MakeTrimEdgesInto(sel, flags, sc, &stb);
     }
 }
 
@@ -309,19 +307,18 @@ Vector SSurface::ExactSurfaceTangentAt(Vector p, SSurface *srfA, SSurface *srfB,
 //-----------------------------------------------------------------------------
 void SSurface::MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *sbl)
 {
-    STrimBy *stb;
-    for(stb = trim.First(); stb; stb = trim.NextAfter(stb)) {
-        SCurve *sc = shell->curve.FindById(stb->curve);
+    for(const STrimBy &stb : trim) {
+        SCurve *sc = shell->curve.FindById(stb.curve);
         SBezier *sb = &(sc->exact);
 
         if(sbl && sc->isExact && (sb->deg != 1 || !sel)) {
             double ts, tf;
-            if(stb->backwards) {
-                sb->ClosestPointTo(stb->start,  &tf);
-                sb->ClosestPointTo(stb->finish, &ts);
+            if(stb.backwards) {
+                sb->ClosestPointTo(stb.start,  &tf);
+                sb->ClosestPointTo(stb.finish, &ts);
             } else {
-                sb->ClosestPointTo(stb->start,  &ts);
-                sb->ClosestPointTo(stb->finish, &tf);
+                sb->ClosestPointTo(stb.start,  &ts);
+                sb->ClosestPointTo(stb.finish, &tf);
             }
             SBezier junk_bef, keep_aft;
             sb->SplitAt(ts, &junk_bef, &keep_aft);
@@ -338,8 +335,8 @@ void SSurface::MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *
             SSurface *srfA = shell->surface.FindById(sc->surfA);
             SSurface *srfB = shell->surface.FindById(sc->surfB);
 
-            Vector s = stb->backwards ? stb->finish : stb->start,
-                   f = stb->backwards ? stb->start : stb->finish;
+            Vector s = stb.backwards ? stb.finish : stb.start,
+                   f = stb.backwards ? stb.start : stb.finish;
 
             int sp, fp;
             for(sp = 0; sp < sc->pts.n; sp++) {
@@ -404,7 +401,7 @@ void SSurface::MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *
                 sp = fpt;
             }
         } else {
-            if(sel) MakeTrimEdgesInto(sel, MakeAs::XYZ, sc, stb);
+            if(sel) MakeTrimEdgesInto(sel, MakeAs::XYZ, sc, &stb);
         }
     }
 }
@@ -469,10 +466,9 @@ void SSurface::Reverse() {
         }
     }
 
-    STrimBy *stb;
-    for(stb = trim.First(); stb; stb = trim.NextAfter(stb)) {
-        stb->backwards = !stb->backwards;
-        swap(stb->start, stb->finish);
+    for(STrimBy &stb : trim) {
+        stb.backwards = !stb.backwards;
+        swap(stb.start, stb.finish);
     }
 }
 

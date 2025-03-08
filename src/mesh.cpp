@@ -318,9 +318,8 @@ void SMesh::MakeFromAssemblyOf(SMesh *a, SMesh *b) {
 void SMesh::MakeFromTransformationOf(SMesh *a, Vector trans,
                                      Quaternion q, double scale)
 {
-    STriangle *tr;
-    for(tr = a->l.First(); tr; tr = a->l.NextAfter(tr)) {
-        STriangle tt = *tr;
+    for(const STriangle &tr : a->l) {
+        STriangle tt = tr;
         tt.a = (tt.a).ScaledBy(scale);
         tt.b = (tt.b).ScaledBy(scale);
         tt.c = (tt.c).ScaledBy(scale);
@@ -689,34 +688,33 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) const {
         // and below parts. Note that we must preserve auxA, which contains
         // the style associated with this line, as well as the tag, which
         // contains the occlusion status.
-        SEdge *se;
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
-            double da = (se->a).Dot(tn) - td,
-                   db = (se->b).Dot(tn) - td;
+        for(SEdge &se : sel->l) {
+            double da = (se.a).Dot(tn) - td,
+                   db = (se.b).Dot(tn) - td;
             if((da < -LENGTH_EPS && db > LENGTH_EPS) ||
                (db < -LENGTH_EPS && da > LENGTH_EPS))
             {
                 Vector m = Vector::AtIntersectionOfPlaneAndLine(
                                         tn, td,
-                                        se->a, se->b, NULL);
-                seln.AddEdge(m, se->b, se->auxA, 0, se->tag);
-                se->b = m;
+                                        se.a, se.b, NULL);
+                seln.AddEdge(m, se.b, se.auxA, 0, se.tag);
+                se.b = m;
             }
         }
-        for(se = seln.l.First(); se; se = seln.l.NextAfter(se)) {
-            sel->AddEdge(se->a, se->b, se->auxA, 0, se->tag);
+        for(const SEdge &se : seln.l) {
+            sel->AddEdge(se.a, se.b, se.auxA, 0, se.tag);
         }
         seln.Clear();
 
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
-            Vector pt = ((se->a).Plus(se->b)).ScaledBy(0.5);
+        for(SEdge &se : sel->l) {
+            Vector pt = ((se.a).Plus(se.b)).ScaledBy(0.5);
             if(pt.Dot(tn) - td > -LENGTH_EPS) {
                 // Edge is in front of or on our plane (remember, tn.z > 0)
                 // so it is exempt from further splitting
-                se->auxB = 1;
+                se.auxB = 1;
             } else {
                 // Edge is behind our plane, needs further splitting
-                se->auxB = 0;
+                se.auxB = 0;
             }
         }
 
@@ -735,36 +733,35 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) const {
                         n[2].Dot(a)  };
 
         // Split all of the edges where they intersect the triangle edges
-        int i;
-        for(i = 0; i < 3; i++) {
-            for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
-                if(se->auxB) continue;
+        for(size_t i = 0; i < 3; i++) {
+            for(SEdge &se : sel->l) {
+                if(se.auxB) continue;
 
-                Point2d ap = (se->a).ProjectXy(),
-                        bp = (se->b).ProjectXy();
+                Point2d ap = (se.a).ProjectXy(),
+                        bp = (se.b).ProjectXy();
                 double da = n[i].Dot(ap) - d[i],
                        db = n[i].Dot(bp) - d[i];
                 if((da < -LENGTH_EPS && db > LENGTH_EPS) ||
                    (db < -LENGTH_EPS && da > LENGTH_EPS))
                 {
                     double dab = (db - da);
-                    Vector spl = ((se->a).ScaledBy( db/dab)).Plus(
-                                  (se->b).ScaledBy(-da/dab));
-                    seln.AddEdge(spl, se->b, se->auxA, 0, se->tag);
-                    se->b = spl;
+                    Vector spl = ((se.a).ScaledBy( db/dab)).Plus(
+                                  (se.b).ScaledBy(-da/dab));
+                    seln.AddEdge(spl, se.b, se.auxA, 0, se.tag);
+                    se.b = spl;
                 }
             }
-            for(se = seln.l.First(); se; se = seln.l.NextAfter(se)) {
+            for(const SEdge &se : seln.l) {
                 // The split pieces are all behind the triangle, since only
                 // edges behind the triangle got split. So their auxB is 0.
-                sel->AddEdge(se->a, se->b, se->auxA, 0, se->tag);
+                sel->AddEdge(se.a, se.b, se.auxA, 0, se.tag);
             }
             seln.Clear();
         }
 
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+        for(SEdge &se : sel->l) {
             bool occluded;
-            if(se->auxB) {
+            if(se.auxB) {
                 // Lies above or on the triangle plane, so triangle doesn't
                 // occlude it.
                 occluded = false;
@@ -772,9 +769,9 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) const {
                 // Test the segment to see if it lies outside the triangle
                 // (i.e., outside wrt at least one edge), and keep it only
                 // then.
-                Point2d pt = ((se->a).Plus(se->b).ScaledBy(0.5)).ProjectXy();
+                Point2d pt = ((se.a).Plus(se.b).ScaledBy(0.5)).ProjectXy();
                 occluded = true;
-                for(i = 0; i < 3; i++) {
+                for(size_t i = 0; i < 3; i++) {
                     // If the test point lies on the boundary of our triangle,
                     // then we still discard the edge.
                     if(n[i].Dot(pt) - d[i] > LENGTH_EPS) occluded = false;
@@ -782,7 +779,7 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) const {
             }
 
             if(occluded) {
-                se->tag = 1;
+                se.tag = 1;
             }
         }
     }
@@ -792,7 +789,7 @@ void SKdNode::SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) const {
 // Given an edge orig, occlusion test it against our mesh. We output an edge
 // list in sel, where only invisible portions of the edge are tagged.
 //-----------------------------------------------------------------------------
-void SKdNode::OcclusionTestLine(SEdge orig, SEdgeList *sel, int cnt) const {
+void SKdNode::OcclusionTestLine(const SEdge &orig, SEdgeList *sel, int cnt) const {
     if(gt && lt) {
         double ac = (orig.a).Element(which),
                bc = (orig.b).Element(which);
@@ -1127,8 +1124,8 @@ void SOutlineList::ListTaggedInto(SEdgeList *el, int auxA, int auxB) {
 }
 
 void SOutlineList::MakeFromCopyOf(SOutlineList *sol) {
-    for(SOutline *so = sol->l.First(); so; so = sol->l.NextAfter(so)) {
-        l.Add(so);
+    for(const SOutline &so : sol->l) {
+        l.Add(&so);
     }
 }
 

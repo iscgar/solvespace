@@ -308,8 +308,8 @@ public:
     void ExportSurfacesTo(const Platform::Path &filename);
     void WriteHeader();
     void WriteProductHeader();
-    int ExportCurve(SBezier *sb);
-    int ExportCurveLoop(SBezierLoop *loop, bool inner);
+    int ExportCurve(const SBezier *sb);
+    int ExportCurveLoop(const SBezierLoop *loop, bool inner);
     void ExportSurface(SSurface *ss, SBezierList *sbl);
     void WriteWireframe();
     void WriteFooter();
@@ -340,15 +340,15 @@ public:
 
     void OutputLinesAndMesh(SBezierLoopSetSet *sblss, SMesh *sm);
 
-    void BezierAsPwl(SBezier *sb);
-    void BezierAsNonrationalCubic(SBezier *sb, int depth=0);
+    void BezierAsPwl(const SBezier *sb);
+    void BezierAsNonrationalCubic(const SBezier *sb, int depth=0);
 
     virtual void StartPath(RgbaColor strokeRgb, double lineWidth,
                             bool filled, RgbaColor fillRgb, hStyle hs) = 0;
     virtual void FinishPath(RgbaColor strokeRgb, double lineWidth,
                             bool filled, RgbaColor fillRgb, hStyle hs) = 0;
-    virtual void Bezier(SBezier *sb) = 0;
-    virtual void Triangle(STriangle *tr) = 0;
+    virtual void Bezier(const SBezier *sb) = 0;
+    virtual void Triangle(const STriangle *tr) = 0;
     virtual bool OutputConstraints(IdList<Constraint,hConstraint> *) { return false; }
     virtual void Background(RgbaColor color) = 0;
     virtual void StartFile() = 0;
@@ -359,7 +359,7 @@ public:
 class DxfFileWriter : public VectorFileWriter {
 public:
     struct BezierPath {
-        std::vector<SBezier *> beziers;
+        std::vector<const SBezier *> beziers;
     };
 
     std::vector<BezierPath>         paths;
@@ -373,8 +373,8 @@ public:
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
     void FinishPath(RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
-    void Triangle(STriangle *tr) override;
-    void Bezier(SBezier *sb) override;
+    void Triangle(const STriangle *tr) override;
+    void Bezier(const SBezier *sb) override;
     void Background(RgbaColor color) override;
     void StartFile() override;
     void FinishAndCloseFile() override;
@@ -391,8 +391,8 @@ public:
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
     void FinishPath(RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
-    void Triangle(STriangle *tr) override;
-    void Bezier(SBezier *sb) override;
+    void Triangle(const STriangle *tr) override;
+    void Bezier(const SBezier *sb) override;
     void Background(RgbaColor color) override;
     void StartFile() override;
     void FinishAndCloseFile() override;
@@ -410,8 +410,8 @@ public:
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
     void FinishPath(RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
-    void Triangle(STriangle *tr) override;
-    void Bezier(SBezier *sb) override;
+    void Triangle(const STriangle *tr) override;
+    void Bezier(const SBezier *sb) override;
     void Background(RgbaColor color) override;
     void StartFile() override;
     void FinishAndCloseFile() override;
@@ -427,8 +427,8 @@ public:
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
     void FinishPath(RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
-    void Triangle(STriangle *tr) override;
-    void Bezier(SBezier *sb) override;
+    void Triangle(const STriangle *tr) override;
+    void Bezier(const SBezier *sb) override;
     void Background(RgbaColor color) override;
     void StartFile() override;
     void FinishAndCloseFile() override;
@@ -442,8 +442,8 @@ public:
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
     void FinishPath(RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
-    void Triangle(STriangle *tr) override;
-    void Bezier(SBezier *sb) override;
+    void Triangle(const STriangle *tr) override;
+    void Bezier(const SBezier *sb) override;
     void Background(RgbaColor color) override;
     void StartFile() override;
     void FinishAndCloseFile() override;
@@ -456,8 +456,8 @@ class Step2dFileWriter : public VectorFileWriter {
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
     void FinishPath(RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
-    void Triangle(STriangle *tr) override;
-    void Bezier(SBezier *sb) override;
+    void Triangle(const STriangle *tr) override;
+    void Bezier(const SBezier *sb) override;
     void Background(RgbaColor color) override;
     void StartFile() override;
     void FinishAndCloseFile() override;
@@ -471,8 +471,8 @@ public:
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
     void FinishPath(RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
-    void Triangle(STriangle *tr) override;
-    void Bezier(SBezier *sb) override;
+    void Triangle(const STriangle *tr) override;
+    void Bezier(const SBezier *sb) override;
     void Background(RgbaColor color) override;
     void StartFile() override;
     void FinishAndCloseFile() override;
