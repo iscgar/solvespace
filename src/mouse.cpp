@@ -40,7 +40,7 @@ void GraphicsWindow::AddPointToDraggedList(hEntity hp) {
             return;
         }
     }
-    pending.points.Add(&hp);
+    pending.points.push_back(hp);
 }
 
 void GraphicsWindow::StartDraggingByEntity(hEntity he) {
@@ -470,8 +470,6 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
 }
 
 void GraphicsWindow::ClearPending(bool scheduleShowTW) {
-    pending.points.Clear();
-    pending.requests.Clear();
     pending = {};
     if(scheduleShowTW) {
         SS.ScheduleShowTW();
@@ -479,14 +477,12 @@ void GraphicsWindow::ClearPending(bool scheduleShowTW) {
 }
 
 bool GraphicsWindow::IsFromPending(hRequest r) {
-    for(auto &req : pending.requests) {
-        if(req == r) return true;
-    }
-    return false;
+    auto it = std::find(pending.requests.begin(), pending.requests.end(), r);
+    return it != pending.requests.end();
 }
 
 void GraphicsWindow::AddToPending(hRequest r) {
-    pending.requests.Add(&r);
+    pending.requests.push_back(r);
 }
 
 void GraphicsWindow::ReplacePending(hRequest before, hRequest after) {
