@@ -264,9 +264,8 @@ void Example2d()
                 sys.param[19].val);
         printf("%d DOF\n", sys.dof);
     } else {
-        int i;
         printf("solve failed: problematic constraints are:");
-        for(i = 0; i < sys.faileds; i++) {
+        for(size_t i = 0; i < sys.faileds; i++) {
             printf(" %d", sys.failed[i]);
         }
         printf("\n");
