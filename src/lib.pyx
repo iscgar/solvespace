@@ -36,7 +36,7 @@ cdef extern from "slvs.h" nogil:
         int result
         int dof
         int rank
-        int bad
+        size_t bad
 
     void Slvs_QuaternionU(double qw, double qx, double qy, double qz,
                              double *x, double *y, double *z)
