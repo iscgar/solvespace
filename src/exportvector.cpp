@@ -1347,7 +1347,7 @@ void Step2dFileWriter::FinishPath(RgbaColor strokeRgb, double lineWidth,
 
 void Step2dFileWriter::Bezier(const SBezier *sb) {
     int c = sfw.ExportCurve(sb);
-    sfw.curves.Add(&c);
+    sfw.curves.push_back(c);
 }
 
 void Step2dFileWriter::FinishAndCloseFile() {
