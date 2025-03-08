@@ -60,7 +60,7 @@ void TtfFontList::LoadAll() {
         TtfFont tf = {};
         tf.fontFile = font;
         if(tf.LoadFromFile(fontLibrary))
-            l.Add(&tf);
+            l.emplace_back(std::move(tf));
     }
 
     // Add builtin font to end of font list so it is displayed first in the UI
@@ -68,7 +68,7 @@ void TtfFontList::LoadAll() {
         TtfFont tf = {};
         tf.SetResourceID("fonts/BitstreamVeraSans-Roman-builtin.ttf");
         if(tf.LoadFromResource(fontLibrary))
-            l.Add(&tf);
+            l.emplace_back(std::move(tf));
     }
 
     // Sort fonts according to their actual name, not filename.
@@ -77,9 +77,9 @@ void TtfFontList::LoadAll() {
 
     // Filter out fonts with the same family and style name. This is not
     // strictly necessarily the exact same font, but it will almost always be.
-    TtfFont *it = std::unique(l.begin(), l.end(),
-                              [](const TtfFont &a, const TtfFont &b) { return a.name == b.name; });
-    l.RemoveLast(&l[l.n] - it);
+    auto last = std::unique(l.begin(), l.end(),
+                          [](const TtfFont &a, const TtfFont &b) { return a.name == b.name; });
+    l.erase(last, l.end());
 
     loaded = true;
 }
@@ -88,7 +88,7 @@ TtfFont *TtfFontList::LoadFont(const std::string &font)
 {
     LoadAll();
 
-    TtfFont *tf = std::find_if(l.begin(), l.end(),
+    auto tf = std::find_if(l.begin(), l.end(),
         [&font](const TtfFont &tf) { return tf.FontFileBaseName() == font; });
 
     if(tf != l.end()) {
@@ -98,7 +98,7 @@ TtfFont *TtfFontList::LoadFont(const std::string &font)
             else
                 tf->LoadFromFile(fontLibrary, /*keepOpen=*/true);
         }
-        return tf;
+        return &*tf;
     } else {
         return NULL;
     }

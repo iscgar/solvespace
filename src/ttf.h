@@ -32,9 +32,9 @@ public:
 
 class TtfFontList {
 public:
-    FT_LibraryRec_ *fontLibrary;
-    bool            loaded;
-    List<TtfFont>   l;
+    FT_LibraryRec_      *fontLibrary;
+    bool                 loaded;
+    std::vector<TtfFont> l;
 
     TtfFontList();
     ~TtfFontList();
