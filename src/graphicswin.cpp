@@ -642,18 +642,17 @@ double GraphicsWindow::ZoomToFit(const Camera &camera,
     std::vector<hEntity> faces;
 
     if(useSelection) {
-        for(int i = 0; i < selection.n; i++) {
-            Selection *s = &selection[i];
-            if(s->entity.v != 0) {
-                Entity *e = SK.entity.FindById(s->entity);
+        for(const Selection &s : selection) {
+            if(s.entity.v != 0) {
+                Entity *e = SK.entity.FindById(s.entity);
                 if(e->IsFace()) {
                     faces.push_back(e->h);
                     continue;
                 }
                 entities.push_back(e);
             }
-            if(s->constraint.v != 0) {
-                Constraint *c = SK.constraint.FindById(s->constraint);
+            if(s.constraint.v != 0) {
+                Constraint *c = SK.constraint.FindById(s.constraint);
                 constraints.push_back(c);
             }
         }
