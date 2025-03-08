@@ -664,22 +664,22 @@ public:
     };
 
     struct {
-        Pending              operation;
-        Command              command;
+        Pending               operation;
+        Command               command;
 
-        hRequest             request;
-        hEntity              point;
-        List<hEntity>        points;
-        List<hRequest>       requests;
-        hEntity              circle;
-        hEntity              normal;
-        hConstraint          constraint;
+        hRequest              request;
+        hEntity               point;
+        std::vector<hEntity>  points;
+        std::vector<hRequest> requests;
+        hEntity               circle;
+        hEntity               normal;
+        hConstraint           constraint;
 
-        const char          *description;
-        Platform::Path       filename;
+        const char           *description;
+        Platform::Path        filename;
 
-        bool                 hasSuggestion;
-        Constraint::Type     suggestion;
+        bool                  hasSuggestion;
+        Constraint::Type      suggestion;
     } pending;
     void ClearPending(bool scheduleShowTW = true);
     bool IsFromPending(hRequest r);

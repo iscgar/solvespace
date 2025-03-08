@@ -424,12 +424,12 @@ void SolveSpaceUI::UpdateCenterOfMass() {
 void SolveSpaceUI::MarkDraggedParams() {
     sys.dragged.Clear();
 
-    for(int i = -1; i < SS.GW.pending.points.n; i++) {
+    for(size_t i = 0; i <= SS.GW.pending.points.size(); i++) {
         hEntity hp;
-        if(i == -1) {
+        if(i == 0) {
             hp = SS.GW.pending.point;
         } else {
-            hp = SS.GW.pending.points[i];
+            hp = SS.GW.pending.points[i-1];
         }
         if(!hp.v) continue;
 
