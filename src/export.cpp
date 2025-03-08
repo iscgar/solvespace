@@ -742,14 +742,13 @@ void VectorFileWriter::OutputLinesAndMesh(SBezierLoopSetSet *sblss, SMesh *sm) {
 }
 
 void VectorFileWriter::BezierAsPwl(const SBezier *sb) {
-    List<Vector> lv = {};
+    std::vector<Vector> lv;
     sb->MakePwlInto(&lv, SS.ExportChordTolMm());
 
-    for(int i = 1; i < lv.n; i++) {
+    for(size_t i = 1; i < lv.size(); i++) {
         SBezier sb = SBezier::From(lv[i-1], lv[i]);
         Bezier(&sb);
     }
-    lv.Clear();
 }
 
 void VectorFileWriter::BezierAsNonrationalCubic(const SBezier *sb, int depth) {
