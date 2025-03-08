@@ -307,15 +307,15 @@ int SEdgeList::AnyEdgeCrossings(Vector a, Vector b, Vector *ppi, SPointList *spl
 // an endpoint with one of our edges.
 //-----------------------------------------------------------------------------
 bool SEdgeList::ContainsEdgeFrom(const SEdgeList *sel) const {
-    for(const SEdge *se = l.First(); se; se = l.NextAfter(se)) {
-        if(sel->ContainsEdge(se)) return true;
+    for(const SEdge &se : l) {
+        if(sel->ContainsEdge(&se)) return true;
     }
     return false;
 }
 bool SEdgeList::ContainsEdge(const SEdge *set) const {
-    for(const SEdge *se = l.First(); se; se = l.NextAfter(se)) {
-        if((se->a).Equals(set->a) && (se->b).Equals(set->b)) return true;
-        if((se->b).Equals(set->a) && (se->a).Equals(set->b)) return true;
+    for(const SEdge &se : l) {
+        if((se.a).Equals(set->a) && (se.b).Equals(set->b)) return true;
+        if((se.b).Equals(set->a) && (se.a).Equals(set->b)) return true;
     }
     return false;
 }
@@ -364,10 +364,9 @@ SEdgeLl *SEdgeLl::Alloc() {
 }
 SKdNodeEdges *SKdNodeEdges::From(SEdgeList *sel) {
     SEdgeLl *sell = NULL;
-    SEdge *se;
-    for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+    for(SEdge &se : sel->l) {
         SEdgeLl *n = SEdgeLl::Alloc();
-        n->se = se;
+        n->se = &se;
         n->next = sell;
         sell = n;
     }
@@ -530,10 +529,9 @@ int SPointList::IndexForPoint(Vector pt) const {
 }
 
 void SPointList::IncrementTagFor(Vector pt) {
-    SPoint *p;
-    for(p = l.First(); p; p = l.NextAfter(p)) {
-        if(pt.Equals(p->p)) {
-            (p->tag)++;
+    for(SPoint &p : l) {
+        if(pt.Equals(p.p)) {
+            (p.tag)++;
             return;
         }
     }
@@ -565,16 +563,16 @@ void SContour::MakeEdgesInto(SEdgeList *el) const {
 }
 
 void SContour::CopyInto(SContour *dest) const {
-    for(const SPoint *sp = l.First(); sp; sp = l.NextAfter(sp)) {
-        dest->AddPoint(sp->p);
+    for(const SPoint &sp : l) {
+        dest->AddPoint(sp.p);
     }
 }
 
 void SContour::FindPointWithMinX() {
     xminPt = Vector::From(1e10, 1e10, 1e10);
-    for(const SPoint *sp = l.First(); sp; sp = l.NextAfter(sp)) {
-        if(sp->p.x < xminPt.x) {
-            xminPt = sp->p;
+    for(const SPoint &sp : l) {
+        if(sp.p.x < xminPt.x) {
+            xminPt = sp.p;
         }
     }
 }
@@ -684,8 +682,8 @@ double SPolygon::SignedArea() const {
     double area = 0;
     // This returns the true area only if the contours are all oriented
     // correctly, with the holes backwards from the outer contours.
-    for(const SContour *sc = l.First(); sc; sc = l.NextAfter(sc)) {
-        area += sc->SignedAreaProjdToNormal(normal);
+    for(const SContour &sc : l) {
+        area += sc.SignedAreaProjdToNormal(normal);
     }
     return area;
 }
@@ -754,9 +752,8 @@ bool SPolygon::SelfIntersecting(Vector *intersectsAt) const {
     el.l.ClearTags();
 
     bool ret = false;
-    SEdge *se;
-    for(se = el.l.First(); se; se = el.l.NextAfter(se)) {
-        int inters = kdtree->AnyEdgeCrossings(se->a, se->b, cnt, intersectsAt);
+    for(const SEdge &se : el.l) {
+        int inters = kdtree->AnyEdgeCrossings(se.a, se.b, cnt, intersectsAt);
         if(inters != 1) {
             ret = true;
             break;

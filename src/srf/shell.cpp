@@ -12,7 +12,7 @@ typedef struct {
 } TrimLine;
 
 
-void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, RgbaColor color)
+void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t1, RgbaColor color)
 {
     // Make the extrusion direction consistent with respect to the normal
     // of the sketch we're extruding.
@@ -48,22 +48,20 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
     // Now go through the input curves. For each one, generate its surface
     // of extrusion, its two translated trim curves, and one trim line. We
     // go through by loops so that we can assign the lines correctly.
-    SBezierLoop *sbl;
-    for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
-        SBezier *sb;
+    for(const SBezierLoop &sbl : sbls->l) {
         List<TrimLine> trimLines = {};
 
-        for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+        for(const SBezier &sb : sbl.l) {
             // Generate the surface of extrusion of this curve, and add
             // it to the list
-            SSurface ss = SSurface::FromExtrusionOf(sb, t0, t1);
+            SSurface ss = SSurface::FromExtrusionOf(&sb, t0, t1);
             ss.color = color;
             hSSurface hsext = surface.AddAndAssignId(&ss);
 
             // Translate the curve by t0 and t1 to produce two trim curves
             SCurve sc = {};
             sc.isExact = true;
-            sc.exact = sb->TransformedBy(t0, Quaternion::IDENTITY, 1.0);
+            sc.exact = sb.TransformedBy(t0, Quaternion::IDENTITY, 1.0);
             (sc.exact).MakePwlInto(&(sc.pts));
             sc.surfA = hs0;
             sc.surfB = hsext;
@@ -71,7 +69,7 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
 
             sc = {};
             sc.isExact = true;
-            sc.exact = sb->TransformedBy(t1, Quaternion::IDENTITY, 1.0);
+            sc.exact = sb.TransformedBy(t1, Quaternion::IDENTITY, 1.0);
             (sc.exact).MakePwlInto(&(sc.pts));
             sc.surfA = hs1;
             sc.surfB = hsext;
@@ -91,7 +89,7 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
             (surface.FindById(hsext))->trim.Add(&stb1);
 
             // And form the trim line
-            Vector pt = sb->Finish();
+            Vector pt = sb.Finish();
             sc = {};
             sc.isExact = true;
             sc.exact = SBezier::From(pt.Plus(t0), pt.Plus(t1));
@@ -124,22 +122,20 @@ void SShell::MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1, Rgb
     }
 }
 
-bool SShell::CheckNormalAxisRelationship(SBezierLoopSet *sbls, Vector pt, Vector axis, double da, double dx)
+bool SShell::CheckNormalAxisRelationship(const SBezierLoopSet *sbls, Vector pt, Vector axis, double da, double dx)
 // Check that the direction of revolution/extrusion ends up parallel to the normal of
 // the sketch, on the side of the axis where the sketch is.
 {
-    SBezierLoop *sbl;
     Vector pto = {};
     double md = VERY_NEGATIVE;
-    for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
-        SBezier *sb;
-        for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+    for(const SBezierLoop &sbl : sbls->l) {
+        for(const SBezier &sb : sbl.l) {
             // Choose the point farthest from the axis; we'll get garbage
             // if we choose a point that lies on the axis, for example.
             // (And our surface will be self-intersecting if the sketch
             // spans the axis, so don't worry about that.)
-            for(int i = 0; i <= sb->deg; i++) {
-                Vector p = sb->ctrl[i];
+            for(int i = 0; i <= sb.deg; i++) {
+                Vector p = sb.ctrl[i];
                 double d = p.DistanceToLine(pt, axis);
                 if(d > md) {
                     md  = d;
@@ -156,11 +152,10 @@ bool SShell::CheckNormalAxisRelationship(SBezierLoopSet *sbls, Vector pt, Vector
 }
 
 // sketch must not contain the axis of revolution as a non-construction line for helix
-void SShell::MakeFromHelicalRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis,
+void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector axis,
                                          RgbaColor color, Group *group, double angles,
                                          double anglef, double dists, double distf) {
     int i0 = surface.n; // number of pre-existing surfaces
-    SBezierLoop *sbl;
     // for testing - hard code the axial distance, and number of sections.
     // distance will need to be parameters in the future.
     double dist  = distf - dists;
@@ -213,29 +208,27 @@ void SShell::MakeFromHelicalRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector
     hSSurface hs1 = surface.AddAndAssignId(&s1);
 
     // Now we actually build and trim the swept surfaces. One loop at a time.
-    for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
-        int i, j;
-        SBezier *sb;
+    for(const SBezierLoop &sbl : sbls->l) {
         List<std::vector<hSSurface>> hsl = {};
 
         // This is where all the NURBS are created and Remapped to the generating curve
-        for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+        for(const SBezier &sb : sbl.l) {
             std::vector<hSSurface> revs(sections);
-            for(j = 0; j < sections; j++) {
-                if((dist == 0) && sb->deg == 1 &&
-                   (sb->ctrl[0]).DistanceToLine(pt, axis) < LENGTH_EPS &&
-                   (sb->ctrl[1]).DistanceToLine(pt, axis) < LENGTH_EPS) {
+            for(int j = 0; j < sections; j++) {
+                if((dist == 0) && sb.deg == 1 &&
+                   (sb.ctrl[0]).DistanceToLine(pt, axis) < LENGTH_EPS &&
+                   (sb.ctrl[1]).DistanceToLine(pt, axis) < LENGTH_EPS) {
                     // This is a line on the axis of revolution; it does
                     // not contribute a surface.
                     revs[j].v = 0;
                 } else {
                     SSurface ss = SSurface::FromRevolutionOf(
-                        sb, pt, axis, angles + (wedge)*j, angles + (wedge) * (j + 1),
+                        &sb, pt, axis, angles + (wedge)*j, angles + (wedge) * (j + 1),
                         dists + j * dist / sections, dists + (j + 1) * dist / sections);
                     ss.color = color;
-                    if(sb->entity != 0) {
+                    if(sb.entity != 0) {
                         hEntity he;
-                        he.v          = sb->entity;
+                        he.v          = sb.entity;
                         hEntity hface = group->Remap(he, Group::REMAP_LINE_TO_FACE);
                         if(SK.entity.FindByIdNoOops(hface) != NULL) {
                             ss.face = hface.v;
@@ -247,10 +240,11 @@ void SShell::MakeFromHelicalRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector
             hsl.Add(&revs);
         }
         // Still the same loop. Need to create trim curves
-        for(i = 0; i < sbl->l.n; i++) {
-            std::vector<hSSurface> revs = hsl[i], revsp = hsl[WRAP(i - 1, sbl->l.n)];
+        // Not using range-for here because we need the index to access `hsl` as well
+        for(int i = 0; i < sbl.l.n; i++) {
+            const std::vector<hSSurface> &revs = hsl[i], &revsp = hsl[WRAP(i - 1, sbl.l.n)];
 
-            sb = &(sbl->l[i]);
+            const SBezier *sb = &(sbl.l[i]);
 
             // we will need the grid t-values for this entire row of surfaces
             List<double> t_values;
@@ -262,7 +256,7 @@ void SShell::MakeFromHelicalRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector
                         &t_values, 0.0, 1.0, true, 0);
             }
             // we generate one more curve than we did surfaces
-            for(j = 0; j <= sections; j++) {
+            for(int j = 0; j <= sections; j++) {
                 SCurve sc;
                 Quaternion qs = Quaternion::From(axis, angles + wedge * j);
                 // we want Q*(x - p) + p = Q*x + (p - Q*p)
@@ -356,38 +350,35 @@ void SShell::MakeFromHelicalRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector
     }
 }
 
-void SShell::MakeFromRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis, RgbaColor color,
+void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector axis, RgbaColor color,
                                   Group *group) {
     int i0 = surface.n; // number of pre-existing surfaces
-    SBezierLoop *sbl;
 
     if(CheckNormalAxisRelationship(sbls, pt, axis, 1.0, 0.0)) {
         axis = axis.ScaledBy(-1);
     }
 
     // Now we actually build and trim the surfaces.
-    for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
-        int i, j;
-        SBezier *sb;
+    for(const SBezierLoop &sbl : sbls->l) {
         List<std::vector<hSSurface>> hsl = {};
 
-        for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+        for(const SBezier &sb : sbl.l) {
             std::vector<hSSurface> revs(4);
-            for(j = 0; j < 4; j++) {
-                if(sb->deg == 1 &&
-                    (sb->ctrl[0]).DistanceToLine(pt, axis) < LENGTH_EPS &&
-                    (sb->ctrl[1]).DistanceToLine(pt, axis) < LENGTH_EPS)
+            for(size_t j = 0; j < 4; j++) {
+                if(sb.deg == 1 &&
+                    (sb.ctrl[0]).DistanceToLine(pt, axis) < LENGTH_EPS &&
+                    (sb.ctrl[1]).DistanceToLine(pt, axis) < LENGTH_EPS)
                 {
                     // This is a line on the axis of revolution; it does
                     // not contribute a surface.
                     revs[j].v = 0;
                 } else {
-                    SSurface ss = SSurface::FromRevolutionOf(sb, pt, axis, (PI / 2) * j,
+                    SSurface ss = SSurface::FromRevolutionOf(&sb, pt, axis, (PI / 2) * j,
                                                              (PI / 2) * (j + 1), 0.0, 0.0);
                     ss.color = color;
-                    if(sb->entity != 0) {
+                    if(sb.entity != 0) {
                         hEntity he;
-                        he.v = sb->entity;
+                        he.v = sb.entity;
                         hEntity hface = group->Remap(he, Group::REMAP_LINE_TO_FACE);
                         if(SK.entity.FindByIdNoOops(hface) != NULL) {
                             ss.face = hface.v;
@@ -399,13 +390,14 @@ void SShell::MakeFromRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis, 
             hsl.Add(&revs);
         }
 
-        for(i = 0; i < sbl->l.n; i++) {
-            std::vector<hSSurface> revs  = hsl[i],
-                     revsp = hsl[WRAP(i-1, sbl->l.n)];
+        // Not using range-for here because we need the index to access `hsl` as well
+        for(int i = 0; i < sbl.l.n; i++) {
+            const std::vector<hSSurface> &revs  = hsl[i],
+                     &revsp = hsl[WRAP(i-1, sbl.l.n)];
 
-            sb   = &(sbl->l[i]);
+            const SBezier *sb = &(sbl.l[i]);
 
-            for(j = 0; j < 4; j++) {
+            for(int j = 0; j < 4; j++) {
                 SCurve sc;
                 Quaternion qs = Quaternion::From(axis, (PI/2)*j);
                 // we want Q*(x - p) + p = Q*x + (p - Q*p)

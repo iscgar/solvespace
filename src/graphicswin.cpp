@@ -1161,14 +1161,13 @@ void GraphicsWindow::MenuEdit(Command id) {
                            fi = e.EndpointFinish();
 
                     bool onChain = false, alreadySelected = false;
-                    List<Selection> *ls = &(SS.GW.selection);
-                    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
-                        if(!s->entity.v) continue;
-                        if(s->entity == e.h) {
+                    for(const Selection &s : SS.GW.selection) {
+                        if(!s.entity.v) continue;
+                        if(s.entity == e.h) {
                             alreadySelected = true;
                             continue;
                         }
-                        Entity *se = SK.GetEntity(s->entity);
+                        Entity *se = SK.GetEntity(s.entity);
                         if(!se->HasEndpoints()) continue;
 
                         Vector sst = se->EndpointStart(),
@@ -1245,10 +1244,9 @@ void GraphicsWindow::MenuEdit(Command id) {
             }
             SS.UndoRemember();
 
-            List<Selection> *ls = &(SS.GW.selection);
-            for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
-                if(s->entity.v) {
-                    hEntity hp = s->entity;
+            for(const Selection &s : SS.GW.selection) {
+                if(s.entity.v) {
+                    hEntity hp = s.entity;
                     Entity *ep = SK.GetEntity(hp);
                     if(!ep->IsPoint()) continue;
 
@@ -1256,8 +1254,8 @@ void GraphicsWindow::MenuEdit(Command id) {
                     ep->PointForceTo(SS.GW.SnapToGrid(p));
                     SS.GW.pending.points.Add(&hp);
                     SS.MarkGroupDirty(ep->group);
-                } else if(s->constraint.v) {
-                    Constraint *c = SK.GetConstraint(s->constraint);
+                } else if(s.constraint.v) {
+                    Constraint *c = SK.GetConstraint(s.constraint);
                     std::vector<Vector> refs;
                     c->GetReferencePoints(SS.GW.GetCamera(), &refs);
                     c->disp.offset = c->disp.offset.Plus(SS.GW.SnapToGrid(refs[0]).Minus(refs[0]));
