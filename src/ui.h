@@ -729,8 +729,6 @@ public:
     // A selected entity.
     class Selection {
     public:
-        int         tag;
-
         hEntity     entity;
         hConstraint constraint;
         bool        emphasized;
@@ -755,8 +753,8 @@ public:
     List<Hover> hoverList;
     Selection hover;
     bool hoverWasSelectedOnMousedown;
-    List<Selection> selection;
-    const unsigned MAX_SELECTABLE_FACES = 3u;
+    std::vector<Selection> selection;
+    static constexpr size_t MAX_SELECTABLE_FACES = 3u;
 
     Selection ChooseFromHoverToSelect();
     Selection ChooseFromHoverToDrag();
