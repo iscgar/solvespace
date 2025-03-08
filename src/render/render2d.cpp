@@ -240,12 +240,11 @@ void SurfaceRenderer::ConvertBeziersToEdges() {
             if(b.deg == 1) {
                 el.AddEdge(b.ctrl[0], b.ctrl[1]);
             } else {
-                List<Vector> lv = {};
+                std::vector<Vector> lv;
                 b.MakePwlInto(&lv, chordTolerance);
-                for(int i = 1; i < lv.n; i++) {
+                for(size_t i = 1; i < lv.size(); i++) {
                     el.AddEdge(lv[i-1], lv[i]);
                 }
-                lv.Clear();
             }
         }
         bl.l.Clear();
