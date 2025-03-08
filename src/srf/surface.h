@@ -364,7 +364,7 @@ public:
     void MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *sbl);
     void MakeClassifyingBsp(SShell *shell, SShell *useCurvesFrom);
     double ChordToleranceForEdge(Vector a, Vector b) const;
-    void MakeTriangulationGridInto(List<double> *l, double vs, double vf,
+    void MakeTriangulationGridInto(std::vector<double> *l, double vs, double vf,
                                     bool swapped, int depth) const;
     Vector PointAtMaybeSwapped(double u, double v, bool swapped) const;
     Vector NormalAtMaybeSwapped(double u, double v, bool swapped) const;
