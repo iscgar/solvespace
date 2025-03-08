@@ -25,18 +25,17 @@ void Group::AssembleLoops(bool *allClosed,
         e.GenerateBezierCurves(&sbl);
     }
 
-    SBezier *sb;
     *allNonZeroLen = true;
-    for(sb = sbl.l.First(); sb; sb = sbl.l.NextAfter(sb)) {
-        for(i = 1; i <= sb->deg; i++) {
-            if(!(sb->ctrl[i]).Equals(sb->ctrl[0])) {
+    for(const SBezier &sb : sbl.l) {
+        for(i = 1; i <= sb.deg; i++) {
+            if(!(sb.ctrl[i]).Equals(sb.ctrl[0])) {
                 break;
             }
         }
-        if(i > sb->deg) {
+        if(i > sb.deg) {
             // This is a zero-length edge.
             *allNonZeroLen = false;
-            polyError.errorPointAt = sb->ctrl[0];
+            polyError.errorPointAt = sb.ctrl[0];
             goto done;
         }
     }
@@ -93,13 +92,12 @@ void SShell::RemapFaces(Group *g, int remap) {
 }
 
 void SMesh::RemapFaces(Group *g, int remap) {
-    STriangle *tr;
-    for(tr = l.First(); tr; tr = l.NextAfter(tr)) {
-        hEntity face = { tr->meta.face };
+    for(STriangle &tr : l) {
+        hEntity face = { tr.meta.face };
         if(face == Entity::NO_ENTITY) continue;
 
         face = g->Remap(face, remap);
-        tr->meta.face = face.v;
+        tr.meta.face = face.v;
     }
 }
 
@@ -254,16 +252,14 @@ void Group::GenerateShellAndMesh() {
             tbot = translate.ScaledBy(-1); ttop = translate.ScaledBy(1);
         }
 
-        SBezierLoopSetSet *sblss = &(src->bezierLoops);
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
+        for(const SBezierLoopSet &sbls : src->bezierLoops.l) {
             int is = thisShell.surface.n;
             // Extrude this outer contour (plus its inner contours, if present)
-            thisShell.MakeFromExtrusionOf(sbls, tbot, ttop, color);
+            thisShell.MakeFromExtrusionOf(&sbls, tbot, ttop, color);
 
             // And for any plane faces, annotate the model with the entity for
             // that face, so that the user can select them with the mouse.
-            Vector onOrig = sbls->point;
+            Vector onOrig = sbls.point;
             int i;
             // Not using range-for here because we're starting at a different place and using
             // indices for meaning.
@@ -319,10 +315,8 @@ void Group::GenerateShellAndMesh() {
                axis = SK.GetEntity(predef.entityB)->VectorGetNum();
         axis = axis.WithMagnitude(1);
 
-        SBezierLoopSetSet *sblss = &(src->bezierLoops);
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
-            thisShell.MakeFromRevolutionOf(sbls, pt, axis, color, this);
+        for(const SBezierLoopSet &sbls : src->bezierLoops.l) {
+            thisShell.MakeFromRevolutionOf(&sbls, pt, axis, color, this);
         }
     } else if(type == Type::REVOLVE && haveSrc) {
         Group *src    = SK.GetGroup(opA);
@@ -337,14 +331,12 @@ void Group::GenerateShellAndMesh() {
                axis = SK.GetEntity(predef.entityB)->VectorGetNum();
         axis        = axis.WithMagnitude(1);
 
-        SBezierLoopSetSet *sblss = &(src->bezierLoops);
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
+        for(const SBezierLoopSet &sbls : src->bezierLoops.l) {
             if(fabs(anglef - angles) < 2 * PI) {
-                thisShell.MakeFromHelicalRevolutionOf(sbls, pt, axis, color, this,
+                thisShell.MakeFromHelicalRevolutionOf(&sbls, pt, axis, color, this,
                                                       angles, anglef, dists, distf);
             } else {
-                thisShell.MakeFromRevolutionOf(sbls, pt, axis, color, this);
+                thisShell.MakeFromRevolutionOf(&sbls, pt, axis, color, this);
             }
         }
     } else if(type == Type::HELIX && haveSrc) {
@@ -363,10 +355,8 @@ void Group::GenerateShellAndMesh() {
                axis = SK.GetEntity(predef.entityB)->VectorGetNum();
         axis        = axis.WithMagnitude(1);
 
-        SBezierLoopSetSet *sblss = &(src->bezierLoops);
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
-            thisShell.MakeFromHelicalRevolutionOf(sbls, pt, axis, color, this,
+        for(const SBezierLoopSet &sbls : src->bezierLoops.l) {
+            thisShell.MakeFromHelicalRevolutionOf(&sbls, pt, axis, color, this,
                                                   angles, anglef, dists, distf);
         }
     } else if(type == Type::LINKED) {
@@ -479,9 +469,8 @@ void Group::GenerateDisplayItems() {
             // shell, and edge-find the mesh.
             displayMesh.Clear();
             runningShell.TriangulateInto(&displayMesh);
-            STriangle *t;
-            for(t = runningMesh.l.First(); t; t = runningMesh.l.NextAfter(t)) {
-                STriangle trn = *t;
+            for(const STriangle &t : runningMesh.l) {
+                STriangle trn = t;
                 Vector n = trn.Normal();
                 trn.an = n;
                 trn.bn = n;

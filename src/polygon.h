@@ -356,7 +356,7 @@ public:
                               bool *inter, bool *leaky, int auxA = 0) const;
     void MakeOutlinesInto(SOutlineList *sel, EdgeKind tagKind) const;
 
-    void OcclusionTestLine(SEdge orig, SEdgeList *sel, int cnt) const;
+    void OcclusionTestLine(const SEdge &orig, SEdgeList *sel, int cnt) const;
     void SplitLinesAgainstTriangle(SEdgeList *sel, STriangle *tr) const;
 
     void SnapToMesh(SMesh *m);

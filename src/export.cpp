@@ -82,13 +82,11 @@ void SolveSpaceUI::ExportSectionTo(const Platform::Path &filename) {
     g->runningShell.MakeSectionEdgesInto(n, d, &el, export_as_pwl ? NULL : &bl);
 
     // All of these are solid model edges, so use the appropriate style.
-    SEdge *se;
-    for(se = el.l.First(); se; se = el.l.NextAfter(se)) {
-        se->auxA = Style::SOLID_EDGE;
+    for(SEdge &se : el.l) {
+        se.auxA = Style::SOLID_EDGE;
     }
-    SBezier *sb;
-    for(sb = bl.l.First(); sb; sb = bl.l.NextAfter(sb)) {
-        sb->auxA = Style::SOLID_EDGE;
+    for(SBezier &sb : bl.l) {
+        sb.auxA = Style::SOLID_EDGE;
     }
 
     // Remove all overlapping edges/beziers to merge the areas they describe.
@@ -291,18 +289,16 @@ void SolveSpaceUI::ExportWireframeCurves(SEdgeList *sel, SBezierList *sbl,
                            VectorFileWriter *out)
 {
     SBezierLoopSetSet sblss = {};
-    SEdge *se;
-    for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
+    for(const SEdge &se : sel->l) {
         SBezier sb = SBezier::From(
-                                (se->a).ScaledBy(1.0 / SS.exportScale),
-                                (se->b).ScaledBy(1.0 / SS.exportScale));
+                                (se.a).ScaledBy(1.0 / SS.exportScale),
+                                (se.b).ScaledBy(1.0 / SS.exportScale));
         sblss.AddOpenPath(&sb);
     }
 
     sbl->ScaleSelfBy(1.0/SS.exportScale);
-    SBezier *sb;
-    for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
-        sblss.AddOpenPath(sb);
+    for(const SBezier &sb : sbl->l) {
+        sblss.AddOpenPath(&sb);
     }
 
     out->OutputLinesAndMesh(&sblss, NULL);
@@ -318,18 +314,18 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
 
     // Project into the export plane; so when we're done, z doesn't matter,
     // and x and y are what goes in the DXF.
-    for(SEdge *e = sel->l.First(); e; e = sel->l.NextAfter(e)) {
+    for(SEdge &e : sel->l) {
         // project into the specified csys, and apply export scale
-        (e->a) = e->a.InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
-        (e->b) = e->b.InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
+        e.a = e.a.InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
+        e.b = e.b.InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
     }
 
     if(sbl) {
-        for(SBezier *b = sbl->l.First(); b; b = sbl->l.NextAfter(b)) {
-            *b = b->InPerspective(u, v, n, origin, cameraTan);
+        for(SBezier &b : sbl->l) {
+            b = b.InPerspective(u, v, n, origin, cameraTan);
             int i;
-            for(i = 0; i <= b->deg; i++) {
-                b->ctrl[i] = (b->ctrl[i]).ScaledBy(s);
+            for(i = 0; i <= b.deg; i++) {
+                b.ctrl[i] = (b.ctrl[i]).ScaledBy(s);
             }
         }
     }
@@ -357,9 +353,8 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
     if(sm) {
         Vector l0 = (SS.lightDir[0]).WithMagnitude(1),
                l1 = (SS.lightDir[1]).WithMagnitude(1);
-        STriangle *tr;
-        for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
-            STriangle tt = *tr;
+        for(const STriangle &tr : sm->l) {
+            STriangle tt = tr;
             tt.a = (tt.a).InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
             tt.b = (tt.b).InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
             tt.c = (tt.c).InPerspective(u, v, n, origin, cameraTan).ScaledBy(s);
@@ -386,12 +381,11 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
         SBsp3 *bsp = SBsp3::FromMesh(&smp);
         if(bsp) bsp->GenerateInPaintOrder(&sms);
         // And cull the back-facing triangles
-        STriangle *tr;
         sms.l.ClearTags();
-        for(tr = sms.l.First(); tr; tr = sms.l.NextAfter(tr)) {
-            Vector n = tr->Normal();
+        for(STriangle &tr : sms.l) {
+            Vector n = tr.Normal();
             if(n.z < 0) {
-                tr->tag = 1;
+                tr.tag = 1;
             }
         }
         sms.l.RemoveTagged();
@@ -413,19 +407,18 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
         root->ClearTags();
         int cnt = 1234;
 
-        SEdge *se;
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
-            if(se->auxA == Style::CONSTRAINT) {
+        for(const SEdge &se : sel->l) {
+            if(se.auxA == Style::CONSTRAINT) {
                 // Constraints should not get hidden line removed; they're
                 // always on top.
-                hlrd.AddEdge(se->a, se->b, se->auxA);
+                hlrd.AddEdge(se.a, se.b, se.auxA);
                 continue;
             }
 
             SEdgeList edges = {};
             // Split the original edge against the mesh
-            edges.AddEdge(se->a, se->b, se->auxA);
-            root->OcclusionTestLine(*se, &edges, cnt);
+            edges.AddEdge(se.a, se.b, se.auxA);
+            root->OcclusionTestLine(se, &edges, cnt);
             if(SS.GW.drawOccludedAs == GraphicsWindow::DrawOccludedAs::STIPPLED) {
                 for(SEdge &se : edges.l) {
                     if(se.tag == 1) {
@@ -437,12 +430,11 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
             }
 
             // the occlusion test splits unnecessarily; so fix those
-            edges.MergeCollinearSegments(se->a, se->b);
+            edges.MergeCollinearSegments(se.a, se.b);
             cnt++;
             // And add the results to our output
-            SEdge *sen;
-            for(sen = edges.l.First(); sen; sen = edges.l.NextAfter(sen)) {
-                hlrd.AddEdge(sen->a, sen->b, sen->auxA);
+            for(const SEdge &sen : edges.l) {
+                hlrd.AddEdge(sen.a, sen.b, sen.auxA);
             }
             edges.Clear();
         }
@@ -574,14 +566,14 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
     // all together, and also project everything into the xy plane, since not
     // all export targets ignore the z component of the points.
     ssassert(sbl != nullptr, "Adding line segments to beziers assumes bezier list is non-null.");
-    for(SEdge *e = sel->l.First(); e; e = sel->l.NextAfter(e)) {
-        SBezier sb = SBezier::From(e->a, e->b);
-        sb.auxA = e->auxA;
+    for(const SEdge &e : sel->l) {
+        SBezier sb = SBezier::From(e.a, e.b);
+        sb.auxA = e.auxA;
         sbl->l.Add(&sb);
     }
-    for(SBezier *b = sbl->l.First(); b; b = sbl->l.NextAfter(b)) {
-        for(int i = 0; i <= b->deg; i++) {
-            b->ctrl[i].z = 0;
+    for(SBezier &b : sbl->l) {
+        for(int i = 0; i <= b.deg; i++) {
+            b.ctrl[i].z = 0;
         }
     }
 
@@ -679,27 +671,22 @@ Vector VectorFileWriter::Transform(Vector &pos) const {
 }
 
 void VectorFileWriter::OutputLinesAndMesh(SBezierLoopSetSet *sblss, SMesh *sm) {
-    STriangle *tr;
-    SBezier *b;
-
     // First calculate the bounding box.
     ptMin = Vector::From(VERY_POSITIVE, VERY_POSITIVE, VERY_POSITIVE);
     ptMax = Vector::From(VERY_NEGATIVE, VERY_NEGATIVE, VERY_NEGATIVE);
     if(sm) {
-        for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
-            (tr->a).MakeMaxMin(&ptMax, &ptMin);
-            (tr->b).MakeMaxMin(&ptMax, &ptMin);
-            (tr->c).MakeMaxMin(&ptMax, &ptMin);
+        for(const STriangle &tr : sm->l) {
+            (tr.a).MakeMaxMin(&ptMax, &ptMin);
+            (tr.b).MakeMaxMin(&ptMax, &ptMin);
+            (tr.c).MakeMaxMin(&ptMax, &ptMin);
         }
     }
     if(sblss) {
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
-            SBezierLoop *sbl;
-            for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
-                for(b = sbl->l.First(); b; b = sbl->l.NextAfter(b)) {
-                    for(int i = 0; i <= b->deg; i++) {
-                        (b->ctrl[i]).MakeMaxMin(&ptMax, &ptMin);
+        for(const SBezierLoopSet &sbls : sblss->l) {
+            for(const SBezierLoop &sbl : sbls.l) {
+                for(const SBezier &b : sbl.l) {
+                    for(int i = 0; i <= b.deg; i++) {
+                        (b.ctrl[i]).MakeMaxMin(&ptMax, &ptMin);
                     }
                 }
             }
@@ -727,15 +714,14 @@ void VectorFileWriter::OutputLinesAndMesh(SBezierLoopSetSet *sblss, SMesh *sm) {
         Background(SS.backgroundColor);
     }
     if(sm && SS.exportShadedTriangles) {
-        for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
-            Triangle(tr);
+        for(const STriangle &tr : sm->l) {
+            Triangle(&tr);
         }
     }
     if(sblss) {
-        SBezierLoopSet *sbls;
-        for(sbls = sblss->l.First(); sbls; sbls = sblss->l.NextAfter(sbls)) {
-            for(SBezierLoop *sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
-                b = sbl->l.First();
+        for(const SBezierLoopSet &sbls : sblss->l) {
+            for(const SBezierLoop &sbl : sbls.l) {
+                const SBezier *b = sbl.l.First();
                 if(!b || !Style::Exportable(b->auxA)) continue;
 
                 hStyle hs = { (uint32_t)b->auxA };
@@ -745,8 +731,8 @@ void VectorFileWriter::OutputLinesAndMesh(SBezierLoopSetSet *sblss, SMesh *sm) {
                 RgbaColor fillRgb   = Style::FillColor(hs, /*forExport=*/true);
 
                 StartPath(strokeRgb, lineWidth, stl->filled, fillRgb, hs);
-                for(b = sbl->l.First(); b; b = sbl->l.NextAfter(b)) {
-                    Bezier(b);
+                for(const SBezier &b : sbl.l) {
+                    Bezier(&b);
                 }
                 FinishPath(strokeRgb, lineWidth, stl->filled, fillRgb, hs);
             }
@@ -755,7 +741,7 @@ void VectorFileWriter::OutputLinesAndMesh(SBezierLoopSetSet *sblss, SMesh *sm) {
     FinishAndCloseFile();
 }
 
-void VectorFileWriter::BezierAsPwl(SBezier *sb) {
+void VectorFileWriter::BezierAsPwl(const SBezier *sb) {
     List<Vector> lv = {};
     sb->MakePwlInto(&lv, SS.ExportChordTolMm());
 
@@ -766,7 +752,7 @@ void VectorFileWriter::BezierAsPwl(SBezier *sb) {
     lv.Clear();
 }
 
-void VectorFileWriter::BezierAsNonrationalCubic(SBezier *sb, int depth) {
+void VectorFileWriter::BezierAsNonrationalCubic(const SBezier *sb, int depth) {
     Vector t0 = sb->TangentAt(0), t1 = sb->TangentAt(1);
     // The curve is correct, and the first derivatives are correct, at the
     // endpoints.
@@ -950,7 +936,6 @@ void SolveSpaceUI::ExportMeshAsThreeJsTo(FILE *f, const Platform::Path &filename
                                          SMesh *sm, SOutlineList *sol)
 {
     SPointList spl = {};
-    STriangle *tr;
     Vector bndl, bndh;
 
     const std::string THREE_FN("three-r111.min.js");
@@ -1053,47 +1038,46 @@ void SolveSpaceUI::ExportMeshAsThreeJsTo(FILE *f, const Platform::Path &filename
     fprintf(f, "    ],\n"
                "    a: %f\n", SS.ambientIntensity);
 
-    for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
-        spl.IncrementTagFor(tr->a);
-        spl.IncrementTagFor(tr->b);
-        spl.IncrementTagFor(tr->c);
+    for(const STriangle &tr : sm->l) {
+        spl.IncrementTagFor(tr.a);
+        spl.IncrementTagFor(tr.b);
+        spl.IncrementTagFor(tr.c);
     }
 
     // Output all the vertices.
-    SPoint *sp;
     fputs("  },\n"
           "  points: [\n", f);
-    for(sp = spl.l.First(); sp; sp = spl.l.NextAfter(sp)) {
+    for(const SPoint &sp : spl.l) {
         fprintf(f, "    [%f, %f, %f],\n",
-                sp->p.x / SS.exportScale,
-                sp->p.y / SS.exportScale,
-                sp->p.z / SS.exportScale);
+                sp.p.x / SS.exportScale,
+                sp.p.y / SS.exportScale,
+                sp.p.z / SS.exportScale);
     }
 
     fputs("  ],\n"
           "  faces: [\n", f);
     // And now all the triangular faces, in terms of those vertices.
     // This time we count from zero.
-    for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
+    for(const STriangle &tr : sm->l) {
         fprintf(f, "    [%d, %d, %d],\n",
-                spl.IndexForPoint(tr->a),
-                spl.IndexForPoint(tr->b),
-                spl.IndexForPoint(tr->c));
+                spl.IndexForPoint(tr.a),
+                spl.IndexForPoint(tr.b),
+                spl.IndexForPoint(tr.c));
     }
 
     // Output face normals.
     fputs("  ],\n"
           "  normals: [\n", f);
-    for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
+    for(const STriangle &tr : sm->l) {
         fprintf(f, "    [[%f, %f, %f], [%f, %f, %f], [%f, %f, %f]],\n",
-                CO(tr->an), CO(tr->bn), CO(tr->cn));
+                CO(tr.an), CO(tr.bn), CO(tr.cn));
     }
 
     fputs("  ],\n"
           "  colors: [\n", f);
     // Output triangle colors.
-    for(tr = sm->l.First(); tr; tr = sm->l.NextAfter(tr)) {
-        fprintf(f, "    0x%x,\n", tr->meta.color.ToARGB32());
+    for(const STriangle &tr : sm->l) {
+        fprintf(f, "    0x%x,\n", tr.meta.color.ToARGB32());
     }
 
     fputs("  ],\n"
