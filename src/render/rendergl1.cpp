@@ -476,9 +476,9 @@ void OpenGl1Renderer::DrawLine(const Vector &a, const Vector &b, hStroke hcs) {
 
 void OpenGl1Renderer::DrawEdges(const SEdgeList &el, hStroke hcs) {
     double phase = 0.0;
-    for(const SEdge *e = el.l.First(); e; e = el.l.NextAfter(e)) {
-        DoStippledLine(e->a, e->b, hcs, phase);
-        phase += e->a.Minus(e->b).Magnitude();
+    for(const SEdge &e : el.l) {
+        DoStippledLine(e.a, e.b, hcs, phase);
+        phase += e.a.Minus(e.b).Magnitude();
     }
 }
 

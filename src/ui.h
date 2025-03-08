@@ -735,12 +735,12 @@ public:
         hConstraint constraint;
         bool        emphasized;
 
-        void Draw(bool isHovered, Canvas *canvas);
+        void Draw(bool isHovered, Canvas *canvas) const;
 
         void Clear();
-        bool IsEmpty();
-        bool Equals(Selection *b);
-        bool HasEndpoints();
+        bool IsEmpty() const;
+        bool Equals(Selection *b) const;
+        bool HasEndpoints() const;
     };
 
     // A hovered entity, with its location relative to the cursor.

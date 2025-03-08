@@ -299,26 +299,15 @@ public:
     T *Last() { return IsEmpty() ? nullptr : &(elem[n - 1]); }
     const T *Last() const { return IsEmpty() ? nullptr : &(elem[n - 1]); }
 
-    T *NextAfter(T *prev) {
-        if(IsEmpty() || !prev) return NULL;
-        if(prev - First() == (n - 1)) return NULL;
-        return prev + 1;
-    }
-    const T *NextAfter(const T *prev) const {
-        if(IsEmpty() || !prev) return NULL;
-        if(prev - First() == (n - 1)) return NULL;
-        return prev + 1;
-    }
-
     T &Get(size_t i) { return elem[i]; }
     T const &Get(size_t i) const { return elem[i]; }
     T &operator[](size_t i) { return Get(i); }
     T const &operator[](size_t i) const { return Get(i); }
 
-    T *begin() { return IsEmpty() ? nullptr : &elem[0]; }
-    T *end() { return IsEmpty() ? nullptr : &elem[n]; }
-    const T *begin() const { return IsEmpty() ? nullptr : &elem[0]; }
-    const T *end() const { return IsEmpty() ? nullptr : &elem[n]; }
+    T *begin() { return elem; }
+    T *end() { return elem + n; }
+    const T *begin() const { return elem; }
+    const T *end() const { return elem + n; }
     const T *cbegin() const { return begin(); }
     const T *cend() const { return end(); }
 

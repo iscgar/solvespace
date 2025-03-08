@@ -175,7 +175,7 @@ public:
                             bool *allClosed, SEdge *notClosedAt,
                             bool *allCoplanar, Vector *notCoplanarAt,
                             SBezierLoopSet *openContours);
-    void AddOpenPath(SBezier *sb);
+    void AddOpenPath(const SBezier *sb);
     void Clear();
 };
 
@@ -284,8 +284,8 @@ public:
     // a point into our surface.
     Point2d         cached;
 
-    static SSurface FromExtrusionOf(SBezier *spc, Vector t0, Vector t1);
-    static SSurface FromRevolutionOf(SBezier *sb, Vector pt, Vector axis, double thetas,
+    static SSurface FromExtrusionOf(const SBezier *spc, Vector t0, Vector t1);
+    static SSurface FromRevolutionOf(const SBezier *sb, Vector pt, Vector axis, double thetas,
                                      double thetaf, double dists, double distf);
     static SSurface FromPlane(Vector pt, Vector u, Vector v);
     static SSurface FromTransformationOf(SSurface *a, Vector t, Quaternion q,
@@ -355,7 +355,7 @@ public:
        UV  = 0x01,
        XYZ = 0x00
     };
-    void MakeTrimEdgesInto(SEdgeList *sel, MakeAs flags, SCurve *sc, STrimBy *stb);
+    void MakeTrimEdgesInto(SEdgeList *sel, MakeAs flags, SCurve *sc, const STrimBy *stb);
     void MakeEdgesInto(SShell *shell, SEdgeList *sel, MakeAs flags,
                        SShell *useCurvesFrom=NULL);
 
@@ -380,12 +380,12 @@ public:
 
     bool                        booleanFailed;
 
-    void MakeFromExtrusionOf(SBezierLoopSet *sbls, Vector t0, Vector t1,
+    void MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t1,
                              RgbaColor color);
-    bool CheckNormalAxisRelationship(SBezierLoopSet *sbls, Vector pt, Vector axis, double da, double dx);
-    void MakeFromRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis,
+    bool CheckNormalAxisRelationship(const SBezierLoopSet *sbls, Vector pt, Vector axis, double da, double dx);
+    void MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector axis,
                               RgbaColor color, Group *group);
-    void MakeFromHelicalRevolutionOf(SBezierLoopSet *sbls, Vector pt, Vector axis, RgbaColor color,
+    void MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector axis, RgbaColor color,
                                      Group *group, double angles, double anglef, double dists, double distf);
     void MakeFirstOrderRevolvedSurfaces(Vector pt, Vector axis, int i0);
     void MakeFromUnionOf(SShell *a, SShell *b);

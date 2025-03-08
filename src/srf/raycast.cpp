@@ -437,11 +437,10 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir,
         if(srf.LineEntirelyOutsideBbox(ea, eb, /*asSegment=*/true)) continue;
 
         SEdgeList *sel = &(srf.edges);
-        SEdge *se;
-        for(se = sel->l.First(); se; se = sel->l.NextAfter(se)) {
-            if((ea.Equals(se->a) && eb.Equals(se->b)) ||
-               (eb.Equals(se->a) && ea.Equals(se->b)) ||
-                p.OnLineSegment(se->a, se->b))
+        for(const SEdge &se : sel->l) {
+            if((ea.Equals(se.a) && eb.Equals(se.b)) ||
+               (eb.Equals(se.a) && ea.Equals(se.b)) ||
+                p.OnLineSegment(se.a, se.b))
             {
                 if(edge_inters < 2) {
                     // Edge-on-edge case
@@ -453,7 +452,7 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir,
                     // intersecting surface) at the intersection point, pointing
                     // out.
                     inter_edge_n[edge_inters] =
-                      (inter_surf_n[edge_inters]).Cross((se->b).Minus((se->a)));
+                      (inter_surf_n[edge_inters]).Cross((se.b).Minus((se.a)));
                 }
 
                 edge_inters++;
@@ -563,19 +562,18 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir,
         bool onEdge = false;
         edge_inters = 0;
 
-        SInter *si;
-        for(si = l.First(); si; si = l.NextAfter(si)) {
-            double t = ((si->p).Minus(p)).DivProjected(ray);
+        for(const SInter &si : l) {
+            double t = ((si.p).Minus(p)).DivProjected(ray);
             if(t*ray.Magnitude() < -LENGTH_EPS) {
                 // wrong side, doesn't count
                 continue;
             }
 
-            double d = ((si->p).Minus(p)).Magnitude();
+            double d = ((si.p).Minus(p)).Magnitude();
 
             // We actually should never hit this case; it should have been
             // handled above.
-            if(d < LENGTH_EPS && si->onEdge) {
+            if(d < LENGTH_EPS && si.onEdge) {
                 edge_inters++;
             }
 
@@ -583,14 +581,14 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir,
                 dmin = d;
                 // Edge does not lie on surface; either strictly inside
                 // or strictly outside
-                if((si->surfNormal).Dot(ray) > 0) {
+                if((si.surfNormal).Dot(ray) > 0) {
                     *indir  = Class::SURF_INSIDE;
                     *outdir = Class::SURF_INSIDE;
                 } else {
                     *indir  = Class::SURF_OUTSIDE;
                     *outdir = Class::SURF_OUTSIDE;
                 }
-                onEdge = si->onEdge;
+                onEdge = si.onEdge;
             }
         }
         l.Clear();
