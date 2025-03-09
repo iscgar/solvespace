@@ -7,8 +7,8 @@
 #include "solvespace.h"
 
 void SolveSpaceUI::Clipboard::Clear() {
-    c.Clear();
-    r.Clear();
+    c.clear();
+    r.clear();
 }
 
 bool SolveSpaceUI::Clipboard::ContainsEntity(hEntity he) {
@@ -122,7 +122,7 @@ void GraphicsWindow::CopySelection() {
             cr.oldPointEnt[i] = e->point[i];
         }
 
-        SS.clipboard.r.Add(&cr);
+        SS.clipboard.r.push_back(cr);
     }
 
     for(const Selection &s : selection) {
@@ -130,7 +130,7 @@ void GraphicsWindow::CopySelection() {
 
         Constraint *c = SK.GetConstraint(s.constraint);
         if(c->type == Constraint::Type::COMMENT) {
-            SS.clipboard.c.Add(c);
+            SS.clipboard.c.push_back(*c);
         }
     }
 
@@ -144,7 +144,7 @@ void GraphicsWindow::CopySelection() {
            c.type == Constraint::Type::COMMENT) {
             continue;
         }
-        SS.clipboard.c.Add(&c);
+        SS.clipboard.c.push_back(c);
     }
 }
 
@@ -322,7 +322,7 @@ void GraphicsWindow::MenuClipboard(Command id) {
         }
 
         case Command::PASTE_TRANSFORM: {
-            if(SS.clipboard.r.IsEmpty()) {
+            if(SS.clipboard.r.empty()) {
                 Error(_("Clipboard is empty; nothing to paste."));
                 break;
             }
@@ -453,7 +453,7 @@ void TextWindow::ScreenPasteTransformed(int link, uint32_t v) {
                 Message(_("Transformation is identity. So all copies will be "
                           "exactly on top of each other."));
             }
-            if(SS.TW.shown.paste.times*SS.clipboard.r.n > 100) {
+            if(SS.TW.shown.paste.times*(int)SS.clipboard.r.size() > 100) {
                 Error(_("Too many items to paste; split this into smaller "
                         "pastes."));
                 break;

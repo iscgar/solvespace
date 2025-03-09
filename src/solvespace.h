@@ -743,8 +743,8 @@ public:
 
     class Clipboard {
     public:
-        List<ClipboardRequest>  r;
-        List<Constraint>        c;
+        std::vector<ClipboardRequest>  r;
+        std::vector<Constraint>        c;
 
         void Clear();
         bool ContainsEntity(hEntity old);
