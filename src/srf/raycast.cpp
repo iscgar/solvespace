@@ -244,7 +244,7 @@ void SSurface::AllPointsIntersectingUntrimmed(Vector a, Vector b,
 // either disregard or report tangent points.
 //-----------------------------------------------------------------------------
 void SSurface::AllPointsIntersecting(Vector a, Vector b,
-                                     List<SInter> *l,
+                                     std::vector<SInter> *l,
                                      bool asSegment, bool trimmed, bool inclTangent)
 {
     if(LineEntirelyOutsideBbox(a, b, asSegment)) return;
@@ -371,14 +371,14 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
         si.pinter = puv;
         si.srf = this;
         si.onEdge = (c != SBspUv::Class::INSIDE);
-        l->Add(&si);
+        l->push_back(si);
     }
 
     inters.Clear();
 }
 
 void SShell::AllPointsIntersecting(Vector a, Vector b,
-                                   List<SInter> *il,
+                                   std::vector<SInter> *il,
                                    bool asSegment, bool trimmed, bool inclTangent)
 {
     for(SSurface &ss : surface) {
@@ -428,7 +428,7 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir,
                           Vector p,
                           Vector edge_n_in, Vector edge_n_out, Vector surf_n)
 {
-    List<SInter> l = {};
+    std::vector<SInter> l;
 
     // First, check for edge-on-edge
     int edge_inters = 0;
@@ -591,7 +591,6 @@ bool SShell::ClassifyEdge(Class *indir, Class *outdir,
                 onEdge = si.onEdge;
             }
         }
-        l.Clear();
 
         // If the point being tested lies exactly on an edge of the shell,
         // then our ray always lies on edge, and that's okay. Otherwise
