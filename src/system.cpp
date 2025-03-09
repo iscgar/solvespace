@@ -563,7 +563,7 @@ void System::Clear() {
     entity.Clear();
     param.Clear();
     eq.Clear();
-    dragged.Clear();
+    dragged.clear();
     mat.A.num.setZero();
     mat.A.sym.setZero();
 }

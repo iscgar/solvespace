@@ -229,7 +229,7 @@ public:
 
     // A list of parameters that are being dragged; these are the ones that
     // we should put as close as possible to their initial positions.
-    List<hParam>                    dragged;
+    std::vector<hParam>             dragged;
 
     enum {
         // In general, the tag indicates the subsys that a variable/equation
