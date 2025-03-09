@@ -306,8 +306,8 @@ Expr *Expr::DeepCopy() const {
     return n;
 }
 
-Expr *Expr::DeepCopyWithParamsAsPointers(IdList<Param,hParam> *firstTry,
-    IdList<Param,hParam> *thenTry) const
+Expr *Expr::DeepCopyWithParamsAsPointers(IdList<Param> *firstTry,
+    IdList<Param> *thenTry) const
 {
     Expr *n = AllocExpr();
     if(op == Op::PARAM) {

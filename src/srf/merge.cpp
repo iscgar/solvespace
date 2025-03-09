@@ -9,11 +9,8 @@
 void SShell::MergeCoincidentSurfaces() {
     surface.ClearTags();
 
-    int i, j;
-    SSurface *si, *sj;
-
-    for(i = 0; i < surface.n; i++) {
-        si = &(surface[i]);
+    for(size_t i = 0; i < surface.Size(); i++) {
+        SSurface *si = &surface.Get(i);
         if(si->tag) continue;
         // Let someone else clean up the empty surfaces; we can certainly merge
         // them, but we don't know how to calculate a reasonable bounding box.
@@ -30,8 +27,8 @@ void SShell::MergeCoincidentSurfaces() {
         do {
             mergedThisTime = false;
 
-            for(j = i + 1; j < surface.n; j++) {
-                sj = &(surface[j]);
+            for(size_t j = i + 1; j < surface.Size(); j++) {
+                SSurface *sj = &surface.Get(j);
                 if(sj->tag) continue;
                 if(!sj->CoincidentWith(si, /*sameNormal=*/true)) continue;
                 if(!sj->color.Equals(si->color)) continue;
