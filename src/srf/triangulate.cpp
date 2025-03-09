@@ -9,13 +9,13 @@
 #include "../solvespace.h"
 
 void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
-    if(l.n <= 0) return;
+    if(l.Size() <= 0) return;
 
     //int64_t in = GetMilliseconds();
 
     normal = Vector::From(0, 0, 1);
 
-    while(l.n > 0) {
+    while(l.Size() > 0) {
         FixContourDirections();
         l.ClearTags();
 
@@ -46,7 +46,7 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
         // those too.
         for(SContour &sc : l) {
             if(sc.timesEnclosed != 1) continue;
-            if(sc.l.n < 2) continue;
+            if(sc.l.Size() < 2) continue;
 
             // Test the midpoint of an edge. Our polygon may not be self-
             // intersecting, but two contours may share a vertex; so a
@@ -110,7 +110,7 @@ bool SContour::BridgeToContour(SContour *sc,
     // Not using range-for loop here because we're looking for the index and we
     // also don't consider the last point
     int sco = 0;
-    for(int i = 0; i < (sc->l.n - 1); i++) {
+    for(int i = 0; i < (sc->l.Size() - 1); i++) {
         if((sc->l[i].p).EqualsExactly(sc->xminPt)) {
             sco = i;
         }
@@ -122,7 +122,7 @@ bool SContour::BridgeToContour(SContour *sc,
     // also don't consider the last point
     int thiso = 0;
     double dmin = 1e10;
-    for(int i = 0; i < l.n-1; i++) {
+    for(int i = 0; i < l.Size()-1; i++) {
         Vector p = l[i].p;
         double d = (p.Minus(sc->xminPt)).MagSquared();
         if(d < dmin) {
@@ -138,8 +138,8 @@ bool SContour::BridgeToContour(SContour *sc,
     // First check if the contours share a point; in that case we should
     // merge them there, without a bridge.
     // Not using range-for loop here because we're using the index in the loop
-    for(int i = 0; i < l.n; i++) {
-        thisp = WRAP(i+thiso, l.n-1);
+    for(int i = 0; i < l.Size(); i++) {
+        thisp = WRAP(i+thiso, l.Size()-1);
         a = l[thisp].p;
 
         const auto f = std::find_if(avoidPts->begin(), avoidPts->end(), [&a](const Vector &v) {
@@ -147,8 +147,8 @@ bool SContour::BridgeToContour(SContour *sc,
         });
         if(f != avoidPts->end()) continue;
 
-        for(int j = 0; j < (sc->l.n - 1); j++) {
-            scp = WRAP(j+sco, (sc->l.n - 1));
+        for(int j = 0; j < (sc->l.Size() - 1); j++) {
+            scp = WRAP(j+sco, (sc->l.Size() - 1));
             b = sc->l[scp].p;
 
             if(a.Equals(b)) {
@@ -160,8 +160,8 @@ bool SContour::BridgeToContour(SContour *sc,
 
     // If that fails, look for a bridge that does not intersect any edges.
     // Not using range-for loop here because we're using the index in the loop
-    for(int i = 0; i < l.n; i++) {
-        thisp = WRAP(i+thiso, l.n);
+    for(int i = 0; i < l.Size(); i++) {
+        thisp = WRAP(i+thiso, l.Size());
         a = l[thisp].p;
 
         const auto f = std::find_if(avoidPts->begin(), avoidPts->end(), [&a](const Vector &v) {
@@ -169,8 +169,8 @@ bool SContour::BridgeToContour(SContour *sc,
         });
         if(f != avoidPts->end()) continue;
 
-        for(int j = 0; j < (sc->l.n - 1); j++) {
-            scp = WRAP(j+sco, (sc->l.n - 1));
+        for(int j = 0; j < (sc->l.Size() - 1); j++) {
+            scp = WRAP(j+sco, (sc->l.Size() - 1));
             b = sc->l[scp].p;
 
             const auto f = std::find_if(avoidPts->begin(), avoidPts->end(), [&b](const Vector &v) {
@@ -192,14 +192,14 @@ bool SContour::BridgeToContour(SContour *sc,
 haveEdge:
     // Not using range-for loop here because we're using the index in the loop
     SContour merged = {};
-    for(int i = 0; i < l.n; i++) {
+    for(int i = 0; i < l.Size(); i++) {
         if(withbridge || (i != thisp)) {
             merged.AddPoint(l[i].p);
         }
         if(i == thisp) {
             // less than or equal; need to duplicate the join point
-            for(int j = 0; j <= (sc->l.n - 1); j++) {
-                int jp = WRAP(j + scp, (sc->l.n - 1));
+            for(int j = 0; j <= (sc->l.Size() - 1); j++) {
+                int jp = WRAP(j + scp, (sc->l.Size() - 1));
                 merged.AddPoint((sc->l[jp]).p);
             }
             // and likewise duplicate join point for the outer curve
@@ -237,7 +237,7 @@ bool SContour::IsEmptyTriangle(int ap, int bp, int cp, double scaledEPS) const {
     Vector n = Vector::From(0, 0, -1);
 
     int i;
-    for(i = 0; i < l.n; i++) {
+    for(i = 0; i < l.Size(); i++) {
         if(i == ap || i == bp || i == cp) continue;
 
         Vector p = l[i].p;
@@ -280,8 +280,8 @@ static bool RayIsInside(Vector a, Vector c, Vector b, Vector d) {
 }
 
 bool SContour::IsEar(int bp, double scaledEps) const {
-    int ap = WRAP(bp-1, l.n),
-        cp = WRAP(bp+1, l.n);
+    int ap = WRAP(bp-1, l.Size()),
+        cp = WRAP(bp+1, l.Size());
 
     STriangle tr = {};
     tr.a = l[ap].p;
@@ -307,7 +307,7 @@ bool SContour::IsEar(int bp, double scaledEps) const {
     (tr.c).MakeMaxMin(&maxv, &minv);
 
     int i;
-    for(i = 0; i < l.n; i++) {
+    for(i = 0; i < l.Size(); i++) {
         if(i == ap || i == bp || i == cp) continue;
 
         Vector p = l[i].p;
@@ -321,8 +321,8 @@ bool SContour::IsEar(int bp, double scaledEps) const {
         // points coincident with bp have to be allowed for bridges but edges
         // from that other point must not cross through our triangle.
         if(p.EqualsExactly(tr.b)) {
-            int j = WRAP(i-1, l.n);
-            int k = WRAP(i+1, l.n);
+            int j = WRAP(i-1, l.Size());
+            int k = WRAP(i+1, l.Size());
             Vector jp = l[j].p;
             Vector kp = l[k].p;
 
@@ -341,8 +341,8 @@ bool SContour::IsEar(int bp, double scaledEps) const {
 }
 
 void SContour::ClipEarInto(SMesh *m, int bp, double scaledEps) {
-    int ap = WRAP(bp-1, l.n),
-        cp = WRAP(bp+1, l.n);
+    int ap = WRAP(bp-1, l.Size()),
+        cp = WRAP(bp+1, l.Size());
 
     STriangle tr = {};
     tr.a = l[ap].p;
@@ -379,14 +379,14 @@ void SContour::UvTriangulateInto(SMesh *m, SSurface *srf) {
     // initialize eartypes to unknown while we're going over them.
     l.ClearTags();
     l[0].ear = EarType::UNKNOWN;
-    for(i = 1; i < l.n; i++) {
+    for(i = 1; i < l.Size(); i++) {
        l[i].ear = EarType::UNKNOWN;
        if((l[i].p).Equals(l[i-1].p)) {
             l[i].tag = 1;
         }
     }
-    if( (l[0].p).Equals(l[l.n-1].p) ) {
-        l[l.n-1].tag = 1;
+    if( (l[0].p).Equals(l[l.Size()-1].p) ) {
+        l[l.Size()-1].tag = 1;
     }
     l.RemoveTagged();
 
@@ -397,7 +397,7 @@ void SContour::UvTriangulateInto(SMesh *m, SSurface *srf) {
         int pstart = 0;
         double elen = -1.0;
         double oldspan = 0.0;
-        for(i = 1; i < l.n; i++) {
+        for(i = 1; i < l.Size(); i++) {
             Vector ab = l[i].p.Minus(l[i-1].p);
             // first time just measure the segment
             if (elen < 0.0) {
@@ -424,7 +424,7 @@ void SContour::UvTriangulateInto(SMesh *m, SSurface *srf) {
                 oldspan = slen;
             }
             // we need to stop at the end of polygon but may still
-            if (i == l.n-1) {
+            if (i == l.Size()-1) {
                 end = true;
             }
             if (end) {  // triangulate the fan and tag the vertices
@@ -456,15 +456,15 @@ void SContour::UvTriangulateInto(SMesh *m, SSurface *srf) {
     }  // end optional fan creation pass
 
     bool toggle = false;
-    while(l.n > 3) {
+    while(l.Size() > 3) {
         int bestEar = -1;
         double bestChordTol = VERY_POSITIVE;
         // Alternate the starting position so we generate strip-like
         // triangulations instead of fan-like
         toggle = !toggle;
         int offset = toggle ? -1 : 0;
-        for(i = 0; i < l.n; i++) {
-            int ear = WRAP(i+offset, l.n);
+        for(i = 0; i < l.Size(); i++) {
+            int ear = WRAP(i+offset, l.Size());
             if(l[ear].ear == EarType::UNKNOWN) {
                 (l[ear]).ear = IsEar(ear, scaledEps) ? EarType::EAR : EarType::NOT_EAR;
             }
@@ -477,8 +477,8 @@ void SContour::UvTriangulateInto(SMesh *m, SSurface *srf) {
                 // If we are triangulating a curved surface, then try to
                 // clip ears that have a small chord tolerance from the
                 // surface.
-                Vector prev = l[WRAP((i+offset-1), l.n)].p,
-                       next = l[WRAP((i+offset+1), l.n)].p;
+                Vector prev = l[WRAP((i+offset-1), l.Size())].p,
+                       next = l[WRAP((i+offset+1), l.Size())].p;
                 double tol = srf->ChordToleranceForEdge(prev, next);
                 if(tol < bestChordTol - scaledEps) {
                     bestEar = ear;

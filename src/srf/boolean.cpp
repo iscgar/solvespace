@@ -343,7 +343,7 @@ static void TagByClassifiedEdge(SBspUv::Class bspclass, SShell::Class *indir, SS
 }
 
 static void DEBUGEDGELIST(SEdgeList *sel, SSurface *surf) {
-    dbp("print %d edges", sel->l.n);
+    dbp("print %d edges", sel->l.Size());
     for(const SEdge &se : sel->l) {
         Vector mid = (se.a).Plus(se.b).ScaledBy(0.5);
         Vector arrow = (se.b).Minus(se.a);
@@ -527,7 +527,7 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
             ss = sha->surface.FindById(sc.surfA);
         }
         int i;
-        for(i = 1; i < sc.pts.n; i++) {
+        for(i = 1; i < sc.pts.Size(); i++) {
             Vector a = sc.pts[i-1].p,
                    b = sc.pts[i].p;
 
@@ -595,7 +595,7 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
 
         // Arbitrarily choose an edge within the chain to classify; they
         // should all be the same, though.
-        const SEdge *se = &(chain.l[chain.l.n/2]);
+        const SEdge *se = &(chain.l[chain.l.Size()/2]);
 
         Point2d auv  = (se->a).ProjectXy(),
                 buv  = (se->b).ProjectXy();
@@ -628,7 +628,7 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
         FindChainAvoiding(&inter, &chain, &choosing);
 
         // Any edge in the chain, same as above.
-        const SEdge *se = &(chain.l[chain.l.n/2]);
+        const SEdge *se = &(chain.l[chain.l.Size()/2]);
 
         Point2d auv = (se->a).ProjectXy(),
                 buv = (se->b).ProjectXy();
@@ -671,7 +671,7 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
 #pragma omp critical
     {
         into->booleanFailed = true;
-        dbp("failed: I=%d, avoid=%d", I+dbg_index, choosing.l.n);
+        dbp("failed: I=%d, avoid=%d", I+dbg_index, choosing.l.Size());
         DEBUGEDGELIST(&final, &ret);
     }
     poly.Clear();

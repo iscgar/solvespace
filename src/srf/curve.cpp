@@ -237,12 +237,12 @@ void SBezierList::CullIdenticalBeziers(bool both) {
     int i, j;
 
     l.ClearTags();
-    for(i = 0; i < l.n; i++) {
+    for(i = 0; i < l.Size(); i++) {
         SBezier *bi = &(l[i]), bir;
         bir = *bi;
         bir.Reverse();
 
-        for(j = i + 1; j < l.n; j++) {
+        for(j = i + 1; j < l.Size(); j++) {
             SBezier *bj = &(l[j]);
             if(bj->Equals(bi) ||
                bj->Equals(&bir))
@@ -387,7 +387,7 @@ SBezierLoop SBezierLoop::FromCurves(SBezierList *sbl,
 {
     SBezierLoop loop = {};
 
-    if(sbl->l.n < 1) return loop;
+    if(sbl->l.Size() < 1) return loop;
     sbl->l.ClearTags();
 
     SBezier *first = &(sbl->l[0]);
@@ -402,7 +402,7 @@ SBezierLoop SBezierLoop::FromCurves(SBezierList *sbl,
     while(!sbl->l.IsEmpty() && !hanging.Equals(start)) {
         int i;
         bool foundNext = false;
-        for(i = 0; i < sbl->l.n; i++) {
+        for(i = 0; i < sbl->l.Size(); i++) {
             SBezier *test = &(sbl->l[i]);
 
             if((test->Finish()).Equals(hanging) && test->auxA == auxA) {
@@ -459,12 +459,12 @@ void SBezierLoop::GetBoundingProjd(Vector u, Vector orig,
 void SBezierLoop::MakePwlInto(SContour *sc, double chordTol) const {
     // Not using range-for loop here because we're using the index to determine
     // whether or not we're at the last element
-    for(int i = 0; i < l.n; ++i) {
+    for(int i = 0; i < l.Size(); ++i) {
         const SBezier &sb = l[i];
         sb.MakePwlInto(sc, chordTol);
         // Avoid double points at join between Beziers; except that
         // first and last points should be identical.
-        if(i < l.n - 1) {
+        if(i < l.Size() - 1) {
             sc->l.RemoveLast(1);
         }
     }
@@ -517,7 +517,7 @@ SBezierLoopSet SBezierLoopSet::From(SBezierList *sbl, SPolygon *poly,
 
     poly->normal = poly->ComputeNormal();
     ret.normal = poly->normal;
-    if(poly->l.n > 0) {
+    if(poly->l.Size() > 0) {
         ret.point = poly->AnyPoint();
     } else {
         ret.point = Vector::From(0, 0, 0);
@@ -558,7 +558,7 @@ void SBezierLoopSet::MakePwlInto(SPolygon *sp) const {
 
 void SBezierLoopSet::Clear() {
     int i;
-    for(i = 0; i < l.n; i++) {
+    for(i = 0; i < l.Size(); i++) {
         (l[i]).Clear();
     }
     l.Clear();
@@ -605,7 +605,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
     SBezierLoopSet sbls = SBezierLoopSet::From(sbl, spxyz, chordTol,
                                                allClosed, notClosedAt,
                                                openContours);
-    if(sbls.l.n != spxyz->l.n) return;
+    if(sbls.l.Size() != spxyz->l.Size()) return;
 
     // Convert the xyz piecewise linear to uv piecewise linear.
     SPolygon spuv = {};
@@ -625,7 +625,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
     // Fix the contour directions; we do this properly, in uv space, so it
     // works for curved surfaces too (important for STEP export).
     spuv.FixContourDirections();
-    for(i = 0; i < spuv.l.n; i++) {
+    for(i = 0; i < spuv.l.Size(); i++) {
         SContour    *contour = &(spuv.l[i]);
         SBezierLoop *bl = &(sbls.l[i]);
         if(contour->tag) {
@@ -643,7 +643,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
     bool loopsRemaining = true;
     while(loopsRemaining) {
         loopsRemaining = false;
-        for(i = 0; i < sbls.l.n; i++) {
+        for(i = 0; i < sbls.l.Size(); i++) {
             SBezierLoop *loop = &(sbls.l[i]);
             if(loop->tag != OUTER_LOOP) continue;
 
@@ -651,7 +651,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
             // we should do those "inner outer loops" first; otherwise we
             // will steal their holes, since their holes also lie inside this
             // contour.
-            for(j = 0; j < sbls.l.n; j++) {
+            for(j = 0; j < sbls.l.Size(); j++) {
                 SBezierLoop *outer = &(sbls.l[j]);
                 if(i == j) continue;
                 if(outer->tag != OUTER_LOOP) continue;
@@ -661,7 +661,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
                     break;
                 }
             }
-            if(j < sbls.l.n) {
+            if(j < sbls.l.Size()) {
                 // It does, can't do this one yet.
                 continue;
             }
@@ -671,12 +671,12 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
             loop->tag = USED_LOOP;
             outerAndInners.l.Add(loop);
             int auxA = 0;
-            if(loop->l.n > 0) auxA = loop->l[0].auxA;
+            if(loop->l.Size() > 0) auxA = loop->l[0].auxA;
 
-            for(j = 0; j < sbls.l.n; j++) {
+            for(j = 0; j < sbls.l.Size(); j++) {
                 SBezierLoop *inner = &(sbls.l[j]);
                 if(inner->tag != INNER_LOOP) continue;
-                if(inner->l.n < 1) continue;
+                if(inner->l.Size() < 1) continue;
                 if(inner->l[0].auxA != auxA) continue;
 
                 Vector p = spuv.l[j].AnyEdgeMidpoint();
@@ -697,7 +697,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
     // group stuff into closed paths for export when possible, so it's bad
     // to screw up on that stuff. So just add them onto the open curve list.
     // Very ugly, but better than losing curves.
-    for(i = 0; i < sbls.l.n; i++) {
+    for(i = 0; i < sbls.l.Size(); i++) {
         SBezierLoop *loop = &(sbls.l[i]);
         if(loop->tag == USED_LOOP) continue;
 
@@ -745,7 +745,7 @@ SCurve SCurve::FromTransformationOf(SCurve *a, Vector t,
     ret.surfA = a->surfA;
     ret.surfB = a->surfB;
 
-    ret.pts.ReserveMore(a->pts.n);
+    ret.pts.ReserveMore(a->pts.Size());
     for(const SCurvePt &p : a->pts) {
         SCurvePt pp = p;
         if(needScale) {
@@ -793,7 +793,7 @@ SSurface *SCurve::GetSurfaceB(SShell *a, SShell *b) const {
 // stuff in the Booleans. So remove them.
 //-----------------------------------------------------------------------------
 void SCurve::RemoveShortSegments(SSurface *srfA, SSurface *srfB) {
-    if(pts.n <= 2) return;
+    if(pts.Size() <= 2) return;
     pts.ClearTags();
 
     Vector prev = pts[0].p;
@@ -802,7 +802,7 @@ void SCurve::RemoveShortSegments(SSurface *srfA, SSurface *srfB) {
     double tnext = 0;
 
     int i, a;
-    for(i = 1; i < pts.n - 1; i++) {
+    for(i = 1; i < pts.Size() - 1; i++) {
         SCurvePt *sct = &(pts[i]),
                  *scn = &(pts[i+1]);
 

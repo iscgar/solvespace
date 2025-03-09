@@ -445,7 +445,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
     // Clean up: remove overlapping line segments and
     // segments with zero-length projections.
     sel->l.ClearTags();
-    for(int i = 0; i < sel->l.n; ++i) {
+    for(int i = 0; i < sel->l.Size(); ++i) {
         SEdge *sei = &sel->l[i];
         hStyle hsi = { (uint32_t)sei->auxA };
         Style *si = Style::Get(hsi);
@@ -462,7 +462,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
             continue;
         }
 
-        for(int j = i + 1; j < sel->l.n; ++j) {
+        for(int j = i + 1; j < sel->l.Size(); ++j) {
             SEdge *sej = &sel->l[j];
             if(sej->tag != 0) continue;
 
@@ -851,12 +851,12 @@ void SolveSpaceUI::ExportMeshAsStlTo(FILE *f, SMesh *sm) {
     strcpy(str, "STL exported mesh");
     fwrite(str, 1, 80, f);
 
-    uint32_t n = sm->l.n;
+    uint32_t n = sm->l.Size();
     fwrite(&n, 4, 1, f);
 
     double s = SS.exportScale;
     int i;
-    for(i = 0; i < sm->l.n; i++) {
+    for(i = 0; i < sm->l.Size(); i++) {
         STriangle *tr = &(sm->l[i]);
         Vector n = tr->Normal().WithMagnitude(1);
         float w;
@@ -914,7 +914,7 @@ void SolveSpaceUI::ExportMeshAsObjTo(FILE *fObj, FILE *fMtl, SMesh *sm) {
     }
 
     RgbaColor currentColor = {};
-    for(int i = 0; i < sm->l.n; i++) {
+    for(int i = 0; i < sm->l.Size(); i++) {
         const STriangle &t = sm->l[i];
         if(!currentColor.Equals(t.meta.color)) {
             currentColor = t.meta.color;

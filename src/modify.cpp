@@ -530,7 +530,7 @@ hEntity GraphicsWindow::SplitCubic(hEntity he, Vector pinter) {
     // contains the intersection point.
     double t;
     int i, j;
-    for(i = 0; i < sbl.l.n; i++) {
+    for(i = 0; i < sbl.l.Size(); i++) {
         SBezier *sb = &(sbl.l[i]);
         ssassert(sb->deg == 3, "Expected a cubic bezier");
 

@@ -232,7 +232,7 @@ void TextWindow::ShowConfiguration() {
     Printf(false, "%Ba   %@ %% %Fl%Ll%f%D[change]%E; %@ mm, %d triangles",
         SS.chordTol,
         &ScreenChangeChordTolerance, 0, SS.chordTolCalculated,
-        SK.GetGroup(SS.GW.activeGroup)->displayMesh.l.n);
+        SK.GetGroup(SS.GW.activeGroup)->displayMesh.l.Size());
     Printf(false, "%Ft max piecewise linear segments%E");
     Printf(false, "%Ba   %d %Fl%Ll%f[change]%E",
         SS.maxSegments,
