@@ -306,10 +306,6 @@ public:
     void AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
                           SShell *agnstA, SShell *agnstB, SShell *into);
 
-    typedef struct {
-        int     tag;
-        Point2d p;
-    } Inter;
     void WeightControlPoints();
     void UnWeightControlPoints();
     void CopyRowOrCol(bool row, int this_ij, SSurface *src, int src_ij);
@@ -322,7 +318,7 @@ public:
                                bool asSegment, bool trimmed, bool inclTangent);
     void AllPointsIntersectingUntrimmed(Vector a, Vector b,
                                         int *cnt, int *level,
-                                        List<Inter> *l, bool asSegment,
+                                        std::vector<Point2d> *l, bool asSegment,
                                         SSurface *sorig);
 
     void ClosestPointTo(Vector p, Point2d *puv, bool mustConverge=true);
