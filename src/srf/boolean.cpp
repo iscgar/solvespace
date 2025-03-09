@@ -198,8 +198,8 @@ SCurve SCurve::MakeCopySplitAgainst(SShell *agnstA, SShell *agnstB,
 
 void SShell::CopyCurvesSplitAgainst(bool opA, SShell *agnst, SShell *into) {
 #pragma omp parallel for
-    for(int i=0; i<curve.n; i++) {
-        SCurve *sc = &curve[i];
+    for(size_t i=0; i<curve.Size(); i++) {
+        SCurve *sc = &curve.Get(i);
         SCurve scn = sc->MakeCopySplitAgainst(agnst, NULL,
                                 surface.FindById(sc->surfA),
                                 surface.FindById(sc->surfB));
@@ -684,25 +684,23 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
 }
 
 void SShell::CopySurfacesTrimAgainst(SShell *sha, SShell *shb, SShell *into, SSurface::CombineAs type) {
-    std::vector <SSurface> ssn(surface.n);
+    std::vector <SSurface> ssn(surface.Size());
 #pragma omp parallel for
-    for (int i = 0; i < surface.n; i++)
-    {
-        SSurface *ss = &surface[i];
+    for(size_t i = 0; i < surface.Size(); i++) {
+        SSurface *ss = &surface.Get(i);
         ssn[i] = ss->MakeCopyTrimAgainst(this, sha, shb, into, type, i);
     }
 
-    for (int i = 0; i < surface.n; i++)
-    {
-        surface[i].newH = into->surface.AddAndAssignId(&ssn[i]);
+    for(size_t i = 0; i < surface.Size(); i++) {
+        surface.Get(i).newH = into->surface.AddAndAssignId(&ssn[i]);
     }
-    I += surface.n;
+    I += surface.Size();
 }
 
 void SShell::MakeIntersectionCurvesAgainst(SShell *agnst, SShell *into) {
 #pragma omp parallel for
-    for(int i = 0; i< surface.n; i++) {
-        SSurface *sa = &surface[i];
+    for(size_t i = 0; i < surface.Size(); i++) {
+        SSurface *sa = &surface.Get(i);
 
         for(SSurface &sb : agnst->surface){
             // Intersect every surface from our shell against every surface
@@ -748,7 +746,7 @@ void SShell::MakeFromAssemblyOf(SShell *a, SShell *b) {
 
     // First, copy over all the curves. Note which shell (a or b) each curve
     // came from, but assign it a new ID.
-    curve.ReserveMore(a->curve.n + b->curve.n);
+    curve.ReserveMore(a->curve.Size() + b->curve.Size());
     SCurve cn;
     for(i = 0; i < 2; i++) {
         ab = (i == 0) ? a : b;
@@ -762,7 +760,7 @@ void SShell::MakeFromAssemblyOf(SShell *a, SShell *b) {
     }
 
     // Likewise copy over all the surfaces.
-    surface.ReserveMore(a->surface.n + b->surface.n);
+    surface.ReserveMore(a->surface.Size() + b->surface.Size());
     SSurface sn;
     for(i = 0; i < 2; i++) {
         ab = (i == 0) ? a : b;
@@ -837,8 +835,8 @@ void SShell::MakeFromBoolean(SShell *a, SShell *b, SSurface::CombineAs type) {
 //-----------------------------------------------------------------------------
 void SShell::MakeClassifyingBsps(SShell *useCurvesFrom) {
 #pragma omp parallel for
-    for(int i = 0; i<surface.n; i++) {
-        surface[i].MakeClassifyingBsp(this, useCurvesFrom);
+    for(size_t i = 0; i<surface.Size(); i++) {
+        surface.Get(i).MakeClassifyingBsp(this, useCurvesFrom);
     }
 }
 

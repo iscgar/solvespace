@@ -1083,8 +1083,8 @@ void SolveSpaceUI::ShowNakedEdges(bool reportOnlyWhenNotOkay) {
         _("The mesh is watertight (okay, valid).");
 
     std::string cntMsg = ssprintf(
-        _("\n\nThe model contains %d triangles, from %d surfaces."),
-        g->displayMesh.l.Size(), g->runningShell.surface.n);
+        _("\n\nThe model contains %d triangles, from %zu surfaces."),
+        g->displayMesh.l.Size(), g->runningShell.surface.Size());
 
     if(SS.nakedEdges.l.IsEmpty()) {
         Message(_("%s\n\n%s\n\nZero problematic edges, good.%s"),

@@ -204,10 +204,9 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
         ;
 
     // Don't lose our numerical guesses when we regenerate.
-    IdList<Param,hParam> prev = {};
-    SK.param.MoveSelfInto(&prev);
-    SK.param.ReserveMore(prev.n);
-    int oldEntityCount = SK.entity.n;
+    IdList<Param> prev(std::move(SK.param));
+    SK.param.ReserveMore(prev.Size());
+    const size_t oldEntityCount = SK.entity.Size();
     SK.entity.Clear();
     SK.entity.ReserveMore(oldEntityCount);
 
@@ -375,8 +374,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
 
 pruned:
     // Restore the numerical guesses
-    SK.param.Clear();
-    prev.MoveSelfInto(&(SK.param));
+    SK.param = std::move(prev);
     // Try again
     GenerateAll(type, andFindFree, genForBBox);
 }
