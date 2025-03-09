@@ -422,7 +422,7 @@ void SolveSpaceUI::UpdateCenterOfMass() {
 }
 
 void SolveSpaceUI::MarkDraggedParams() {
-    sys.dragged.Clear();
+    sys.dragged.clear();
 
     for(size_t i = 0; i <= SS.GW.pending.points.size(); i++) {
         hEntity hp;
@@ -442,14 +442,14 @@ void SolveSpaceUI::MarkDraggedParams() {
                 case Entity::Type::POINT_N_TRANS:
                 case Entity::Type::POINT_IN_3D:
                 case Entity::Type::POINT_N_ROT_AXIS_TRANS:
-                    sys.dragged.Add(&(pt->param[0]));
-                    sys.dragged.Add(&(pt->param[1]));
-                    sys.dragged.Add(&(pt->param[2]));
+                    sys.dragged.push_back(pt->param[0]);
+                    sys.dragged.push_back(pt->param[1]);
+                    sys.dragged.push_back(pt->param[2]);
                     break;
 
                 case Entity::Type::POINT_IN_2D:
-                    sys.dragged.Add(&(pt->param[0]));
-                    sys.dragged.Add(&(pt->param[1]));
+                    sys.dragged.push_back(pt->param[0]);
+                    sys.dragged.push_back(pt->param[1]);
                     break;
 
                 default: // Only the entities above can be dragged.
@@ -463,7 +463,7 @@ void SolveSpaceUI::MarkDraggedParams() {
             Entity *dist = SK.GetEntity(circ->distance);
             switch(dist->type) {
                 case Entity::Type::DISTANCE:
-                    sys.dragged.Add(&(dist->param[0]));
+                    sys.dragged.push_back(dist->param[0]);
                     break;
 
                 default: // Only the entities above can be dragged.
@@ -476,10 +476,10 @@ void SolveSpaceUI::MarkDraggedParams() {
         if(norm) {
             switch(norm->type) {
                 case Entity::Type::NORMAL_IN_3D:
-                    sys.dragged.Add(&(norm->param[0]));
-                    sys.dragged.Add(&(norm->param[1]));
-                    sys.dragged.Add(&(norm->param[2]));
-                    sys.dragged.Add(&(norm->param[3]));
+                    sys.dragged.push_back(norm->param[0]);
+                    sys.dragged.push_back(norm->param[1]);
+                    sys.dragged.push_back(norm->param[2]);
+                    sys.dragged.push_back(norm->param[3]);
                     break;
 
                 default: // Only the entities above can be dragged.
