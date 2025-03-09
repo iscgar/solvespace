@@ -253,18 +253,17 @@ void Group::GenerateShellAndMesh() {
         }
 
         for(const SBezierLoopSet &sbls : src->bezierLoops.l) {
-            int is = thisShell.surface.n;
+            const size_t is = thisShell.surface.Size();
             // Extrude this outer contour (plus its inner contours, if present)
             thisShell.MakeFromExtrusionOf(&sbls, tbot, ttop, color);
 
             // And for any plane faces, annotate the model with the entity for
             // that face, so that the user can select them with the mouse.
             Vector onOrig = sbls.point;
-            int i;
             // Not using range-for here because we're starting at a different place and using
             // indices for meaning.
-            for(i = is; i < thisShell.surface.n; i++) {
-                SSurface *ss = &(thisShell.surface[i]);
+            for(size_t i = is; i < thisShell.surface.Size(); i++) {
+                SSurface *ss = &thisShell.surface.Get(i);
                 hEntity face = Entity::NO_ENTITY;
 
                 Vector p = ss->PointAt(0, 0),

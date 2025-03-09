@@ -63,9 +63,9 @@ public:
         void Clear() { points.Clear(); }
     };
 
-    IdList<SEdgeListItem,  hStroke> lines;
-    IdList<SMeshListItem,  hFill>   meshes;
-    IdList<SPointListItem, hStroke> points;
+    IdList<SEdgeListItem>  lines;
+    IdList<SMeshListItem>  meshes;
+    IdList<SPointListItem> points;
 
     TextureCache            pixmapCache;
     std::shared_ptr<Pixmap> masks[3];
@@ -958,8 +958,8 @@ public:
 
     OpenGl3Renderer *renderer;
 
-    IdList<EdgeBuffer,  hStroke> edgeBuffer;
-    IdList<PointBuffer, hStroke> pointBuffer;
+    IdList<EdgeBuffer>  edgeBuffer;
+    IdList<PointBuffer> pointBuffer;
 
     std::multiset<std::shared_ptr<DrawCall>, CompareDrawCall> drawCalls;
 

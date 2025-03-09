@@ -926,14 +926,14 @@ void EntityBase::RectGetPointsExprs(ExprVector *eb, ExprVector *ec) const {
     *ec = eo.Plus(eu).Plus(ev);
 }
 
-void EntityBase::AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index) const {
+void EntityBase::AddEq(IdList<Equation> *l, Expr *expr, int index) const {
     Equation eq;
     eq.e = expr;
     eq.h = h.equation(index);
     l->Add(&eq);
 }
 
-void EntityBase::GenerateEquations(IdList<Equation,hEquation> *l) const {
+void EntityBase::GenerateEquations(IdList<Equation> *l) const {
     switch(type) {
         case Type::NORMAL_IN_3D: {
             ExprQuaternion q = NormalGetExprs();
