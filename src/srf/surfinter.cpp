@@ -88,7 +88,7 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
     if(sb->deg == 2) {
         dbp(" ");
         const SCurvePt *prev = NULL;
-        dbp("split.pts.n = %d", split.pts.n);
+        dbp("split.pts.n = %d", split.pts.Size());
         for(const SCurvePt &v : split.pts) {
             if(prev) {
                 Vector e = (prev->p).Minus(v.p).WithMagnitude(0);
@@ -397,7 +397,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             el.Clear();
         }
 
-        while(spl.l.n >= 2) {
+        while(spl.l.Size() >= 2) {
             SCurve sc = {};
             sc.surfA = h;
             sc.surfB = b->h;
