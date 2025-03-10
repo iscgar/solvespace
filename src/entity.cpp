@@ -930,7 +930,7 @@ void EntityBase::AddEq(IdList<Equation> *l, Expr *expr, int index) const {
     Equation eq;
     eq.e = expr;
     eq.h = h.equation(index);
-    l->Add(&eq);
+    l->Add(eq);
 }
 
 void EntityBase::GenerateEquations(IdList<Equation> *l) const {

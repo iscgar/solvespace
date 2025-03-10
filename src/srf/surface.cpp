@@ -174,7 +174,7 @@ SSurface SSurface::FromTransformationOf(SSurface *a, Vector t, Quaternion q, dou
                 n.start  = n.start.Plus(t);
                 n.finish = n.finish.Plus(t);
             }
-            ret.trim.Add(&n);
+            ret.trim.Add(n);
         }
     }
 
@@ -329,7 +329,7 @@ void SSurface::MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *
             SBezier keep_bef, junk_aft;
             keep_aft.SplitAt(tf, &keep_bef, &junk_aft);
 
-            sbl->l.Add(&keep_bef);
+            sbl->l.Add(keep_bef);
         } else if(sbl && !sel && !sc->isExact) {
             // We must approximate this trim curve, as piecewise cubic sections.
             SSurface *srfA = shell->surface.FindById(sc->surfA);
@@ -391,7 +391,7 @@ void SSurface::MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *
                         continue;
                     } else {
                         // Okay, so use this piece and break.
-                        sbl->l.Add(&sb);
+                        sbl->l.Add(sb);
                         break;
                     }
                 }

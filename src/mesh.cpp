@@ -31,9 +31,9 @@ void SMesh::AddTriangle(STriMeta meta, Vector a, Vector b, Vector c) {
     t.a = a;
     t.b = b;
     t.c = c;
-    AddTriangle(&t);
+    AddTriangle(t);
 }
-void SMesh::AddTriangle(const STriangle *st) {
+void SMesh::AddTriangle(const STriangle &st) {
     l.Add(st);
 }
 
@@ -110,54 +110,52 @@ void SMesh::Simplify(int start) {
 
     STriMeta meta = l[start].meta;
 
-    STriangle *tout = new STriangle[maxTriangles];
-    int toutc = 0;
+    std::vector<STriangle> tout;
+    tout.reserve(maxTriangles);
 
     Vector n = Vector::From(0, 0, 0);
-    Vector *conv = new Vector[maxTriangles * 3];
+    std::vector<Vector> conv(maxTriangles * 3);
     int convc = 0;
 
     int start0 = start;
 
-    int i, j;
-    for(i = start; i < l.Size(); i++) {
-        STriangle *tr = &(l[i]);
-        if(tr->MinAltitude() < LENGTH_EPS) {
-            tr->tag = 1;
+    for(STriangle &tr : l) {
+        if(tr.MinAltitude() < LENGTH_EPS) {
+            tr.tag = 1;
         } else {
-            tr->tag = 0;
+            tr.tag = 0;
         }
     }
 
     for(;;) {
-        bool didAdd;
         convc = 0;
-        for(i = start; i < l.Size(); i++) {
-            STriangle *tr = &(l[i]);
-            if(tr->tag) continue;
-
-            tr->tag = 1;
-            n = (tr->Normal()).WithMagnitude(1);
-            conv[convc++] = tr->a;
-            conv[convc++] = tr->b;
-            conv[convc++] = tr->c;
-
-            start = i+1;
+        auto tr = std::find_if(l.begin()+start, l.end(), [](const STriangle &tr) {
+            return tr.tag == 0;
+        });
+        if(tr == l.end()) {
             break;
         }
-        if(i >= l.Size()) break;
 
+        tr->tag = 1;
+        n = (tr->Normal()).WithMagnitude(1);
+        conv[convc++] = tr->a;
+        conv[convc++] = tr->b;
+        conv[convc++] = tr->c;
+
+        start = (int)std::distance(l.begin(), tr) + 1;
+
+        bool didAdd;
         do {
             didAdd = false;
 
-            for(j = 0; j < convc; j++) {
+            for(int j = 0; j < convc; j++) {
                 Vector a = conv[WRAP((j-1), convc)],
                        b = conv[j],
                        d = conv[WRAP((j+1), convc)],
                        e = conv[WRAP((j+2), convc)];
 
                 Vector c;
-                for(i = start; i < l.Size(); i++) {
+                for(int i = start; i < l.Size(); i++) {
                     STriangle *tr = &(l[i]);
                     if(tr->tag) continue;
 
@@ -186,7 +184,7 @@ void SMesh::Simplify(int start) {
                     if(fabs(bDot) < LENGTH_EPS && fabs(dDot) < LENGTH_EPS) {
                         conv[WRAP((j+1), convc)] = c;
                         // and remove the vertex at j, which is a dup
-                        std::move(conv+j+1, conv+convc, conv+j);
+                        std::move(conv.data()+j+1, conv.data()+convc, conv.data()+j);
                         convc--;
                     } else if(fabs(bDot) < LENGTH_EPS && dDot > 0) {
                         conv[j] = c;
@@ -194,7 +192,7 @@ void SMesh::Simplify(int start) {
                         conv[WRAP((j+1), convc)] = c;
                     } else if(bDot > 0 && dDot > 0) {
                         // conv[j] is unchanged, conv[j+1] goes to [j+2]
-                        std::move_backward(conv+j+1, conv+convc, conv+convc+1);
+                        std::move_backward(conv.data()+j+1, conv.data()+convc, conv.data()+convc+1);
                         conv[j+1] = c;
                         convc++;
                     } else {
@@ -210,7 +208,7 @@ void SMesh::Simplify(int start) {
 
         // I need to debug why this is required; sometimes the above code
         // still generates a convex polygon
-        for(i = 0; i < convc; i++) {
+        for(int i = 0; i < convc; i++) {
             Vector a = conv[WRAP((i-1), convc)],
                    b = conv[i],
                    c = conv[WRAP((i+1), convc)];
@@ -222,36 +220,31 @@ void SMesh::Simplify(int start) {
             if(bDot < 0) return; // XXX, shouldn't happen
         }
 
-        for(i = 0; i < convc - 2; i++) {
+        for(int i = 0; i < convc - 2; i++) {
             STriangle tr = STriangle::From(meta, conv[0], conv[i+1], conv[i+2]);
             if(tr.MinAltitude() > LENGTH_EPS) {
-                tout[toutc++] = tr;
+                tout.push_back(tr);
             }
         }
     }
 
     l.RemoveLast(l.Size() - start0);
-    for(i = 0; i < toutc; i++) {
-        AddTriangle(&(tout[i]));
+    for(const STriangle &tr : tout) {
+        AddTriangle(tr);
     }
-    delete[] tout;
-    delete[] conv;
 }
 
-void SMesh::AddAgainstBsp(SMesh *srcm, SBsp3 *bsp3) {
-    int i;
-
-    for(i = 0; i < srcm->l.Size(); i++) {
-        STriangle *st = &(srcm->l[i]);
+void SMesh::AddAgainstBsp(const SMesh *srcm, SBsp3 *bsp3) {
+    for(const STriangle &st : srcm->l) {
         int pn = l.Size();
         atLeastOneDiscarded = false;
-        SBsp3::InsertOrCreate(bsp3, st, this);
+        SBsp3::InsertOrCreate(bsp3, &st, this);
         if(!atLeastOneDiscarded && (l.Size() != (pn+1))) {
             l.RemoveLast(l.Size() - pn);
             if(flipNormal) {
-                AddTriangle(st->meta, st->c, st->b, st->a);
+                AddTriangle(st.meta, st.c, st.b, st.a);
             } else {
-                AddTriangle(st->meta, st->a, st->b, st->c);
+                AddTriangle(st.meta, st.a, st.b, st.c);
             }
         }
         if(l.Size() - pn > 1) {
@@ -260,7 +253,7 @@ void SMesh::AddAgainstBsp(SMesh *srcm, SBsp3 *bsp3) {
     }
 }
 
-void SMesh::MakeFromUnionOf(SMesh *a, SMesh *b) {
+void SMesh::MakeFromUnionOf(const SMesh *a, const SMesh *b) {
     SBsp3 *bspa = SBsp3::FromMesh(a);
     SBsp3 *bspb = SBsp3::FromMesh(b);
 
@@ -274,7 +267,7 @@ void SMesh::MakeFromUnionOf(SMesh *a, SMesh *b) {
     AddAgainstBsp(a, bspb);
 }
 
-void SMesh::MakeFromDifferenceOf(SMesh *a, SMesh *b) {
+void SMesh::MakeFromDifferenceOf(const SMesh *a, const SMesh *b) {
     SBsp3 *bspa = SBsp3::FromMesh(a);
     SBsp3 *bspb = SBsp3::FromMesh(b);
 
@@ -289,7 +282,7 @@ void SMesh::MakeFromDifferenceOf(SMesh *a, SMesh *b) {
     AddAgainstBsp(a, bspb);
 }
 
-void SMesh::MakeFromIntersectionOf(SMesh *a, SMesh *b) {
+void SMesh::MakeFromIntersectionOf(const SMesh *a, const SMesh *b) {
     SBsp3 *bspa = SBsp3::FromMesh(a);
     SBsp3 *bspb = SBsp3::FromMesh(b);
 
@@ -303,19 +296,19 @@ void SMesh::MakeFromIntersectionOf(SMesh *a, SMesh *b) {
     AddAgainstBsp(b, bspa);
 }
 
-void SMesh::MakeFromCopyOf(SMesh *a) {
+void SMesh::MakeFromCopyOf(const SMesh *a) {
     ssassert(this != a, "Can't make from copy of self");
-    for(int i = 0; i < a->l.Size(); i++) {
-        AddTriangle(&(a->l[i]));
+    for(const STriangle &tr : a->l) {
+        AddTriangle(tr);
     }
 }
 
-void SMesh::MakeFromAssemblyOf(SMesh *a, SMesh *b) {
+void SMesh::MakeFromAssemblyOf(const SMesh *a, const SMesh *b) {
     MakeFromCopyOf(a);
     MakeFromCopyOf(b);
 }
 
-void SMesh::MakeFromTransformationOf(SMesh *a, Vector trans,
+void SMesh::MakeFromTransformationOf(const SMesh *a, Vector trans,
                                      Quaternion q, double scale)
 {
     for(const STriangle &tr : a->l) {
@@ -330,7 +323,7 @@ void SMesh::MakeFromTransformationOf(SMesh *a, Vector trans,
         tt.a = (q.Rotate(tt.a)).Plus(trans);
         tt.b = (q.Rotate(tt.b)).Plus(trans);
         tt.c = (q.Rotate(tt.c)).Plus(trans);
-        AddTriangle(&tt);
+        AddTriangle(tt);
     }
 }
 
@@ -545,7 +538,7 @@ void SKdNode::MakeMeshInto(SMesh *m) const {
     for(ll = tris; ll; ll = ll->next) {
         if(ll->tri->tag) continue;
 
-        m->AddTriangle(ll->tri);
+        m->AddTriangle(*ll->tri);
         ll->tri->tag = 1;
     }
 }
@@ -623,19 +616,19 @@ void SKdNode::SnapToVertex(Vector v, SMesh *extras) {
 
             if(v.OnLineSegment(tr->a, tr->b)) {
                 STriangle nt = STriangle::From(tr->meta, tr->a, v, tr->c);
-                extras->AddTriangle(&nt);
+                extras->AddTriangle(nt);
                 tr->a = v;
                 continue;
             }
             if(v.OnLineSegment(tr->b, tr->c)) {
                 STriangle nt = STriangle::From(tr->meta, tr->b, v, tr->a);
-                extras->AddTriangle(&nt);
+                extras->AddTriangle(nt);
                 tr->b = v;
                 continue;
             }
             if(v.OnLineSegment(tr->c, tr->a)) {
                 STriangle nt = STriangle::From(tr->meta, tr->c, v, tr->b);
-                extras->AddTriangle(&nt);
+                extras->AddTriangle(nt);
                 tr->c = v;
                 continue;
             }
@@ -1113,7 +1106,7 @@ void SOutlineList::AddEdge(Vector a, Vector b, Vector nl, Vector nr, int tag) {
     so.nl  = nl;
     so.nr  = nr;
     so.tag = tag;
-    l.Add(&so);
+    l.Add(so);
 }
 
 void SOutlineList::ListTaggedInto(SEdgeList *el, int auxA, int auxB) {
@@ -1123,9 +1116,9 @@ void SOutlineList::ListTaggedInto(SEdgeList *el, int auxA, int auxB) {
     }
 }
 
-void SOutlineList::MakeFromCopyOf(SOutlineList *sol) {
+void SOutlineList::MakeFromCopyOf(const SOutlineList *sol) {
     for(const SOutline &so : sol->l) {
-        l.Add(&so);
+        l.Add(so);
     }
 }
 
