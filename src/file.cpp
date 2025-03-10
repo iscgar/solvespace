@@ -428,6 +428,7 @@ void SolveSpaceUI::SaveUsingTable(const Platform::Path &filename, const char *tn
         if(fmt == 'u' && p->u() == 0)             continue;
         if(fmt == 'f' && EXACT(p->f() == 0.0))    continue;
         if(fmt == 'x' && p->x() == 0)             continue;
+        if(fmt == 'b' && p->b() == false)         continue;
 
         fprintf(fh, "%s.%s=", tname, key);
         switch(fmt) {
