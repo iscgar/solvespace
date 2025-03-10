@@ -353,35 +353,27 @@ class IdList {
                   "Invalid handle value type");
 
     struct Storage {
-        Storage() {
-            set_used(false);
-        }
+        Storage() : used_(false) {}
 
-        explicit Storage(const T &t) {
+        explicit Storage(const T &t) : used_(true) {
             new(&data) T(t);
-            set_used(true);
         }
 
-        explicit Storage(T &&t) {
+        explicit Storage(T &&t) : used_(true) {
             new(&data) T(std::forward<T>(t));
-            set_used(true);
         }
 
-        Storage(const Storage &other) {
-            const bool used = other.used();
-            if(used) {
+        Storage(const Storage &other) : used_(other.used()) {
+            if(other.used()) {
                 new(&data) T(*other.get());
             }
-            set_used(used);
         }
 
-        Storage(Storage &&other) noexcept(noexcept(T(std::move(std::declval<T>())))) {
-            const bool used = other.used();
-            if(used) {
+        Storage(Storage &&other) noexcept(noexcept(T(std::move(std::declval<T>())))) : used_(other.used()) {
+            if(other.used()) {
                 new(&data) T(std::move(*other.get()));
                 other.reset();
             }
-            set_used(used);
         }
 
         ~Storage() {
@@ -399,13 +391,13 @@ class IdList {
         }
 
         bool used() const noexcept {
-            return reinterpret_cast<const Data *>(&data)->used;
+            return used_;
         }
 
         void reset() {
             if(used()) {
                 get()->~T();
-                set_used(false);
+                used_ = false;
             }
         }
 
@@ -414,7 +406,7 @@ class IdList {
                 get()->~T();
             }
             new(&data) T(t);
-            set_used(true);
+            used_ = true;
         }
 
         void reset(T &&t) {
@@ -422,7 +414,7 @@ class IdList {
                 get()->~T();
             }
             new(&data) T(std::forward<T>(t));
-            set_used(true);
+            used_ = true;
         }
 
         T *get() noexcept {
@@ -433,17 +425,8 @@ class IdList {
         }
 
     private:
-        void set_used(bool used) {
-            reinterpret_cast<Data *>(&data)->used = used;
-        }
-
-        // Use T as base in order to allow the use of padding bytes in T
-        // for the storage of the used bool flag.
-        // TODO: if a class is final this would cause a compilation error.
-        // With C++14 we can do this conditionally with std::is_final, but
-        // unfortunately not with C++11.
-        struct Data : T { bool used; };
-        typename std::aligned_storage<sizeof(Data), alignof(Data)>::type data;
+        typename std::aligned_storage<sizeof(T), alignof(T)>::type data;
+        bool used_;
     };
 
     struct Target { uint32_t value; };
@@ -594,11 +577,15 @@ public:
     }
 
     T *FindByIdNoOops(Handle h) noexcept {
-        const size_t idx = FindIndexById(h);
+        const size_t idx = FindInsertionPoint(h);
         if(idx >= Size()) {
             return nullptr;
         }
-        return GetTarget(targets[idx]);
+        T *t = GetTarget(targets[idx]);
+        if(t->h.v != h.v) {
+            return nullptr;
+        }
+        return t;
     }
 
     T &Get(size_t i) {
@@ -614,6 +601,8 @@ public:
     iterator end() noexcept { return iterator(this, Size()); }
     const_iterator begin() const noexcept { return const_iterator(this); }
     const_iterator end() const noexcept { return const_iterator(this, Size()); }
+    const_iterator cbegin() const noexcept { return const_iterator(this); }
+    const_iterator cend() const noexcept { return const_iterator(this, Size()); }
 
     void ClearTags() noexcept {
         for(T &elt : *this) { elt.tag = 0; }
@@ -656,8 +645,8 @@ public:
     }
 
     void RemoveById(Handle h) {
-        const size_t idx = FindIndexById(h);
-        if(idx < Size()) {
+        const size_t idx = FindInsertionPoint(h);
+        if(idx < Size() && GetTarget(targets[idx])->h.v == h.v) {
             RemoveAt(idx);
         }
     }
@@ -675,14 +664,6 @@ private:
 
     const T *GetTarget(Target target) const noexcept {
         return elemstore[target.value].get();
-    }
-
-    size_t FindIndexById(Handle h) const {
-        const size_t idx = FindInsertionPoint(h);
-        if(idx >= Size() || GetTarget(targets[idx])->h.v != h.v) {
-            return Size();
-        }
-        return idx;
     }
 
     size_t FindInsertionPoint(Handle h) const {
@@ -709,9 +690,11 @@ private:
             elemstore.emplace_back();
         }
         const Target target = targets.back();
-        if(idx < used || used < targets.size() - 1) {
+        if(idx < used) {
             targets.pop_back();
             targets.insert(targets.begin() + idx, target);
+        } else if(used < targets.size() - 1) {
+            std::swap(targets[used], targets.back());
         }
         ++used;
         return target;
