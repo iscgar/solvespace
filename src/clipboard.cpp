@@ -195,8 +195,13 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
         SS.MarkGroupDirty(r->group);
         bool hasDistance;
         int i, pts;
-        EntReqTable::GetRequestInfo(r->type, r->extraPoints,
-            NULL, &pts, NULL, &hasDistance);
+        if (!EntReqTable::GetRequestInfo(r->type, r->extraPoints,
+                NULL, &pts, NULL, &hasDistance)) {
+            // Unreachable in practice, because we're matching on `r->type`,
+            // so we'll always find this request, but GCC complains about it,
+            // so add an assertion just in case
+            ssassert(false, "Couldn't get request info, but this should not happen");
+        }
         for(i = 0; i < pts; i++) {
             Vector pt = cr->point[i];
             // We need the reflection to occur within the workplane; it may
