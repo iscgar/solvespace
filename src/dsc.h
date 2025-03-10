@@ -353,27 +353,35 @@ class IdList {
                   "Invalid handle value type");
 
     struct Storage {
-        Storage() : used_(false) {}
+        Storage() {
+            set_used(false);
+        }
 
-        explicit Storage(const T &t) : used_(true) {
+        explicit Storage(const T &t) {
             new(&data) T(t);
+            set_used(true);
         }
 
-        explicit Storage(T &&t) : used_(true) {
+        explicit Storage(T &&t) {
             new(&data) T(std::forward<T>(t));
+            set_used(true);
         }
 
-        Storage(const Storage &other) : used_(other.used()) {
-            if(other.used()) {
+        Storage(const Storage &other) {
+            const bool used = other.used();
+            if(used) {
                 new(&data) T(*other.get());
             }
+            set_used(used);
         }
 
-        Storage(Storage &&other) noexcept(noexcept(T(std::move(std::declval<T>())))) : used_(other.used()) {
-            if(other.used()) {
+        Storage(Storage &&other) noexcept(noexcept(T(std::move(std::declval<T>())))) {
+            const bool used = other.used();
+            if(used) {
                 new(&data) T(std::move(*other.get()));
                 other.reset();
             }
+            set_used(used);
         }
 
         ~Storage() {
@@ -391,13 +399,13 @@ class IdList {
         }
 
         bool used() const noexcept {
-            return used_;
+            return reinterpret_cast<const Data *>(&data)->used;
         }
 
         void reset() {
             if(used()) {
                 get()->~T();
-                used_ = false;
+                set_used(false);
             }
         }
 
@@ -406,7 +414,7 @@ class IdList {
                 get()->~T();
             }
             new(&data) T(t);
-            used_ = true;
+            set_used(true);
         }
 
         void reset(T &&t) {
@@ -414,7 +422,7 @@ class IdList {
                 get()->~T();
             }
             new(&data) T(std::forward<T>(t));
-            used_ = true;
+            set_used(true);
         }
 
         T *get() noexcept {
@@ -425,8 +433,17 @@ class IdList {
         }
 
     private:
-        typename std::aligned_storage<sizeof(T), alignof(T)>::type data;
-        bool used_;
+        void set_used(bool used) {
+            reinterpret_cast<Data *>(&data)->used = used;
+        }
+
+        // Use T as base in order to allow the use of padding bytes in T
+        // for the storage of the used bool flag.
+        // TODO: if a class is final this would cause a compilation error.
+        // With C++14 we can do this conditionally with std::is_final, but
+        // unfortunately not with C++11.
+        struct Data : T { bool used; };
+        typename std::aligned_storage<sizeof(Data), alignof(Data)>::type data;
     };
 
     struct Target { uint32_t value; };
