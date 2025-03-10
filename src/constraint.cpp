@@ -117,11 +117,12 @@ hConstraint Constraint::TryConstrain(Constraint::Type type, hEntity ptA, hEntity
     // There are two cases where the constraint is clearly redundant:
     //   * If the group wasn't overconstrained and now it is;
     //   * If the group was overconstrained, and adding the constraint doesn't change rank at all.
-    if((howBefore == SolveResult::OKAY && howAfter == SolveResult::REDUNDANT_OKAY) ||
-       (howBefore == SolveResult::REDUNDANT_OKAY && howAfter == SolveResult::REDUNDANT_OKAY &&
-            rankBefore == rankAfter)) {
-        SK.constraint.RemoveById(hc);
-        hc = {};
+    if(howAfter == SolveResult::REDUNDANT_OKAY) {
+        if((howBefore == SolveResult::OKAY) ||
+                (howBefore == SolveResult::REDUNDANT_OKAY && rankBefore == rankAfter)) {
+            SK.constraint.RemoveById(hc);
+            hc = {};
+        }
     }
     return hc;
 }
