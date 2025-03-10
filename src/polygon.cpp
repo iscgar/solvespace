@@ -220,7 +220,7 @@ void SEdgeList::AddEdge(Vector a, Vector b, int auxA, int auxB, int tag) {
     e.b = b;
     e.auxA = auxA;
     e.auxB = auxB;
-    l.Add(&e);
+    l.Add(e);
 }
 
 bool SEdgeList::AssembleContour(Vector first, Vector last, SContour *dest,
@@ -538,13 +538,13 @@ void SPointList::IncrementTagFor(Vector pt) {
     SPoint pa;
     pa.p = pt;
     pa.tag = 1;
-    l.Add(&pa);
+    l.Add(pa);
 }
 
 void SPointList::Add(Vector pt) {
     SPoint p = {};
     p.p = pt;
-    l.Add(&p);
+    l.Add(p);
 }
 
 void SContour::AddPoint(Vector p) {
@@ -552,7 +552,7 @@ void SContour::AddPoint(Vector p) {
     sp.tag = 0;
     sp.p = p;
 
-    l.Add(&sp);
+    l.Add(sp);
 }
 
 void SContour::MakeEdgesInto(SEdgeList *el) const {
@@ -651,24 +651,21 @@ void SContour::Reverse() {
     l.Reverse();
 }
 
-
 void SPolygon::Clear() {
-    int i;
-    for(i = 0; i < l.Size(); i++) {
-        (l[i]).l.Clear();
+    for(SContour &sc : l) {
+        sc.l.Clear();
     }
     l.Clear();
 }
 
 void SPolygon::AddEmptyContour() {
     SContour c = {};
-    l.Add(&c);
+    l.Add(std::move(c));
 }
 
 void SPolygon::MakeEdgesInto(SEdgeList *el) const {
-    int i;
-    for(i = 0; i < l.Size(); i++) {
-        (l[i]).MakeEdgesInto(el);
+    for(const SContour &sc : l) {
+        sc.MakeEdgesInto(el);
     }
 }
 
@@ -704,8 +701,7 @@ void SPolygon::FixContourDirections() {
     l.ClearTags();
 
     // Outside curve looks counterclockwise, projected against our normal.
-    int i, j;
-    for(i = 0; i < l.Size(); i++) {
+    for(int i = 0; i < l.Size(); i++) {
         SContour *sc = &(l[i]);
         if(sc->l.Size() < 2) continue;
         // The contours may not intersect, but they may share vertices; so
@@ -715,7 +711,7 @@ void SPolygon::FixContourDirections() {
 
         sc->timesEnclosed = 0;
         bool outer = true;
-        for(j = 0; j < l.Size(); j++) {
+        for(int j = 0; j < l.Size(); j++) {
             if(i == j) continue;
             SContour *sct = &(l[j]);
             if(sct->ContainsPointProjdToNormal(normal, pt)) {
@@ -772,7 +768,7 @@ void SPolygon::InverseTransformInto(SPolygon *sp, Vector u, Vector v, Vector n) 
         for(const SPoint &sp : sc.l) {
             tsc.AddPoint(sp.p.DotInToCsys(u, v, n));
         }
-        sp->l.Add(&tsc);
+        sp->l.Add(std::move(tsc));
     }
 }
 
@@ -782,12 +778,10 @@ void SPolygon::InverseTransformInto(SPolygon *sp, Vector u, Vector v, Vector n) 
 // with respect to normal (0, 0, -1).
 //-----------------------------------------------------------------------------
 void SPolygon::OffsetInto(SPolygon *dest, double r) const {
-    int i;
     dest->Clear();
-    for(i = 0; i < l.Size(); i++) {
-        const SContour *sc = &(l[i]);
+    for(const SContour &sc : l) {
         dest->AddEmptyContour();
-        sc->OffsetInto(&(dest->l[dest->l.Size()-1]), r);
+        sc.OffsetInto(dest->l.Last(), r);
     }
 }
 //-----------------------------------------------------------------------------

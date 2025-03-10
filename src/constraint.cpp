@@ -82,8 +82,8 @@ void Constraint::DeleteAllConstraintsFor(Constraint::Type type, hEntity entityA,
 hConstraint Constraint::AddConstraint(Constraint *c, bool rememberForUndo) {
     if(rememberForUndo) SS.UndoRemember();
 
-    hConstraint hc = SK.constraint.AddAndAssignId(c);
-    SK.GetConstraint(hc)->Generate(&SK.param);
+    c->h = SK.constraint.AddAndAssignId(Constraint(*c));
+    SK.GetConstraint(c->h)->Generate(&SK.param);
 
     SS.MarkGroupDirty(c->group);
     SK.GetGroup(c->group)->dofCheckOk = false;

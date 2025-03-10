@@ -184,7 +184,7 @@ void SBezier::MakePwlInto(List<SCurvePt> *l, double chordTol, double max_dt) con
         scpt.tag    = 0;
         scpt.p      = lv[i];
         scpt.vertex = (i == 0) || (i == (lv.size() - 1));
-        l->Add(&scpt);
+        l->Add(scpt);
     }
 }
 void SBezier::MakePwlInto(SContour *sc, double chordTol, double max_dt) const {
@@ -292,7 +292,7 @@ void SBezier::MakeNonrationalCubicInto(SBezierList *bl, double tolerance, int de
     }
 
     if(closeEnough || depth > 3) {
-        bl->l.Add(this);
+        bl->l.Add(*this);
     } else {
         SBezier bef, aft;
         SplitAt(0.5, &bef, &aft);

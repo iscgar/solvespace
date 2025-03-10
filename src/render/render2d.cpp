@@ -43,7 +43,7 @@ bool SurfaceRenderer::DrawBeziers(const SBezierList &bl, hStroke hcs) {
 
     for(const SBezier &b : bl.l) {
         SBezier pb = camera.ProjectBezier(b);
-        beziers[hcs].l.Add(&pb);
+        beziers[hcs].l.Add(pb);
     }
     return true;
 }
@@ -158,7 +158,7 @@ void SurfaceRenderer::DrawMesh(const SMesh &m,
             // This triangle is just for occlusion testing.
             tr.meta.color = {};
         }
-        mesh.AddTriangle(&tr);
+        mesh.AddTriangle(tr);
     }
 }
 
@@ -295,8 +295,7 @@ void SurfaceRenderer::CullOccludedStrokes() {
             cnt++;
         }
 
-        el.l.Clear();
-        el.l = nel.l;
+        el.l = std::move(nel.l);
     }
 }
 
