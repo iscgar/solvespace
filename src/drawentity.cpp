@@ -379,7 +379,7 @@ void Entity::ComputeInterpolatingSpline(SBezierList *sbl, bool periodic) const {
             p2 = p3.Minus(Vector::From(Xx[i], Xy[i], Xz[i]));
         }
         SBezier sb = SBezier::From(p0, p1, p2, p3);
-        sbl->l.Add(&sb);
+        sbl->l.Add(sb);
     }
 }
 
@@ -394,7 +394,7 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) const {
             Vector b = SK.GetEntity(point[1])->PointGetNum();
             sb = SBezier::From(a, b);
             sb.entity = h.v;
-            sbl->l.Add(&sb);
+            sbl->l.Add(sb);
             break;
         }
         case Type::CUBIC:
@@ -462,7 +462,7 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) const {
 
                 SBezier sb = SBezier::From(p0, p1, p2);
                 sb.weight[1] = cos(dtheta/2);
-                sbl->l.Add(&sb);
+                sbl->l.Add(sb);
             }
             break;
         }
@@ -763,7 +763,7 @@ void Entity::Draw(DrawAs how, Canvas *canvas) {
                 explodeOffset = ExplodeOffset();
                 for(const SBezier& b : beziers->l) {
                     SBezier offset = b.TransformedBy(explodeOffset, Quaternion::IDENTITY, 1.0);
-                    offsetBeziers.l.Add(&offset);
+                    offsetBeziers.l.Add(offset);
                 }
                 beziers = &offsetBeziers;
             }

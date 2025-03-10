@@ -805,15 +805,15 @@ hRequest GraphicsWindow::AddRequest(Request::Type type, bool rememberForUndo) {
     }
     r.workplane = ActiveWorkplane();
     r.type = type;
-    SK.request.AddAndAssignId(&r);
+    hRequest hr = SK.request.AddAndAssignId(std::move(r));
 
     // We must regenerate the parameters, so that the code that tries to
     // place this request's entities where the mouse is can do so. But
     // we mustn't try to solve until reasonable values have been supplied
     // for these new parameters, or else we'll get a numerical blowup.
-    r.Generate(&SK.entity, &SK.param);
-    SS.MarkGroupDirty(r.group);
-    return r.h;
+    SK.GetRequest(hr)->Generate(&SK.entity, &SK.param);
+    SS.MarkGroupDirty(activeGroup);
+    return hr;
 }
 
 Vector GraphicsWindow::SnapToEntityByScreenPoint(Point2d pp, hEntity he) {

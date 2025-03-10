@@ -159,8 +159,8 @@ void Request::Generate(IdList<Entity> *entity,
             p.param[0] = AddParam(param, h.param(16 + 3*i + 0));
             p.param[1] = AddParam(param, h.param(16 + 3*i + 1));
         }
-        entity->Add(&p);
         e.point[i] = p.h;
+        entity->Add(std::move(p));
     }
     if(hasNormal) {
         Entity n = {};
@@ -184,8 +184,8 @@ void Request::Generate(IdList<Entity> *entity,
         // The point determines where the normal gets displayed on-screen;
         // it's entirely cosmetic.
         n.point[0] = e.point[0];
-        entity->Add(&n);
         e.normal = n.h;
+        entity->Add(std::move(n));
     }
     if(hasDistance) {
         Entity d = {};
@@ -195,11 +195,11 @@ void Request::Generate(IdList<Entity> *entity,
         d.style = style;
         d.type = Entity::Type::DISTANCE;
         d.param[0] = AddParam(param, h.param(64));
-        entity->Add(&d);
         e.distance = d.h;
+        entity->Add(std::move(d));
     }
 
-    if(et != (Entity::Type)0) entity->Add(&e);
+    if(et != (Entity::Type)0) entity->Add(std::move(e));
 }
 
 std::string Request::DescriptionString() const {
@@ -242,7 +242,7 @@ int Request::IndexOfPoint(hEntity he) const {
 hParam Request::AddParam(IdList<Param> *param, hParam hp) {
     Param pa = {};
     pa.h = hp;
-    param->Add(&pa);
+    param->Add(pa);
     return hp;
 }
 

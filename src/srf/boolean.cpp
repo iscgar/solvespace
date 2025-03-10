@@ -75,9 +75,8 @@ static void FindVertsOnCurve(std::vector<SInter> *l, const SCurve *curve, SShell
 SCurve SCurve::MakeCopySplitAgainst(SShell *agnstA, SShell *agnstB,
                                     SSurface *srfA, SSurface *srfB) const
 {
-    SCurve ret;
-    ret = *this;
-    ret.pts = {};
+    SCurve ret = *this;
+    ret.pts.Clear();
 
     // First find any vertex that lies on our curve.
     std::vector<SInter> vertpts;
@@ -91,7 +90,7 @@ SCurve SCurve::MakeCopySplitAgainst(SShell *agnstA, SShell *agnstB,
     ssassert(!pts.IsEmpty(), "Cannot split an empty curve");
     const SCurvePt *p = pts.begin();
     SCurvePt prev = *p;
-    ret.pts.Add(p);
+    ret.pts.Add(*p);
 
     // Not using range-for loop here because we have a different treatment for
     // the first point above
@@ -183,13 +182,13 @@ SCurve SCurve::MakeCopySplitAgainst(SShell *agnstA, SShell *agnstB,
                     scpt.tag    = 0;
                     scpt.p      = pi.p;
                     scpt.vertex = true;
-                    ret.pts.Add(&scpt);
+                    ret.pts.Add(scpt);
                 }
                 prev = pi.p;
             }
         }
 
-        ret.pts.Add(p);
+        ret.pts.Add(*p);
         prev = *p;
     }
 
@@ -209,7 +208,7 @@ void SShell::CopyCurvesSplitAgainst(bool opA, SShell *agnst, SShell *into) {
         scn.source = opA ? SCurve::Source::A : SCurve::Source::B;
 #pragma omp critical
         {
-            hSCurve hsc = into->curve.AddAndAssignId(&scn);
+            hSCurve hsc = into->curve.AddAndAssignId(std::move(scn));
             // And note the new ID so that we can rewrite the trims appropriately
             sc->newH = hsc;
         }
@@ -261,7 +260,7 @@ void SSurface::TrimFromEdgeList(SEdgeList *el, bool asUv) {
         }
 
         // And add the merged trim, with xyz (not uv like the polygon) pts
-        trim.Add(&stb);
+        trim.Add(stb);
     }
 }
 
@@ -373,7 +372,7 @@ void SSurface::FindChainAvoiding(SEdgeList *src, SEdgeList *dest,
 {
     ssassert(!src->l.IsEmpty(), "Need at least one edge");
     // Start with an arbitrary edge.
-    dest->l.Add(src->l.First());
+    dest->l.Add(*src->l.First());
     src->l.ClearTags();
     src->l.First()->tag = 1;
 
@@ -399,7 +398,7 @@ void SSurface::FindChainAvoiding(SEdgeList *src, SEdgeList *dest,
                 se.tag = 1;
                 startOkay = !avoid->ContainsPoint(s);
             } else if(finishOkay && f.Equals(se.a)) {
-                dest->l.Add(&se);
+                dest->l.Add(se);
                 f = se.b;
                 se.tag = 1;
                 finishOkay = !avoid->ContainsPoint(f);
@@ -489,17 +488,13 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
     bool opA = (parent == sha);
     SShell *agnst = opA ? shb : sha;
 
-    SSurface ret;
     // The returned surface is identical, just the trim curves change
-    ret = *this;
-    ret.trim = {};
+    SSurface ret = *this;
 
     // First, build a list of the existing trim curves; update them to use
     // the split curves.
-    for(const STrimBy &stb : trim) {
-        STrimBy stn = stb;
-        stn.curve = (parent->curve.FindById(stn.curve))->newH;
-        ret.trim.Add(&stn);
+    for(STrimBy &stb : ret.trim) {
+        stb.curve = (parent->curve.FindById(stb.curve))->newH;
     }
 
     if(type == SSurface::CombineAs::DIFFERENCE && !opA) {
@@ -698,7 +693,7 @@ void SShell::CopySurfacesTrimAgainst(SShell *sha, SShell *shb, SShell *into, SSu
     }
 
     for(size_t i = 0; i < surface.Size(); i++) {
-        surface.Get(i).newH = into->surface.AddAndAssignId(&ssn[i]);
+        surface.Get(i).newH = into->surface.AddAndAssignId(std::move(ssn[i]));
     }
     I += surface.Size();
 }
@@ -750,37 +745,33 @@ void SShell::MakeFromAssemblyOf(SShell *a, SShell *b) {
 
     Vector t = Vector::From(0, 0, 0);
     Quaternion q = Quaternion::IDENTITY;
-    int i = 0;
-    SShell *ab;
 
     // First, copy over all the curves. Note which shell (a or b) each curve
     // came from, but assign it a new ID.
     curve.ReserveMore(a->curve.Size() + b->curve.Size());
-    SCurve cn;
-    for(i = 0; i < 2; i++) {
-        ab = (i == 0) ? a : b;
+    for(size_t i = 0; i < 2; i++) {
+        SShell *ab = (i == 0) ? a : b;
         for(SCurve &c : ab->curve) {
-            cn = SCurve::FromTransformationOf(&c, t, q, 1.0);
+            SCurve cn = SCurve::FromTransformationOf(&c, t, q, 1.0);
             cn.source = (i == 0) ? SCurve::Source::A : SCurve::Source::B;
             // surfA and surfB are wrong now, and we can't fix them until
             // we've assigned IDs to the surfaces. So we'll get that later.
-            c.newH = curve.AddAndAssignId(&cn);
+            c.newH = curve.AddAndAssignId(std::move(cn));
         }
     }
 
     // Likewise copy over all the surfaces.
     surface.ReserveMore(a->surface.Size() + b->surface.Size());
-    SSurface sn;
-    for(i = 0; i < 2; i++) {
-        ab = (i == 0) ? a : b;
+    for(size_t i = 0; i < 2; i++) {
+        SShell *ab = (i == 0) ? a : b;
         for(SSurface &s : ab->surface) {
-            sn = SSurface::FromTransformationOf(&s, t, q, 1.0, /*includingTrims=*/true);
+            SSurface sn = SSurface::FromTransformationOf(&s, t, q, 1.0, /*includingTrims=*/true);
             // All the trim curve IDs get rewritten; we know the new handles
             // to the curves since we recorded them in the previous step.
             for(STrimBy &stb : sn.trim) {
                 stb.curve = ab->curve.FindById(stb.curve)->newH;
             }
-            s.newH = surface.AddAndAssignId(&sn);
+            s.newH = surface.AddAndAssignId(std::move(sn));
         }
     }
 

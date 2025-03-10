@@ -39,7 +39,7 @@ void Group::AddParam(IdList<Param> *param, hParam hp, double v) {
     pa.h = hp;
     pa.val = v;
 
-    param->Add(&pa);
+    param->Add(pa);
 }
 
 bool Group::IsVisible() {
@@ -347,8 +347,8 @@ void Group::MenuGroup(Command id, Platform::Path linkFile) {
         }
     }
 
-    SK.group.AddAndAssignId(&g);
-    Group *gg = SK.GetGroup(g.h);
+    hGroup hg = SK.group.AddAndAssignId(std::move(g));
+    Group *gg = SK.GetGroup(hg);
 
     if(gg->type == Type::LINKED) {
         SS.ReloadAllLinked(SS.saveFile);
@@ -474,7 +474,6 @@ void Group::Generate(IdList<Entity> *entity, IdList<Param> *param)
             normal.point[0] = h.entity(2);
             normal.group = h;
             normal.h = h.entity(1);
-            entity->Add(&normal);
 
             Entity point = {};
             point.type = Entity::Type::POINT_N_COPY;
@@ -482,7 +481,6 @@ void Group::Generate(IdList<Entity> *entity, IdList<Param> *param)
             point.construction = true;
             point.group = h;
             point.h = h.entity(2);
-            entity->Add(&point);
 
             Entity wp = {};
             wp.type = Entity::Type::WORKPLANE;
@@ -490,7 +488,10 @@ void Group::Generate(IdList<Entity> *entity, IdList<Param> *param)
             wp.point[0] = point.h;
             wp.group = h;
             wp.h = h.entity(0);
-            entity->Add(&wp);
+
+            entity->Add(std::move(normal));
+            entity->Add(std::move(point));
+            entity->Add(std::move(wp));
             return;
         }
 
@@ -687,7 +688,7 @@ void Group::Generate(IdList<Entity> *entity, IdList<Param> *param)
                         en.style = ep->style;
                         en.h = Remap(ep->h, REMAP_PT_TO_LINE);
                         en.type = Entity::Type::LINE_SEGMENT;
-                        entity->Add(&en);
+                        entity->Add(std::move(en));
                     }
                 }
             }
@@ -795,7 +796,7 @@ void Group::AddEq(IdList<Equation> *l, Expr *expr, int index) {
     Equation eq;
     eq.e = expr;
     eq.h = h.equation(index);
-    l->Add(&eq);
+    l->Add(eq);
 }
 
 void Group::GenerateEquations(IdList<Equation> *l) {
@@ -870,8 +871,8 @@ hEntity Group::Remap(hEntity in, int copyNumber) {
 void Group::MakeExtrusionLines(IdList<Entity> *el, hEntity in) {
     Entity *ep = SK.GetEntity(in);
 
-    Entity en = {};
     if(ep->IsPoint()) {
+        Entity en = {};
         // A point gets extruded to form a line segment
         en.point[0] = Remap(ep->h, REMAP_TOP);
         en.point[1] = Remap(ep->h, REMAP_BOTTOM);
@@ -880,8 +881,9 @@ void Group::MakeExtrusionLines(IdList<Entity> *el, hEntity in) {
         en.style = ep->style;
         en.h = Remap(ep->h, REMAP_PT_TO_LINE);
         en.type = Entity::Type::LINE_SEGMENT;
-        el->Add(&en);
+        el->Add(std::move(en));
     } else if(ep->type == Entity::Type::LINE_SEGMENT) {
+        Entity en = {};
         // A line gets extruded to form a plane face; an endpoint of the
         // original line is a point in the plane, and the line is in the plane.
         Vector a = SK.GetEntity(ep->point[0])->PointGetNum();
@@ -899,7 +901,7 @@ void Group::MakeExtrusionLines(IdList<Entity> *el, hEntity in) {
         en.style = ep->style;
         en.h = Remap(ep->h, REMAP_LINE_TO_FACE);
         en.type = Entity::Type::FACE_XPROD;
-        el->Add(&en);
+        el->Add(std::move(en));
     }
 }
 
@@ -944,16 +946,15 @@ void Group::MakeLatheCircles(IdList<Entity> *el, IdList<Param> *param, hEntity i
         // The point determines where the normal gets displayed on-screen;
         // it's entirely cosmetic.
         n.point[0] = en.point[0];
-        el->Add(&n);
         en.normal = n.h;
-        el->Add(&en);
+        el->Add(std::move(n));
+        el->Add(std::move(en));
     }
 }
 
 void Group::MakeLatheSurfacesSelectable(IdList<Entity> *el, hEntity in, Vector axis) {
     Entity *ep = SK.GetEntity(in);
 
-    Entity en = {};
     if(ep->type == Entity::Type::LINE_SEGMENT) {
         // An axis-perpendicular line gets revolved to form a face.
         Vector a = SK.GetEntity(ep->point[0])->PointGetNum();
@@ -964,6 +965,7 @@ void Group::MakeLatheSurfacesSelectable(IdList<Entity> *el, hEntity in, Vector a
         // between axis and line direction and check that
         // cos(angle) == 0 <-> angle == +-90 deg.
         if(fabs(u.Dot(axis) / axis.Magnitude()) < ANGLE_COS_EPS) {
+            Entity en = {};
             en.param[0] = h.param(0);
             en.param[1] = h.param(1);
             en.param[2] = h.param(2);
@@ -977,7 +979,7 @@ void Group::MakeLatheSurfacesSelectable(IdList<Entity> *el, hEntity in, Vector a
             en.h = Remap(ep->h, REMAP_LINE_TO_FACE);
             en.type = Entity::Type::FACE_NORMAL_PT;
             en.point[0] = ep->point[0];
-            el->Add(&en);
+            el->Add(std::move(en));
         }
     }
 }
@@ -997,29 +999,31 @@ void Group::MakeRevolveEndFaces(IdList<Entity> *el, hEntity pt, int ai, int af)
         n = SK.GetEntity(src->h.entity(0))->Normal()->NormalN();
     }
 
-    Entity en = {};
-    en.type = Entity::Type::FACE_ROT_NORMAL_PT;
-    en.group = h;
+    Entity enStart = {};
+    enStart.type = Entity::Type::FACE_ROT_NORMAL_PT;
+    enStart.group = h;
     // The center of rotation
-    en.param[0] = h.param(0);
-    en.param[1] = h.param(1);
-    en.param[2] = h.param(2);
+    enStart.param[0] = h.param(0);
+    enStart.param[1] = h.param(1);
+    enStart.param[2] = h.param(2);
     // The rotation quaternion
-    en.param[3] = h.param(3);
-    en.param[4] = h.param(4);
-    en.param[5] = h.param(5);
-    en.param[6] = h.param(6);
+    enStart.param[3] = h.param(3);
+    enStart.param[4] = h.param(4);
+    enStart.param[5] = h.param(5);
+    enStart.param[6] = h.param(6);
 
-    en.numNormal = Quaternion::From(0, n.x, n.y, n.z);
-    en.point[0] = Remap(pt, REMAP_LATHE_START);
-    en.timesApplied = ai;
-    en.h = Remap(Entity::NO_ENTITY, REMAP_LATHE_START);
-    el->Add(&en);
+    enStart.numNormal = Quaternion::From(0, n.x, n.y, n.z);
+    enStart.point[0] = Remap(pt, REMAP_LATHE_START);
+    enStart.timesApplied = ai;
+    enStart.h = Remap(Entity::NO_ENTITY, REMAP_LATHE_START);
 
-    en.point[0] = Remap(pt, REMAP_LATHE_END);
-    en.timesApplied = af;
-    en.h = Remap(Entity::NO_ENTITY, REMAP_LATHE_END);
-    el->Add(&en);
+    Entity enEnd = enStart;
+    enEnd.point[0] = Remap(pt, REMAP_LATHE_END);
+    enEnd.timesApplied = af;
+    enEnd.h = Remap(Entity::NO_ENTITY, REMAP_LATHE_END);
+
+    el->Add(std::move(enStart));
+    el->Add(std::move(enEnd));
 }
 
 void Group::MakeExtrusionTopBottomFaces(IdList<Entity> *el, hEntity pt)
@@ -1034,18 +1038,20 @@ void Group::MakeExtrusionTopBottomFaces(IdList<Entity> *el, hEntity pt)
         n = SK.GetEntity(src->h.entity(0))->Normal()->NormalN();
     }
 
-    Entity en = {};
-    en.type = Entity::Type::FACE_NORMAL_PT;
-    en.group = h;
+    Entity enTop = {};
+    enTop.type = Entity::Type::FACE_NORMAL_PT;
+    enTop.group = h;
 
-    en.numNormal = Quaternion::From(0, n.x, n.y, n.z);
-    en.point[0] = Remap(pt, REMAP_TOP);
-    en.h = Remap(Entity::NO_ENTITY, REMAP_TOP);
-    el->Add(&en);
+    enTop.numNormal = Quaternion::From(0, n.x, n.y, n.z);
+    enTop.point[0] = Remap(pt, REMAP_TOP);
+    enTop.h = Remap(Entity::NO_ENTITY, REMAP_TOP);
 
-    en.point[0] = Remap(pt, REMAP_BOTTOM);
-    en.h = Remap(Entity::NO_ENTITY, REMAP_BOTTOM);
-    el->Add(&en);
+    Entity enBottom = enTop;
+    enBottom.point[0] = Remap(pt, REMAP_BOTTOM);
+    enBottom.h = Remap(Entity::NO_ENTITY, REMAP_BOTTOM);
+
+    el->Add(std::move(enTop));
+    el->Add(std::move(enBottom));
 }
 
 void Group::CopyEntity(IdList<Entity> *el,
@@ -1209,7 +1215,7 @@ void Group::CopyEntity(IdList<Entity> *el,
     // entity, then we also want to hide it.
     en.forceHidden = (!ep->actVisible) || ep->forceHidden;
 
-    el->Add(&en);
+    el->Add(std::move(en));
 }
 
 bool Group::ShouldDrawExploded() const {

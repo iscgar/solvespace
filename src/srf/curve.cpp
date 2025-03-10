@@ -392,9 +392,9 @@ SBezierLoop SBezierLoop::FromCurves(SBezierList *sbl,
     }
     sbl->l.ClearTags();
 
-    SBezier *first = &(sbl->l[0]);
+    SBezier *first = sbl->l.First();
     first->tag = 1;
-    loop.l.Add(first);
+    loop.l.Add(*first);
     Vector start = first->Start();
     Vector hanging = first->Finish();
     int auxA = first->auxA;
@@ -413,7 +413,7 @@ SBezierLoop SBezierLoop::FromCurves(SBezierList *sbl,
             }
             if((test->Start()).Equals(hanging) && test->auxA == auxA) {
                 test->tag = 1;
-                loop.l.Add(test);
+                loop.l.Add(*test);
                 hanging = test->Finish();
                 sbl->l.RemoveTagged();
                 foundNext = true;
@@ -500,20 +500,19 @@ SBezierLoopSet SBezierLoopSet::From(SBezierList *sbl, SPolygon *poly,
     *allClosed = true;
     while(!sbl->l.IsEmpty()) {
         bool thisClosed;
-        SBezierLoop loop;
-        loop = SBezierLoop::FromCurves(sbl, &thisClosed, errorAt);
+        SBezierLoop loop = SBezierLoop::FromCurves(sbl, &thisClosed, errorAt);
         if(!thisClosed) {
             // Record open loops in a separate list, if requested.
             *allClosed = false;
             if(openContours) {
-                openContours->l.Add(&loop);
+                openContours->l.Add(std::move(loop));
             } else {
                 loop.Clear();
             }
         } else {
-            ret.l.Add(&loop);
             poly->AddEmptyContour();
             loop.MakePwlInto(poly->l.Last(), chordTol);
+            ret.l.Add(std::move(loop));
         }
     }
 
@@ -588,9 +587,9 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
             // all coplanar.
             if(openContours) {
                 for(const SBezier &sb : sbl->l) {
-                    SBezierLoop sbl={};
-                    sbl.l.Add(&sb);
-                    openContours->l.Add(&sbl);
+                    SBezierLoop sbl = {};
+                    sbl.l.Add(sb);
+                    openContours->l.Add(std::move(sbl));
                 }
             }
             return;
@@ -670,10 +669,10 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
 
             SBezierLoopSet outerAndInners = {};
             loopsRemaining = true;
-            loop->tag = USED_LOOP;
-            outerAndInners.l.Add(loop);
             int auxA = 0;
             if(loop->l.Size() > 0) auxA = loop->l[0].auxA;
+            outerAndInners.l.Add(std::move(*loop));
+            loop->tag = USED_LOOP;
 
             for(j = 0; j < sbls.l.Size(); j++) {
                 SBezierLoop *inner = &(sbls.l[j]);
@@ -683,14 +682,14 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
 
                 Vector p = spuv.l[j].AnyEdgeMidpoint();
                 if(spuv.l[i].ContainsPointProjdToNormal(spuv.normal, p)) {
-                    outerAndInners.l.Add(inner);
+                    outerAndInners.l.Add(std::move(*inner));
                     inner->tag = USED_LOOP;
                 }
             }
 
             outerAndInners.point  = srfuv->PointAt(0, 0);
             outerAndInners.normal = srfuv->NormalAt(0, 0);
-            l.Add(&outerAndInners);
+            l.Add(std::move(outerAndInners));
         }
     }
 
@@ -704,26 +703,25 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
         if(loop->tag == USED_LOOP) continue;
 
         if(openContours) {
-            openContours->l.Add(loop);
+            openContours->l.Add(std::move(*loop));
         } else {
             loop->Clear();
         }
-        // but don't free the used loops, since we shallow-copied them to
-        // ourself
+        // no need to free the used loops, since we moved them to ourself
     }
 
-    sbls.l.Clear(); // not sbls.Clear(), since that would deep-clear
+    sbls.Clear();
     spuv.Clear();
 }
 
 void SBezierLoopSetSet::AddOpenPath(const SBezier *sb) {
     SBezierLoop sbl = {};
-    sbl.l.Add(sb);
+    sbl.l.Add(*sb);
 
     SBezierLoopSet sbls = {};
-    sbls.l.Add(&sbl);
+    sbls.l.Add(std::move(sbl));
 
-    l.Add(&sbls);
+    l.Add(std::move(sbls));
 }
 
 void SBezierLoopSetSet::Clear() {
@@ -759,7 +757,7 @@ SCurve SCurve::FromTransformationOf(SCurve *a, Vector t,
         if(needTranslate) {
             pp.p = pp.p.Plus(t);
         }
-        ret.pts.Add(&pp);
+        ret.pts.Add(pp);
     }
     return ret;
 }

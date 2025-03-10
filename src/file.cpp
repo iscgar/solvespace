@@ -53,9 +53,9 @@ hGroup SolveSpaceUI::CreateDefaultDrawingGroup() {
     g.predef.q = Quaternion::From(1, 0, 0, 0);
     hRequest hr = Request::HREQUEST_REFERENCE_XY;
     g.predef.origin = hr.entity(1);
-    SK.group.AddAndAssignId(&g);
-    SK.GetGroup(g.h)->activeWorkplane = g.h.entity(0);
-    return g.h;
+    hGroup hg = SK.group.AddAndAssignId(std::move(g));
+    SK.GetGroup(hg)->activeWorkplane = g.h.entity(0);
+    return hg;
 }
 
 void SolveSpaceUI::NewFile() {
@@ -68,7 +68,7 @@ void SolveSpaceUI::NewFile() {
     g.type = Group::Type::DRAWING_3D;
     g.order = 0;
     g.h = Group::HGROUP_REFERENCES;
-    SK.group.Add(&g);
+    SK.group.Add(std::move(g));
 
     // Let's create three two-d coordinate systems, for the coordinate
     // planes; these are our references, present in every sketch.
@@ -78,13 +78,13 @@ void SolveSpaceUI::NewFile() {
     r.workplane = Entity::FREE_IN_3D;
 
     r.h = Request::HREQUEST_REFERENCE_XY;
-    SK.request.Add(&r);
+    SK.request.Add(r);
 
     r.h = Request::HREQUEST_REFERENCE_YZ;
-    SK.request.Add(&r);
+    SK.request.Add(r);
 
     r.h = Request::HREQUEST_REFERENCE_ZX;
-    SK.request.Add(&r);
+    SK.request.Add(r);
 
     CreateDefaultDrawingGroup();
 }
@@ -696,24 +696,24 @@ bool SolveSpaceUI::LoadFromFile(const Platform::Path &filename, bool canCancel) 
             if(sv.g.type == Group::Type::LINKED)
                 sv.g.opA.v = 0;
 
-            SK.group.Add(&(sv.g));
+            SK.group.Add(std::move(sv.g));
             sv.g = {};
             sv.g.scale = 1; // default is 1, not 0; so legacy files need this
         } else if(strcmp(line, "AddParam")==0) {
             // params are regenerated, but we want to preload the values
             // for initial guesses
-            SK.param.Add(&(sv.p));
+            SK.param.Add(sv.p);
             sv.p = {};
         } else if(strcmp(line, "AddEntity")==0) {
             // entities are regenerated
         } else if(strcmp(line, "AddRequest")==0) {
-            SK.request.Add(&(sv.r));
+            SK.request.Add(sv.r);
             sv.r = {};
         } else if(strcmp(line, "AddConstraint")==0) {
-            SK.constraint.Add(&(sv.c));
+            SK.constraint.Add(sv.c);
             sv.c = {};
         } else if(strcmp(line, "AddStyle")==0) {
-            SK.style.Add(&(sv.s));
+            SK.style.Add(sv.s);
             sv.s = {};
             Style::FillDefaultStyle(&sv.s);
         } else if(strcmp(line, VERSION_STRING)==0) {
@@ -766,8 +766,8 @@ void SolveSpaceUI::UpgradeLegacyData() {
             // at workplane origin, and the solver will mess up the sketch if
             // it is not fully constrained.
             case Request::Type::TTF_TEXT: {
-                IdList<Entity> entity = {};
-                IdList<Param>  param = {};
+                IdList<Entity> entity;
+                IdList<Param>  param;
                 r.Generate(&entity, &param);
 
                 // If we didn't load all of the entities and params that this
@@ -775,26 +775,24 @@ void SolveSpaceUI::UpgradeLegacyData() {
                 // force them to their appropriate positions.
                 for(Param &p : param) {
                     if(SK.param.FindByIdNoOops(p.h) != NULL) continue;
-                    SK.param.Add(&p);
+                    SK.param.Add(p);
                 }
                 bool allPointsExist = true;
                 for(Entity &e : entity) {
                     if(SK.entity.FindByIdNoOops(e.h) != NULL) continue;
-                    SK.entity.Add(&e);
+                    SK.entity.Add(std::move(e));
                     allPointsExist = false;
                 }
 
                 if(!allPointsExist) {
-                    Entity *text = entity.FindById(r.h.entity(0));
-                    Entity *b = entity.FindById(text->point[2]);
-                    Entity *c = entity.FindById(text->point[3]);
+                    Entity *text = SK.entity.FindById(r.h.entity(0));
+                    Entity *b = SK.entity.FindById(text->point[2]);
+                    Entity *c = SK.entity.FindById(text->point[3]);
                     ExprVector bex, cex;
                     text->RectGetPointsExprs(&bex, &cex);
                     b->PointForceParamTo(bex.Eval());
                     c->PointForceParamTo(cex.Eval());
                 }
-                entity.Clear();
-                param.Clear();
                 break;
             }
 
@@ -810,7 +808,7 @@ void SolveSpaceUI::UpgradeLegacyData() {
     SS.GenerateAll(SolveSpaceUI::Generate::REGEN);
 
     auto AllParamsExistFor = [&oldParam](Constraint &c) {
-        IdList<Param> param = {};
+        IdList<Param> param;
         c.Generate(&param);
         bool allParamsExist = true;
         for(Param &p : param) {
@@ -818,7 +816,6 @@ void SolveSpaceUI::UpgradeLegacyData() {
             allParamsExist = false;
             break;
         }
-        param.Clear();
         return allParamsExist;
     };
 
@@ -892,7 +889,6 @@ void SolveSpaceUI::UpgradeLegacyData() {
                 break;
         }
     }
-    oldParam.Clear();
 }
 
 bool SolveSpaceUI::LoadEntitiesFromFile(const Platform::Path &filename, EntityList *le,
@@ -945,7 +941,7 @@ bool SolveSpaceUI::LoadEntitiesFromSlvs(const Platform::Path &filename, EntityLi
         } else if(strcmp(line, "AddParam")==0) {
 
         } else if(strcmp(line, "AddEntity")==0) {
-            le->Add(&(sv.e));
+            le->Add(std::move(sv.e));
             sv.e = {};
         } else if(strcmp(line, "AddRequest")==0) {
 
@@ -955,7 +951,7 @@ bool SolveSpaceUI::LoadEntitiesFromSlvs(const Platform::Path &filename, EntityLi
             // Linked file contains a style that we don't have yet,
             // so import it.
             if (SK.style.FindByIdNoOops(sv.s.h) == nullptr) {
-                SK.style.Add(&(sv.s));
+                SK.style.Add(sv.s);
             }
             sv.s = {};
             Style::FillDefaultStyle(&sv.s);
@@ -973,7 +969,7 @@ bool SolveSpaceUI::LoadEntitiesFromSlvs(const Platform::Path &filename, EntityLi
                 ssassert(false, "Unexpected Triangle format");
             }
             tr.meta.color = RgbaColor::FromPackedInt((uint32_t)rgba);
-            m->AddTriangle(&tr);
+            m->AddTriangle(tr);
         } else if(StrStartsWith(line, "Surface ")) {
             unsigned int rgba = 0;
             if(sscanf(line, "Surface %x %x %x %d %d",
@@ -1004,9 +1000,9 @@ bool SolveSpaceUI::LoadEntitiesFromSlvs(const Platform::Path &filename, EntityLi
                 ssassert(false, "Unexpected TrimBy format");
             }
             stb.backwards = (backwards != 0);
-            srf.trim.Add(&stb);
+            srf.trim.Add(stb);
         } else if(strcmp(line, "AddSurface")==0) {
-            sh->surface.Add(&srf);
+            sh->surface.Add(std::move(srf));
             srf = {};
         } else if(StrStartsWith(line, "Curve ")) {
             int isExact;
@@ -1040,9 +1036,9 @@ bool SolveSpaceUI::LoadEntitiesFromSlvs(const Platform::Path &filename, EntityLi
                 ssassert(false, "Unexpected CurvePt format");
             }
             scpt.vertex = (vertex != 0);
-            crv.pts.Add(&scpt);
+            crv.pts.Add(scpt);
         } else if(strcmp(line, "AddCurve")==0) {
-            sh->curve.Add(&crv);
+            sh->curve.Add(std::move(crv));
             crv = {};
         } else ssassert(false, "Unexpected operation");
     }

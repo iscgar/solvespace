@@ -85,9 +85,10 @@ static hEntity newPoint(EntityList *el, int *id, Vector p, bool visible = true) 
     en.forceHidden = false;
 
     *id = *id+1;
-    en.h.v = *id + en.group.v*65536;    
-    el->Add(&en);
-    return en.h;
+    hEntity he = { *id + en.group.v*65536 };
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 static hEntity newLine(EntityList *el, int *id, hEntity p0, hEntity p1, bool keepout) {
@@ -104,9 +105,10 @@ static hEntity newLine(EntityList *el, int *id, hEntity p0, hEntity p1, bool kee
     en.forceHidden = false;
 
     *id = *id+1;
-    en.h.v = *id + en.group.v*65536;    
-    el->Add(&en);
-    return en.h;
+    hEntity he = { *id + en.group.v*65536 };
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 static hEntity newNormal(EntityList *el, int *id, Quaternion normal) {
@@ -125,9 +127,10 @@ static hEntity newNormal(EntityList *el, int *id, Quaternion normal) {
     en.forceHidden = false;
 
     *id = *id+1;
-    en.h.v = *id + en.group.v*65536;    
-    el->Add(&en);
-    return en.h;
+    hEntity he = { *id + en.group.v*65536 };
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 static hEntity newArc(EntityList *el, int *id, hEntity p0, hEntity p1, hEntity pc, hEntity hnorm, bool keepout) {
@@ -146,9 +149,10 @@ static hEntity newArc(EntityList *el, int *id, hEntity p0, hEntity p1, hEntity p
     en.forceHidden = false;    *id = *id+1;
 
     *id = *id + 1;
-    en.h.v = *id + en.group.v*65536;
-    el->Add(&en);
-    return en.h;
+    hEntity he = { *id + en.group.v*65536 };
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 static hEntity newDistance(EntityList *el, int *id, double distance) {
@@ -166,9 +170,10 @@ static hEntity newDistance(EntityList *el, int *id, double distance) {
     en.forceHidden = false;
 
     *id = *id+1;
-    en.h.v = *id + en.group.v*65536;    
-    el->Add(&en);
-    return en.h;
+    hEntity he = { *id + en.group.v*65536 };
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 static hEntity newCircle(EntityList *el, int *id, hEntity p0, hEntity hdist, hEntity hnorm, bool keepout) {
@@ -186,9 +191,10 @@ static hEntity newCircle(EntityList *el, int *id, hEntity p0, hEntity hdist, hEn
     en.forceHidden = false;
 
     *id = *id+1;
-    en.h.v = *id + en.group.v*65536;
-    el->Add(&en);
-    return en.h;
+    hEntity he = { *id + en.group.v*65536 };
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 static Vector ArcCenter(Vector p0, Vector p1, double angle) {
@@ -297,7 +303,7 @@ static void MakeBeziersForArcs(SBezierList *sbl, Vector center, Vector pa, Vecto
 
         SBezier sb = SBezier::From(p0, p1, p2);
         sb.weight[1] = cos(dtheta/2);
-        sbl->l.Add(&sb);
+        sbl->l.Add(sb);
     }
 }
 
@@ -431,7 +437,7 @@ bool LinkIDF(const Platform::Path &filename, EntityList *el, SMesh *m, SShell *s
                             if (ang == 0) {
                                 // straight lines
                                 SBezier sb = SBezier::From(pprev, point);
-                                sbl.l.Add(&sb);
+                                sbl.l.Add(sb);
                             } else if (ang != 360.0) {
                                 // Arcs
                                 Vector c = ArcCenter(pprev, point, ang);
