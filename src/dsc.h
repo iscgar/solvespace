@@ -275,7 +275,7 @@ public:
     }
 
     void Add(T &&t) {
-        elem.emplace_back(std::move(t));
+        elem.emplace_back(std::forward<T>(t));
     }
 
     void AddToBeginning(const T *t) {
@@ -353,12 +353,14 @@ class IdList {
                   "Invalid handle value type");
 
     struct Storage {
+        Storage() : used_(false) {}
+
         explicit Storage(const T &t) : used_(true) {
             new(&data) T(t);
         }
 
         explicit Storage(T &&t) : used_(true) {
-            new(&data) T(std::move(t));
+            new(&data) T(std::forward<T>(t));
         }
 
         Storage(const Storage &other) : used_(other.used()) {
@@ -383,9 +385,9 @@ class IdList {
             return *new(this) Storage(other);
         }
 
-        Storage &operator=(Storage &&other) noexcept(noexcept(Storage(std::move(other)))) {
+        Storage &operator=(Storage &&other) noexcept(noexcept(Storage(std::forward<Storage>(other)))) {
             this->~Storage();
-            return *new(this) Storage(std::move(other));
+            return *new(this) Storage(std::forward<Storage>(other));
         }
 
         bool used() const noexcept {
@@ -411,7 +413,7 @@ class IdList {
             if(used()) {
                 get()->~T();
             }
-            new(&data) T(std::move(t));
+            new(&data) T(std::forward<T>(t));
             used_ = true;
         }
 
@@ -515,9 +517,9 @@ public:
         return *new(this) IdList(other);
     }
 
-    IdList &operator=(IdList &&other) noexcept(noexcept(IdList(std::move(other)))) {
+    IdList &operator=(IdList &&other) noexcept(noexcept(IdList(std::forward<IdList>(other)))) {
         this->~IdList();
-        return *new(this) IdList(std::move(other));
+        return *new(this) IdList(std::forward<IdList>(other));
     }
 
     ~IdList() {
@@ -542,13 +544,14 @@ public:
 
     Handle AddAndAssignId(T &&t) {
         t.h.v = MaximumId() + 1;
-        InsertAt(Size(), std::move(t));
+        InsertAt(Size(), std::forward<T>(t));
         return t.h;
     }
 
     void ReserveMore(size_t howMuch) {
         const size_t total_reserve = Size() + howMuch;
         elemstore.reserve(total_reserve);
+        targets.reserve(total_reserve);
     }
 
     void Add(const T &t) {
@@ -564,7 +567,7 @@ public:
         if(idx < Size()) {
             ssassert(GetTarget(targets[idx])->h.v != t.h.v, "Handle isn't unique");
         }
-        InsertAt(idx, std::move(t));
+        InsertAt(idx, std::forward<T>(t));
     }
 
     T *FindById(Handle h) {
@@ -674,34 +677,27 @@ private:
     }
 
     void InsertAt(size_t idx, const T &t) {
-        if(used >= elemstore.size()) {
-            targets.push_back({uint32_t(elemstore.size())});
-            elemstore.emplace_back(t);
-        } else {
-            const Target target = targets.back();
-            elemstore[target.value].reset(t);
-        }
-        FixupInsert(idx);
+        const Target target = AllocForInsert(idx);
+        elemstore[target.value].reset(t);
     }
 
     void InsertAt(size_t idx, T &&t) {
-        if(used >= elemstore.size()) {
-            targets.push_back({uint32_t(elemstore.size())});
-            elemstore.emplace_back(std::move(t));
-        } else {
-            const Target target = targets.back();
-            elemstore[target.value].reset(std::move(t));
-        }
-        FixupInsert(idx);
+        const Target target = AllocForInsert(idx);
+        elemstore[target.value].reset(std::forward<T>(t));
     }
 
-    void FixupInsert(size_t idx) {
+    Target AllocForInsert(size_t idx) {
+        if(used >= elemstore.size()) {
+            targets.push_back({uint32_t(elemstore.size())});
+            elemstore.emplace_back();
+        }
+        const Target target = targets.back();
         if(idx < used || used < targets.size() - 1) {
-            const Target target = targets.back();
             targets.pop_back();
             targets.insert(targets.begin() + idx, target);
         }
         ++used;
+        return target;
     }
 
     void RemoveAt(size_t idx) {
