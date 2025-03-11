@@ -290,7 +290,6 @@ void SBezier::AllIntersectionsWith(const SBezier *sbb, SPointList *spl) const {
     }
     sea.Clear();
     seb.Clear();
-    splRaw.Clear();
 }
 
 //-----------------------------------------------------------------------------
