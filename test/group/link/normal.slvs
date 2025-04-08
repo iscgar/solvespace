@@ -5,15 +5,7 @@ Group.h.v=00000001
 Group.type=5000
 Group.name=#references
 Group.color=ff000000
-Group.skipFirst=0
-Group.predef.swapUV=0
-Group.predef.negateU=0
-Group.predef.negateV=0
 Group.visible=1
-Group.suppress=0
-Group.relaxConstraints=0
-Group.allowRedundant=0
-Group.allDimsReference=0
 Group.scale=1.00000000000000000000
 Group.remap={
 }
@@ -26,17 +18,9 @@ Group.name=sketch-in-plane
 Group.activeWorkplane.v=80020000
 Group.color=ff000000
 Group.subtype=6000
-Group.skipFirst=0
 Group.predef.q.w=1.00000000000000000000
 Group.predef.origin.v=00010001
-Group.predef.swapUV=0
-Group.predef.negateU=0
-Group.predef.negateV=0
 Group.visible=1
-Group.suppress=0
-Group.relaxConstraints=0
-Group.allowRedundant=0
-Group.allDimsReference=0
 Group.scale=1.00000000000000000000
 Group.remap={
 }
@@ -48,16 +32,8 @@ Group.order=2
 Group.name=rect-v20
 Group.activeWorkplane.v=00010000
 Group.color=00646464
-Group.skipFirst=0
 Group.meshCombine=2
-Group.predef.swapUV=0
-Group.predef.negateU=0
-Group.predef.negateV=0
 Group.visible=1
-Group.suppress=0
-Group.relaxConstraints=0
-Group.allowRedundant=0
-Group.allDimsReference=0
 Group.scale=1.00000000000000000000
 Group.remap={
     1 00010000 0
@@ -188,24 +164,20 @@ AddParam
 Request.h.v=00000001
 Request.type=100
 Request.group.v=00000001
-Request.construction=0
 AddRequest
 
 Request.h.v=00000002
 Request.type=100
 Request.group.v=00000001
-Request.construction=0
 AddRequest
 
 Request.h.v=00000003
 Request.type=100
 Request.group.v=00000001
-Request.construction=0
 AddRequest
 
 Entity.h.v=00010000
 Entity.type=10000
-Entity.construction=0
 Entity.point[0].v=00010001
 Entity.normal.v=00010020
 Entity.actVisible=1
@@ -219,7 +191,6 @@ AddEntity
 
 Entity.h.v=00010020
 Entity.type=3000
-Entity.construction=0
 Entity.point[0].v=00010001
 Entity.actNormal.w=1.00000000000000000000
 Entity.actVisible=1
@@ -227,7 +198,6 @@ AddEntity
 
 Entity.h.v=00020000
 Entity.type=10000
-Entity.construction=0
 Entity.point[0].v=00020001
 Entity.normal.v=00020020
 Entity.actVisible=1
@@ -241,7 +211,6 @@ AddEntity
 
 Entity.h.v=00020020
 Entity.type=3000
-Entity.construction=0
 Entity.point[0].v=00020001
 Entity.actNormal.w=0.50000000000000000000
 Entity.actNormal.vx=0.50000000000000000000
@@ -252,7 +221,6 @@ AddEntity
 
 Entity.h.v=00030000
 Entity.type=10000
-Entity.construction=0
 Entity.point[0].v=00030001
 Entity.normal.v=00030020
 Entity.actVisible=1
@@ -266,7 +234,6 @@ AddEntity
 
 Entity.h.v=00030020
 Entity.type=3000
-Entity.construction=0
 Entity.point[0].v=00030001
 Entity.actNormal.w=0.50000000000000000000
 Entity.actNormal.vx=-0.50000000000000000000
@@ -277,15 +244,12 @@ AddEntity
 
 Entity.h.v=80020000
 Entity.type=10000
-Entity.construction=0
 Entity.point[0].v=80020002
 Entity.normal.v=80020001
-Entity.actVisible=0
 AddEntity
 
 Entity.h.v=80020001
 Entity.type=3010
-Entity.construction=0
 Entity.point[0].v=80020002
 Entity.actNormal.w=1.00000000000000000000
 Entity.actVisible=1
@@ -299,7 +263,6 @@ AddEntity
 
 Entity.h.v=80030002
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=10.00000000000000000000
 Entity.actPoint.y=10.00000000000000000000
 Entity.actVisible=1
@@ -307,7 +270,6 @@ AddEntity
 
 Entity.h.v=80030003
 Entity.type=3011
-Entity.construction=0
 Entity.point[0].v=80030002
 Entity.actNormal.w=1.00000000000000000000
 Entity.actVisible=1
@@ -315,7 +277,6 @@ AddEntity
 
 Entity.h.v=80030005
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=10.00000000000000000000
 Entity.actPoint.y=10.00000000000000000000
 Entity.actVisible=1
@@ -323,7 +284,6 @@ AddEntity
 
 Entity.h.v=80030006
 Entity.type=3011
-Entity.construction=0
 Entity.point[0].v=80030005
 Entity.actNormal.w=0.50000000000000000000
 Entity.actNormal.vx=0.50000000000000000000
@@ -334,7 +294,6 @@ AddEntity
 
 Entity.h.v=80030008
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=10.00000000000000000000
 Entity.actPoint.y=10.00000000000000000000
 Entity.actVisible=1
@@ -342,7 +301,6 @@ AddEntity
 
 Entity.h.v=80030009
 Entity.type=3011
-Entity.construction=0
 Entity.point[0].v=80030008
 Entity.actNormal.w=0.50000000000000000000
 Entity.actNormal.vx=-0.50000000000000000000
@@ -353,7 +311,6 @@ AddEntity
 
 Entity.h.v=8003000a
 Entity.type=11000
-Entity.construction=0
 Entity.point[0].v=8003000b
 Entity.point[1].v=8003000c
 Entity.actVisible=1
@@ -361,7 +318,6 @@ AddEntity
 
 Entity.h.v=8003000b
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=15.00000000000000000000
 Entity.actPoint.y=5.00000000000000000000
 Entity.actVisible=1
@@ -369,7 +325,6 @@ AddEntity
 
 Entity.h.v=8003000c
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=15.00000000000000000000
 Entity.actPoint.y=15.00000000000000000000
 Entity.actVisible=1
@@ -377,7 +332,6 @@ AddEntity
 
 Entity.h.v=8003000d
 Entity.type=11000
-Entity.construction=0
 Entity.point[0].v=8003000e
 Entity.point[1].v=8003000f
 Entity.actVisible=1
@@ -385,7 +339,6 @@ AddEntity
 
 Entity.h.v=8003000e
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=5.00000000000000000000
 Entity.actPoint.y=5.00000000000000000000
 Entity.actVisible=1
@@ -393,7 +346,6 @@ AddEntity
 
 Entity.h.v=8003000f
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=15.00000000000000000000
 Entity.actPoint.y=5.00000000000000000000
 Entity.actVisible=1
@@ -401,7 +353,6 @@ AddEntity
 
 Entity.h.v=80030010
 Entity.type=11000
-Entity.construction=0
 Entity.point[0].v=80030011
 Entity.point[1].v=80030012
 Entity.actVisible=1
@@ -409,7 +360,6 @@ AddEntity
 
 Entity.h.v=80030011
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=5.00000000000000000000
 Entity.actPoint.y=15.00000000000000000000
 Entity.actVisible=1
@@ -417,7 +367,6 @@ AddEntity
 
 Entity.h.v=80030012
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=5.00000000000000000000
 Entity.actPoint.y=5.00000000000000000000
 Entity.actVisible=1
@@ -425,7 +374,6 @@ AddEntity
 
 Entity.h.v=80030013
 Entity.type=11000
-Entity.construction=0
 Entity.point[0].v=80030014
 Entity.point[1].v=80030015
 Entity.actVisible=1
@@ -433,7 +381,6 @@ AddEntity
 
 Entity.h.v=80030014
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=15.00000000000000000000
 Entity.actPoint.y=15.00000000000000000000
 Entity.actVisible=1
@@ -441,7 +388,6 @@ AddEntity
 
 Entity.h.v=80030015
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=5.00000000000000000000
 Entity.actPoint.y=15.00000000000000000000
 Entity.actVisible=1
@@ -449,7 +395,6 @@ AddEntity
 
 Entity.h.v=80030017
 Entity.type=3011
-Entity.construction=0
 Entity.point[0].v=80030018
 Entity.actNormal.w=1.00000000000000000000
 Entity.actVisible=1
@@ -457,7 +402,6 @@ AddEntity
 
 Entity.h.v=80030018
 Entity.type=2011
-Entity.construction=0
 Entity.actPoint.x=10.00000000000000000000
 Entity.actPoint.y=10.00000000000000000000
 Entity.actVisible=1
