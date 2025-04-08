@@ -5,6 +5,8 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
+namespace SolveSpace {
+
 void StepFileWriter::WriteHeader() {
     fprintf(f,
 "ISO-10303-21;\n"
@@ -408,3 +410,4 @@ void StepFileWriter::WriteWireframe() {
     curves.Clear();
 }
 
+} // namespace SolveSpace

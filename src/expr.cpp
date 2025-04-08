@@ -8,6 +8,12 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
+namespace SolveSpace {
+
+static inline Expr *AllocExpr() {
+    return (Expr *)Platform::AllocTemporary(sizeof(Expr));
+}
+
 ExprVector ExprVector::From(Expr *x, Expr *y, Expr *z) {
     ExprVector r = { x, y, z};
     return r;
@@ -650,7 +656,7 @@ ExprParser::Token ExprParser::Token::From(TokenType type, Expr *expr) {
 ExprParser::Token ExprParser::Token::From(TokenType type, Expr::Op op) {
     Token t;
     t.type = type;
-    t.expr = Expr::AllocExpr();
+    t.expr = AllocExpr();
     t.expr->op = op;
     return t;
 }
@@ -933,3 +939,5 @@ Expr *Expr::From(const std::string &input, bool popUpError) {
     }
     return e;
 }
+
+} // namespace SolveSpace

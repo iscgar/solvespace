@@ -8,6 +8,8 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
+namespace SolveSpace {
+
 const hParam   Param::NO_PARAM = { 0 };
 #define NO_PARAM (Param::NO_PARAM)
 
@@ -1211,3 +1213,5 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
 bool Group::ShouldDrawExploded() const {
     return SS.explode && h == SS.GW.activeGroup && type == Type::DRAWING_WORKPLANE && !SS.exportMode;
 }
+
+} // namespace SolveSpace
