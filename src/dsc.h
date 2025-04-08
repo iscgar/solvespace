@@ -618,16 +618,14 @@ public:
     void RemoveTagged() {
         size_t transfer_idx = 0;
         for(size_t i = 0; i < Size(); ++i) {
-            // We're not using `RemoveAt()` because it shifts all target indices that
-            // are after the current index every time it's called, causing this operation
-            // to become O(n^2), whereas by doing it manually we're only moving each
-            // target index once, while bubbling forwards the freed indices into the free
-            // list area, giving us a nice O(n) complexity.
+            // Manually shifting the items by bubbling them forwards into the free list
+            // area means taht we're only moving each target index once, giving us a nice
+            // O(n) complexity, instead of the naive O(n^2) solution, which is to repeatedly
+            // perform removal by erasing each target index, like `RemoveById()` does.
             //
             // NOTE: this is only relevant if multiple elements are tagged. Otherwise, if
             // only a single element is tagged, due to the bubbling behaviour this way is
-            // twice as slow as simply finding the tagged element and calling `RemoveAt()`
-            // on it.
+            // slower than simply calling `RemoveById()` on it.
             const auto target = targets[i];
             Storage &at_target = elemstore[target.value];
             if(at_target.get()->tag != 0) {
@@ -646,8 +644,17 @@ public:
 
     void RemoveById(Handle h) {
         const size_t idx = FindInsertionPoint(h);
-        if(idx < Size() && GetTarget(targets[idx])->h.v == h.v) {
-            RemoveAt(idx);
+        if(idx < Size()) {
+            const Target target = targets[idx];
+            Storage &at_target = elemstore[target.value];
+            if(at_target.get()->h.v == h.v) {
+                at_target.reset();
+                --used;
+                if(idx < used) {
+                    targets.erase(targets.begin() + idx);
+                    targets.push_back(target);
+                }
+            }
         }
     }
 
@@ -698,16 +705,6 @@ private:
         }
         ++used;
         return target;
-    }
-
-    void RemoveAt(size_t idx) {
-        const Target target = targets[idx];
-        elemstore[target.value].reset();
-        --used;
-        if(idx < used) {
-            targets.erase(targets.begin() + idx);
-            targets.push_back(target);
-        }
     }
 };
 
