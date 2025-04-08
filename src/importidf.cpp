@@ -54,17 +54,16 @@ static std::vector <std::string> splitString(const std::string line) {
 }
 
 static bool isHoleDuplicate(EntityList *el, double x, double y, double r) {
-    bool duplicate = false;
-    for(int i = 0; i < el->n && !duplicate; i++) {
-        Entity &en = el->Get(i);
+    for(auto &en : *el) {
         if(en.type != Entity::Type::CIRCLE)
             continue;
         Entity *distance = el->FindById(en.distance);
         Entity *center   = el->FindById(en.point[0]);
-        duplicate =
-            center->actPoint.x == x && center->actPoint.y == y && distance->actDistance == r;
+        if(center->actPoint.x == x && center->actPoint.y == y && distance->actDistance == r) {
+            return true;
+        }
     }
-    return duplicate;
+    return false;
 }
 
 //////////////////////////////////////////////////////////////////////////////

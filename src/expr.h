@@ -94,8 +94,8 @@ public:
     // Make a copy, with the parameters (usually referenced by hParam)
     // resolved to pointers to the actual value. This speeds things up
     // considerably.
-    Expr *DeepCopyWithParamsAsPointers(IdList<Param,hParam> *firstTry,
-                                       IdList<Param,hParam> *thenTry) const;
+    Expr *DeepCopyWithParamsAsPointers(IdList<Param> *firstTry,
+                                       IdList<Param> *thenTry) const;
 
     static Expr *Parse(const std::string &input, std::string *error);
     static Expr *From(const std::string &input, bool popUpError);

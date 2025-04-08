@@ -137,8 +137,8 @@ public:
         bool Equals(const Fill &other) const;
     };
 
-    IdList<Stroke, hStroke> strokes = {};
-    IdList<Fill,   hFill>   fills   = {};
+    IdList<Stroke> strokes = {};
+    IdList<Fill>   fills   = {};
     BitmapFont bitmapFont = {};
 
     virtual void Clear();

@@ -8,6 +8,8 @@
 #define SOLVESPACE_DSC_H
 
 #include <algorithm>
+#include <limits>
+#include <new>
 #include <type_traits>
 #include <vector>
 
@@ -333,187 +335,291 @@ public:
     }
 };
 
-template<class T, class H> class IdList;
-
-// Comparison functor used by IdList and related classes
-template <class T, class H>
-struct CompareId {
-
-    CompareId(const IdList<T, H> *list) {
-        idlist = list;
-    }
-
-    bool operator()(int lhs, T const& rhs) const {
-        return idlist->elemstore[lhs].h.v < rhs.h.v;
-    }
-    bool operator()(int lhs, H rhs) const {
-        return idlist->elemstore[lhs].h.v < rhs.v;
-    }
-    bool operator()(T *lhs, int rhs) const {
-        return lhs->h.v < idlist->elemstore[rhs].h.v;
-    }
-
-private:
-    const IdList<T, H> *idlist;
-};
-
 // A list, where each element has an integer identifier. The list is kept
 // sorted by that identifier, and items can be looked up in log n time by
 // id.
-template <class T, class H>
+template<class T>
 class IdList {
-    std::vector<T> elemstore;
-    std::vector<int> elemidx;
-    std::vector<int> freelist;
+    static_assert(!std::is_reference<T>::value, "Cannot store reference types");
+
+    using Handle      = decltype(std::remove_pointer<T>::type::h);
+    using HandleValue = decltype(Handle::v);
+
+    // XXX: Can't use this assertion because `IdList<Canvas::Stroke>` and `IdList<Canvas::Fill>`
+    //      are instantiated inside `Canvas`, before `IsHandleOracle` can be specialised for
+    //      `Canvas::hStroke` and `Canvas::hFill`.
+    // static_assert(IsHandleOracle<Handle>::value, "Invalid handle type");
+    static_assert(std::is_integral<HandleValue>::value && sizeof(HandleValue) <= sizeof(size_t),
+                  "Invalid handle value type");
+
+    struct Storage {
+        struct Target {
+            size_t value;
+        };
+
+        Storage(Target target, const T &t) : target_and_used(target.value & TARGET_MASK) {
+            reset(t);
+        }
+
+        Storage(Target target, T &&t) : target_and_used(target.value & TARGET_MASK) {
+            reset(std::forward<T>(t));
+        }
+
+        Storage(const Storage &other) : target_and_used(other.target_and_used) {
+            if(other.used()) {
+                new(&data) T(*other.get());
+            }
+        }
+
+        Storage(Storage &&other) noexcept(noexcept(T(std::move(std::declval<T>())))) : target_and_used(other.target_and_used) {
+            if(other.used()) {
+                new(&data) T(std::move(*other.get()));
+                other.reset();
+            }
+        }
+
+        ~Storage() {
+            reset();
+        }
+
+        Storage &operator=(const Storage &other) {
+            this->~Storage();
+            return *new(this) Storage(other);
+        }
+
+        Storage &operator=(Storage &&other) noexcept(noexcept(Storage(std::forward<Storage>(other)))) {
+            this->~Storage();
+            return *new(this) Storage(std::forward<Storage>(other));
+        }
+
+        bool used() const noexcept {
+            return (target_and_used & USED_MASK) != 0;
+        }
+
+        Target target() const noexcept {
+            return {target_and_used & TARGET_MASK};
+        }
+
+        void reset() {
+            if(used()) {
+                get()->~T();
+                target_and_used &= TARGET_MASK;
+            }
+        }
+
+        void reset(const T &t) {
+            if(used()) {
+                get()->~T();
+            }
+            new(&data) T(t);
+            target_and_used |= USED_MASK;
+        }
+
+        void reset(T &&t) {
+            if(used()) {
+                get()->~T();
+            }
+            new(&data) T(std::forward<T>(t));
+            target_and_used |= USED_MASK;
+        }
+
+        void retarget(Target target) {
+            target_and_used = (target_and_used & USED_MASK) | (target.value & TARGET_MASK);
+        }
+
+        T *get() noexcept {
+            return reinterpret_cast<T *>(&data);
+        }
+        const T *get() const noexcept {
+            return reinterpret_cast<const T *>(&data);
+        }
+
+    private:
+        static constexpr size_t TARGET_MASK = std::numeric_limits<size_t>::max() >> 1;
+        static constexpr size_t USED_MASK   = TARGET_MASK + 1;
+
+        size_t target_and_used;
+        typename std::aligned_storage<sizeof(T), alignof(T)>::type data;
+    };
+
+    std::vector<Storage> elemstore;
+    size_t used = 0;
+
 public:
-    int n = 0;  // PAR@@@@@ make this private to see all interesting and suspicious places in SoveSpace ;-)
+    // This iterator is only invalidated if items are removed or added before or at
+    // its current position. References, however, can also be invalidated if the
+    // underlying storage capacity changes.
+    template<class ValueType>
+    struct IdListIterator {
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type        = ValueType;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = ValueType *;
+        using reference         = ValueType &;
 
-    friend struct CompareId<T, H>;
-    using Compare = CompareId<T, H>;
-
-    struct iterator {
-        typedef std::random_access_iterator_tag iterator_category;
-        typedef T value_type;
-        typedef int difference_type;
-        typedef T *pointer;
-        typedef T &reference;
+        using ListType = typename std::conditional<
+            std::is_same<ValueType, T>::value, IdList<T>, const IdList<T>>::type;
 
     public:
-        T &operator*() const noexcept { return *elem; }
-        const T *operator->() const noexcept { return elem; }
+        ValueType &operator*() noexcept {
+            return *l->GetTarget(l->elemstore[idx].target());
+        }
+        const ValueType &operator*() const noexcept {
+            return *l->GetTarget(l->elemstore[idx].target());
+        }
+        ValueType *operator->() noexcept {
+            return l->GetTarget(l->elemstore[idx].target());
+        }
+        const ValueType *operator->() const noexcept {
+            return l->GetTarget(l->elemstore[idx].target());
+        }
 
-        bool operator==(const iterator &p) const { return p.position == position; }
-        bool operator!=(const iterator &p) const { return !operator==(p); }
-
-        iterator &operator++() {
-            ++position;
-            if(position >= (int)list->elemidx.size()) {
-                elem = nullptr; // PAR@@@@ Remove just debugging
-            } else if(0 <= position) {
-                elem = &(list->elemstore[list->elemidx[position]]);
+        bool operator==(const IdListIterator &p) const noexcept {
+            if(p.l != l) {
+                ssassert(false, "Invalid comparison of iterators for different lists");
             }
+            return p.idx == idx;
+        }
+        bool operator!=(const IdListIterator &p) const noexcept { return !operator==(p); }
+
+        IdListIterator &operator++() noexcept {
+            ++idx;
             return *this;
         }
 
-        // Needed for std:find_if of gcc used in entity.cpp GenerateEquations 
-        difference_type operator-(const iterator &rhs) const noexcept {
-            return position - rhs.position;
+        IdListIterator operator+(size_t i) const noexcept {
+            return IdListIterator(l, idx + i);
         }
 
-        iterator(IdList<T, H> *l) : position(0), list(l) {
-            if(list) {
-                if(list->elemstore.size() && list->elemidx.size()) {
-                    elem = &(list->elemstore[list->elemidx[position]]);
-                }
-            }
-        };
-        iterator(IdList<T, H> *l, int pos) : position(pos), list(l) {
-            if(position >= (int)list->elemidx.size()) {
-                elem = nullptr;
-            } else if(0 <= position) {
-                elem = &((list->elemstore)[list->elemidx[position]]);
-            }
-        };
+        // Needed for std::find_if of gcc used in entity.cpp GenerateEquations
+        difference_type operator-(const IdListIterator &rhs) const noexcept {
+            return idx - rhs.idx;
+        }
+
+        IdListIterator(ListType *l_, size_t idx_ = 0) noexcept : l(l_), idx(idx_) {}
 
     private:
-        int position;
-        T *elem;
-        IdList<T, H> *list;
+        ListType *l;
+        size_t idx;
     };
 
+    using iterator = IdListIterator<T>;
+    using const_iterator = IdListIterator<const T>;
 
-    bool IsEmpty() const {
-        return n == 0;
+    IdList() noexcept = default;
+
+    IdList(IdList &&other) noexcept(noexcept(std::vector<Storage>(std::move(other.elemstore)))) :
+            elemstore(std::move(other.elemstore)), used(other.used) {
+        other.used = 0;
     }
 
-    uint32_t MaximumId() {
+    IdList(const IdList &other) : elemstore(), used(other.Size()) {
+        elemstore.reserve(used);
+        for(size_t i = 0; i < used; ++i) {
+            elemstore.emplace_back(typename Storage::Target{i}, other.Get(i));
+        }
+    }
+
+    IdList &operator=(const IdList &other) {
+        this->~IdList();
+        return *new(this) IdList(other);
+    }
+
+    IdList &operator=(IdList &&other) noexcept(noexcept(IdList(std::forward<IdList>(other)))) {
+        this->~IdList();
+        return *new(this) IdList(std::forward<IdList>(other));
+    }
+
+    ~IdList() {
+        Clear();
+    }
+
+    bool IsEmpty() const noexcept {
+        return Size() == 0;
+    }
+
+    size_t Size() const noexcept {
+        return used;
+    }
+
+    HandleValue MaximumId() const noexcept {
         if(IsEmpty()) {
             return 0;
         } else {
-            return elemstore[elemidx.back()].h.v;
+            return GetTarget(elemstore[Size()-1].target())->h.v;
         }
     }
 
-    H AddAndAssignId(T *t) {
-        t->h.v = (MaximumId() + 1);
-
-        // Add at the end of the list.
-        elemstore.push_back(*t);
-        elemidx.push_back(elemstore.size()-1);
-        ++n;
-
+    Handle AddAndAssignId(T *t) {
+        t->h.v = MaximumId() + 1;
+        InsertAt(Size(), *t);
         return t->h;
     }
 
-    void ReserveMore(int howMuch) {
-        elemstore.reserve(elemstore.size() + howMuch);
-        elemidx.reserve(elemidx.size() + howMuch);
-        //        freelist.reserve(freelist.size() + howMuch);    // PAR@@@@ maybe we should - not much more RAM
+    Handle AddAndAssignId(T &&t) {
+        t.h.v = MaximumId() + 1;
+        InsertAt(Size(), std::forward<T>(t));
+        return t.h;
+    }
+
+    void ReserveMore(size_t howMuch) {
+        const size_t total_reserve = Size() + howMuch;
+        elemstore.reserve(total_reserve);
     }
 
     void Add(T *t) {
-        // Look to see if we already have something with the same handle value.
-        ssassert(FindByIdNoOops(t->h) == nullptr, "Handle isn't unique");
-
-        // Find out where the added element should be.
-        auto pos = std::lower_bound(elemidx.begin(), elemidx.end(), *t, Compare(this));
-
-        if(freelist.empty()) { // Add a new element to the store
-            elemstore.push_back(*t);
-            // Insert a pointer to the element at the correct position
-            if(elemidx.empty()) {
-                // The list is empty so pos, begin and end are all null.
-                // insert does not work in this case.
-                elemidx.push_back(elemstore.size()-1);
-            } else {
-                elemidx.insert(pos, elemstore.size() - 1);
-            }
-        } else { // Use the last element from the freelist
-            // Insert an index to the element at the correct position
-            elemidx.insert(pos, freelist.back());
-            // Remove the element from the freelist
-            freelist.pop_back();
-
-            // Copy-construct to the element storage.
-            elemstore[*pos] = T(*t);
-            //            *elemptr[pos] = *t;   // PAR@@@@@@ maybe this?
+        const size_t idx = FindInsertionPoint(t->h);
+        if(idx < Size()) {
+            ssassert(GetTarget(elemstore[idx].target())->h.v != t->h.v, "Handle isn't unique");
         }
-
-        ++n;
+        InsertAt(idx, *t);
     }
 
-    T *FindById(H h) {
+    void Add(T &&t) {
+        const size_t idx = FindInsertionPoint(t.h);
+        if(idx < Size()) {
+            ssassert(GetTarget(elemstore[idx].target())->h.v != t.h.v, "Handle isn't unique");
+        }
+        InsertAt(idx, std::forward<T>(t));
+    }
+
+    T *FindById(Handle h) {
         T *t = FindByIdNoOops(h);
         ssassert(t != nullptr, "Cannot find handle");
         return t;
     }
 
-    T *FindByIdNoOops(H h) {
-        if(IsEmpty()) {
+    T *FindByIdNoOops(Handle h) noexcept {
+        const size_t idx = FindIndexById(h);
+        if(idx >= Size()) {
             return nullptr;
         }
-        auto it = std::lower_bound(elemidx.begin(), elemidx.end(), h, Compare(this));
-        if(it == elemidx.end()) {
-            return nullptr;
-        } else {
-            if(elemstore[*it].h.v != h.v) {
-                return nullptr;
-            }
-            return &elemstore[*it];
-        }
+        return GetTarget(elemstore[idx].target());
     }
 
-    T &Get(size_t i) { return elemstore[elemidx[i]]; }
-    T &operator[](size_t i) { return Get(i); }
-
-    iterator begin() { return IsEmpty() ? nullptr : iterator(this); }
-    iterator end() { return IsEmpty() ? nullptr : iterator(this, elemidx.size()); }
-
-    void ClearTags() {
-        for(auto &elt : *this) { elt.tag = 0; }
+    T &Get(size_t i) {
+        return *GetTarget(elemstore.at(i).target());
+    }
+    const T &Get(size_t i) const {
+        return *GetTarget(elemstore.at(i).target());
     }
 
-    void Tag(H h, int tag) {
+    iterator begin() noexcept { return IsEmpty() ? nullptr : iterator(this); }
+    iterator end() noexcept {
+        return IsEmpty() ? nullptr : iterator(this, Size());
+    }
+    const_iterator begin() const noexcept {
+        return IsEmpty() ? nullptr : const_iterator(this);
+    }
+    const_iterator end() const noexcept {
+        return IsEmpty() ? nullptr : const_iterator(this, Size());
+    }
+
+    void ClearTags() noexcept {
+        for(T &elt : *this) { elt.tag = 0; }
+    }
+
+    void Tag(Handle h, int tag) {
         auto it = FindByIdNoOops(h);
         if (it != nullptr) {
             it->tag = tag;
@@ -521,64 +627,108 @@ public:
     }
 
     void RemoveTagged() {
-        int src, dest;
-        dest = 0;
-        for(src = 0; src < n; src++) {
-            if(elemstore[elemidx[src]].tag) {
-                // this item should be deleted
-                elemstore[elemidx[src]].Clear();
-//                elemstore[elemidx[src]].~T(); // Clear below calls the destructors
-                freelist.push_back(elemidx[src]);
-                elemidx[src] = 0xDEADBEEF; // PAR@@@@@ just for debugging, not needed, remove later
+        size_t transfer_idx = 0;
+        for(size_t i = 0; i < Size(); ++i) {
+            // We're not using `RemoveAt()` because it shifts all target indices that
+            // are after the current index every time it's called, causing this operation
+            // to become O(n^2), whereas by doing it manually we're only moving each
+            // target index once, while bubbling forwards the freed indices into the free
+            // list area, giving us a nice O(n) complexity.
+            //
+            // NOTE: this is only relevant if multiple elements are tagged. Otherwise, if
+            // only a single element is tagged, due to the bubbling behaviour this way is
+            // twice as slow as simply finding the tagged element and calling `RemoveAt()`
+            // on it.
+            const auto target = elemstore[i].target();
+            Storage &at_target = elemstore[target.value];
+            if(at_target.get()->tag != 0) {
+                at_target.reset();
             } else {
-                if(src != dest) {
-                    elemidx[dest] = elemidx[src];
+                if(transfer_idx < i) {
+                    const auto transfer_target = elemstore[transfer_idx].target();
+                    elemstore[transfer_idx].retarget(target);
+                    elemstore[i].retarget(transfer_target);
                 }
-                dest++;
+                ++transfer_idx;
             }
         }
-        n = dest;
-        elemidx.resize(n);  // Clear left over elements at the end.
-    }
-    void RemoveById(H h) {  // PAR@@@@@ this can be optimized
-        ClearTags();
-        FindById(h)->tag = 1;
-        RemoveTagged();
+        used = transfer_idx;
     }
 
-    void MoveSelfInto(IdList<T,H> *l) {
-        l->Clear();
-        std::swap(l->elemstore, elemstore);
-        std::swap(l->elemidx, elemidx);
-        std::swap(l->freelist, freelist);
-        std::swap(l->n, n);
-    }
-
-    void DeepCopyInto(IdList<T,H> *l) {
-        l->Clear();
-
-        for(auto const &it : elemstore) {
-            l->elemstore.push_back(it);
+    void RemoveById(Handle h) {
+        const size_t idx = FindIndexById(h);
+        if(idx < Size()) {
+            RemoveAt(idx);
         }
-
-        for(auto const &it : elemidx) {
-            l->elemidx.push_back(it);
-        }
-
-        l->n = n;
     }
 
     void Clear() {
-        for(auto &it : elemidx) {
-            elemstore[it].Clear();
-//            elemstore[it].~T(); // clear below calls the destructors
-        }
-        freelist.clear();
-        elemidx.clear();
         elemstore.clear();
-        n = 0;
+        used = 0;
     }
 
+private:
+    T *GetTarget(typename Storage::Target target) noexcept {
+        return elemstore[target.value].get();
+    }
+
+    const T *GetTarget(typename Storage::Target target) const noexcept {
+        return elemstore[target.value].get();
+    }
+
+    size_t FindIndexById(Handle h) const {
+        const size_t idx = FindInsertionPoint(h);
+        if(idx >= Size() || GetTarget(elemstore[idx].target())->h.v != h.v) {
+            return Size();
+        }
+        return idx;
+    }
+
+    size_t FindInsertionPoint(Handle h) const {
+        auto it = std::lower_bound(elemstore.begin(), elemstore.begin() + Size(), h,
+                                   [this](const Storage &storage, Handle h) {
+                                       return GetTarget(storage.target())->h.v < h.v;
+                                   });
+        return it - elemstore.begin();
+    }
+
+    void InsertAt(size_t idx, const T &t) {
+        if(used >= elemstore.size()) {
+            elemstore.emplace_back(typename Storage::Target{elemstore.size()}, t);
+        } else {
+            const typename Storage::Target target = elemstore[used].target();
+            elemstore[target.value].reset(t);
+        }
+        FixupInsert(idx);
+    }
+
+    void InsertAt(size_t idx, T &&t) {
+        if(used >= elemstore.size()) {
+            elemstore.emplace_back(typename Storage::Target{elemstore.size()}, std::forward<T>(t));
+        } else {
+            const typename Storage::Target target = elemstore[used].target();
+            elemstore[target.value].reset(std::forward<T>(t));
+        }
+        FixupInsert(idx);
+    }
+
+    void FixupInsert(size_t idx) {
+        const typename Storage::Target target = elemstore[used].target();
+        for(size_t i = used; i > idx; --i) {
+            elemstore[i].retarget(elemstore[i - 1].target());
+        }
+        elemstore[idx].retarget(target);
+        ++used;
+    }
+
+    void RemoveAt(size_t idx) {
+        const typename Storage::Target target = elemstore[idx].target();
+        elemstore[target.value].reset();
+        for(size_t i = idx + 1; i < used; ++i) {
+            elemstore[i - 1].retarget(elemstore[i].target());
+        }
+        elemstore[--used].retarget(target);
+    }
 };
 
 class BandedMatrix {

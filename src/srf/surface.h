@@ -370,8 +370,8 @@ public:
 
 class SShell {
 public:
-    IdList<SCurve,hSCurve>      curve;
-    IdList<SSurface,hSSurface>  surface;
+    IdList<SCurve>   curve;
+    IdList<SSurface> surface;
 
     bool                        booleanFailed;
 
@@ -382,7 +382,7 @@ public:
                               RgbaColor color, Group *group);
     void MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector axis, RgbaColor color,
                                      Group *group, double angles, double anglef, double dists, double distf);
-    void MakeFirstOrderRevolvedSurfaces(Vector pt, Vector axis, int i0);
+    void MakeFirstOrderRevolvedSurfaces(Vector pt, Vector axis, size_t i0);
     void MakeFromUnionOf(SShell *a, SShell *b);
     void MakeFromDifferenceOf(SShell *a, SShell *b);
     void MakeFromIntersectionOf(SShell *a, SShell *b);

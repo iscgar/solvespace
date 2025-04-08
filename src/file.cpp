@@ -535,7 +535,7 @@ bool SolveSpaceUI::SaveToFile(const Platform::Path &filename) {
     // A group will have either a mesh or a shell, but not both; but the code
     // to print either of those just does nothing if the mesh/shell is empty.
 
-    Group *g = SK.GetGroup(SK.groupOrder.back());
+    const Group *g = SK.GetGroup(SK.groupOrder.back());
     for(const STriangle &tr : g->runningMesh.l) {
         fprintf(fh, "Triangle %08x %08x "
                 "%.20f %.20f %.20f  %.20f %.20f %.20f  %.20f %.20f %.20f\n",
@@ -543,7 +543,7 @@ bool SolveSpaceUI::SaveToFile(const Platform::Path &filename) {
             CO(tr.a), CO(tr.b), CO(tr.c));
     }
 
-    SShell *s = &g->runningShell;
+    const SShell *s = &g->runningShell;
     for(const SSurface &srf : s->surface) {
         fprintf(fh, "Surface %08x %08x %08x %d %d\n",
             srf.h.v, srf.color.ToPackedInt(), srf.face, srf.degm, srf.degn);
@@ -766,8 +766,8 @@ void SolveSpaceUI::UpgradeLegacyData() {
             // at workplane origin, and the solver will mess up the sketch if
             // it is not fully constrained.
             case Request::Type::TTF_TEXT: {
-                IdList<Entity,hEntity> entity = {};
-                IdList<Param,hParam>   param = {};
+                IdList<Entity> entity = {};
+                IdList<Param>  param = {};
                 r.Generate(&entity, &param);
 
                 // If we didn't load all of the entities and params that this
@@ -806,12 +806,11 @@ void SolveSpaceUI::UpgradeLegacyData() {
     // Constraints saved in versions prior to 3.0 never had any params;
     // version 3.0 introduced params to constraints to avoid the hairy ball problem,
     // so force them where they belong.
-    IdList<Param,hParam> oldParam = {};
-    SK.param.DeepCopyInto(&oldParam);
+    IdList<Param> oldParam = SK.param;
     SS.GenerateAll(SolveSpaceUI::Generate::REGEN);
 
     auto AllParamsExistFor = [&oldParam](Constraint &c) {
-        IdList<Param,hParam> param = {};
+        IdList<Param> param = {};
         c.Generate(&param);
         bool allParamsExist = true;
         for(Param &p : param) {

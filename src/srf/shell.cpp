@@ -153,7 +153,7 @@ bool SShell::CheckNormalAxisRelationship(const SBezierLoopSet *sbls, Vector pt, 
 void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector axis,
                                          RgbaColor color, Group *group, double angles,
                                          double anglef, double dists, double distf) {
-    int i0 = surface.n; // number of pre-existing surfaces
+    const size_t i0 = surface.Size(); // number of pre-existing surfaces
     // for testing - hard code the axial distance, and number of sections.
     // distance will need to be parameters in the future.
     double dist  = distf - dists;
@@ -347,7 +347,7 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
 
 void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector axis, RgbaColor color,
                                   Group *group) {
-    int i0 = surface.n; // number of pre-existing surfaces
+    const size_t i0 = surface.Size(); // number of pre-existing surfaces
 
     if(CheckNormalAxisRelationship(sbls, pt, axis, 1.0, 0.0)) {
         axis = axis.ScaledBy(-1);
@@ -448,11 +448,9 @@ void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector 
     MakeFirstOrderRevolvedSurfaces(pt, axis, i0);
 }
 
-void SShell::MakeFirstOrderRevolvedSurfaces(Vector pt, Vector axis, int i0) {
-    int i;
-
-    for(i = i0; i < surface.n; i++) {
-        SSurface *srf = &(surface[i]);
+void SShell::MakeFirstOrderRevolvedSurfaces(Vector pt, Vector axis, size_t i0) {
+    for(size_t i = i0; i < surface.Size(); i++) {
+        SSurface *srf = &surface.Get(i);
 
         // Revolution of a line; this is potentially a plane, which we can
         // rewrite to have degree (1, 1).
@@ -545,17 +543,15 @@ void SShell::MakeFromTransformationOf(SShell *a,
                                       Vector t, Quaternion q, double scale)
 {
     booleanFailed = false;
-    surface.ReserveMore(a->surface.n);
+    surface.ReserveMore(a->surface.Size());
     for(SSurface &s : a->surface) {
-        SSurface n;
-        n = SSurface::FromTransformationOf(&s, t, q, scale, /*includingTrims=*/true);
+        SSurface n = SSurface::FromTransformationOf(&s, t, q, scale, /*includingTrims=*/true);
         surface.Add(&n); // keeping the old ID
     }
 
-    curve.ReserveMore(a->curve.n);
+    curve.ReserveMore(a->curve.Size());
     for(SCurve &c : a->curve) {
-        SCurve n;
-        n = SCurve::FromTransformationOf(&c, t, q, scale);
+        SCurve n = SCurve::FromTransformationOf(&c, t, q, scale);
         curve.Add(&n); // keeping the old ID
     }
 }
@@ -577,8 +573,11 @@ void SShell::MakeSectionEdgesInto(Vector n, double d, SEdgeList *sel, SBezierLis
 
 void SShell::TriangulateInto(SMesh *sm) {
 #pragma omp parallel for
-    for(int i=0; i<surface.n; i++) {
-        SSurface *s = &surface[i];
+    // Have to use `int` here even though `surface.Size()` returns `size_t`,
+    // becuase on Windows we get the following error otherwise:
+    // index variable in OpenMP 'for' statement must have signed integral type
+    for(int i=0; i<(int)surface.Size(); i++) {
+        SSurface *s = &surface.Get(i);
         SMesh m;
         s->TriangulateInto(this, &m);
         #pragma omp critical

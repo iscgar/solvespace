@@ -540,7 +540,7 @@ public:
     }
 };
 
-bool DxfFileWriter::OutputConstraints(IdList<Constraint,hConstraint> *constraint) {
+bool DxfFileWriter::OutputConstraints(IdList<Constraint> *constraint) {
     this->constraint = constraint;
     return true;
 }

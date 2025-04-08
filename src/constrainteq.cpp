@@ -217,20 +217,20 @@ void ConstraintBase::ModifyToSatisfy() {
     } else {
         // We'll fix these ones up by looking at their symbolic equation;
         // that means no extra work.
-        IdList<Equation,hEquation> l = {};
+        IdList<Equation> l = {};
         // Generate the equations even if this is a reference dimension
         GenerateEquations(&l, /*forReference=*/true);
-        ssassert(l.n == 1, "Expected constraint to generate a single equation");
+        ssassert(l.Size() == 1, "Expected constraint to generate a single equation");
 
         // These equations are written in the form f(...) - d = 0, where
         // d is the value of the valA.
-        valA += (l[0].e)->Eval();
+        valA += (l.begin()->e)->Eval();
 
         l.Clear();
     }
 }
 
-void ConstraintBase::AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index) const
+void ConstraintBase::AddEq(IdList<Equation> *l, Expr *expr, int index) const
 {
     Equation eq;
     eq.e = expr;
@@ -238,7 +238,7 @@ void ConstraintBase::AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index)
     l->Add(&eq);
 }
 
-void ConstraintBase::AddEq(IdList<Equation,hEquation> *l, const ExprVector &v,
+void ConstraintBase::AddEq(IdList<Equation> *l, const ExprVector &v,
                            int baseIndex) const {
     AddEq(l, v.x, baseIndex);
     AddEq(l, v.y, baseIndex + 1);
@@ -247,7 +247,7 @@ void ConstraintBase::AddEq(IdList<Equation,hEquation> *l, const ExprVector &v,
     }
 }
 
-void ConstraintBase::Generate(IdList<Param,hParam> *l) {
+void ConstraintBase::Generate(IdList<Param> *l) {
     switch(type) {
         case Type::PARALLEL:
         case Type::CUBIC_LINE_TANGENT:
@@ -268,7 +268,7 @@ void ConstraintBase::Generate(IdList<Param,hParam> *l) {
     }
 }
 
-void ConstraintBase::GenerateEquations(IdList<Equation,hEquation> *l,
+void ConstraintBase::GenerateEquations(IdList<Equation> *l,
                                        bool forReference) const {
     if(reference && !forReference) return;
 

@@ -161,8 +161,8 @@ class Entity;
 class hEntity;
 class Param;
 class hParam;
-typedef IdList<Entity,hEntity> EntityList;
-typedef IdList<Param,hParam> ParamList;
+typedef IdList<Entity> EntityList;
+typedef IdList<Param> ParamList;
 
 enum class SolveResult : uint32_t {
     OKAY                     = 0,
@@ -223,13 +223,13 @@ class System {
 public:
     enum { MAX_UNKNOWNS = 2048 };
 
-    EntityList                      entity;
-    ParamList                       param;
-    IdList<Equation,hEquation>      eq;
+    EntityList          entity;
+    ParamList           param;
+    IdList<Equation>    eq;
 
     // A list of parameters that are being dragged; these are the ones that
     // we should put as close as possible to their initial positions.
-    std::vector<hParam>             dragged;
+    std::vector<hParam> dragged;
 
     enum {
         // In general, the tag indicates the subsys that a variable/equation
@@ -349,7 +349,7 @@ public:
                             bool filled, RgbaColor fillRgb, hStyle hs) = 0;
     virtual void Bezier(const SBezier *sb) = 0;
     virtual void Triangle(const STriangle *tr) = 0;
-    virtual bool OutputConstraints(IdList<Constraint,hConstraint> *) { return false; }
+    virtual bool OutputConstraints(IdList<Constraint> *) { return false; }
     virtual void Background(RgbaColor color) = 0;
     virtual void StartFile() = 0;
     virtual void FinishAndCloseFile() = 0;
@@ -362,12 +362,12 @@ public:
         std::vector<const SBezier *> beziers;
     };
 
-    std::vector<BezierPath>         paths;
-    IdList<Constraint,hConstraint> *constraint;
+    std::vector<BezierPath> paths;
+    IdList<Constraint>     *constraint;
 
     static const char *lineTypeName(StipplePattern stippleType);
 
-    bool OutputConstraints(IdList<Constraint,hConstraint> *constraint) override;
+    bool OutputConstraints(IdList<Constraint> *constraint) override;
 
     void StartPath( RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb, hStyle hs) override;
@@ -490,15 +490,15 @@ public:
 class Sketch {
 public:
     // These are user-editable, and define the sketch.
-    IdList<Group,hGroup>            group;
-    std::vector<hGroup>             groupOrder;
-    IdList<CONSTRAINT,hConstraint>  constraint;
-    IdList<Request,hRequest>        request;
-    IdList<Style,hStyle>            style;
+    IdList<Group>       group;
+    std::vector<hGroup> groupOrder;
+    IdList<CONSTRAINT>  constraint;
+    IdList<Request>     request;
+    IdList<Style>       style;
 
     // These are generated from the above.
-    IdList<ENTITY,hEntity>          entity;
-    IdList<Param,hParam>            param;
+    IdList<ENTITY>      entity;
+    IdList<Param>       param;
 
     inline CONSTRAINT *GetConstraint(hConstraint h)
         { return constraint.FindById(h); }
@@ -524,13 +524,13 @@ public:
 
     // The state for undo/redo
     typedef struct UndoState {
-        IdList<Group,hGroup>            group;
-        std::vector<hGroup>             groupOrder;
-        IdList<Request,hRequest>        request;
-        IdList<Constraint,hConstraint>  constraint;
-        IdList<Param,hParam>            param;
-        IdList<Style,hStyle>            style;
-        hGroup                          activeGroup;
+        IdList<Group>       group;
+        std::vector<hGroup> groupOrder;
+        IdList<Request>     request;
+        IdList<Constraint>  constraint;
+        IdList<Param>       param;
+        IdList<Style>       style;
+        hGroup              activeGroup;
 
         void Clear() {
             group.Clear();

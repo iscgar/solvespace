@@ -34,7 +34,7 @@ void Group::Clear() {
     remap.clear();
 }
 
-void Group::AddParam(IdList<Param,hParam> *param, hParam hp, double v) {
+void Group::AddParam(IdList<Param> *param, hParam hp, double v) {
     Param pa = {};
     pa.h = hp;
     pa.val = v;
@@ -435,15 +435,14 @@ void Group::Activate() {
     SS.ScheduleShowTW();
 }
 
-void Group::Generate(IdList<Entity,hEntity> *entity,
-                     IdList<Param,hParam> *param)
+void Group::Generate(IdList<Entity> *entity, IdList<Param> *param)
 {
     Vector gn = (SS.GW.projRight).Cross(SS.GW.projUp);
     Vector gp = SS.GW.projRight.Plus(SS.GW.projUp);
     Vector gc = (SS.GW.offset).ScaledBy(-1);
     gn = gn.WithMagnitude(200/SS.GW.scale);
     gp = gp.WithMagnitude(200/SS.GW.scale);
-    int a, i;
+    int a;
     switch(type) {
         case Type::DRAWING_3D:
             return;
@@ -510,7 +509,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             // as a reference when defining top and bottom faces.
             hEntity pt = { 0 };
             // Not using range-for here because we're changing the size of entity in the loop.
-            for(i = 0; i < entity->n; i++) {
+            for(size_t i = 0; i < entity->Size(); i++) {
                 Entity *e = &(entity->Get(i));
                 if(e->group != opA) continue;
 
@@ -541,7 +540,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             Vector axis_dir = SK.GetEntity(predef.entityB)->VectorGetNum();
 
             // Not using range-for here because we're changing the size of entity in the loop.
-            for(i = 0; i < entity->n; i++) {
+            for(size_t i = 0; i < entity->Size(); i++) {
                 Entity *e = &(entity->Get(i));
                 if(e->group != opA) continue;
 
@@ -597,7 +596,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
                 af = 1;
             }
             // Not using range-for here because we're changing the size of entity in the loop.
-            for(i = 0; i < entity->n; i++) {
+            for(size_t i = 0; i < entity->Size(); i++) {
                 Entity *e = &(entity->Get(i));
                 if(e->group != opA)
                     continue;
@@ -653,7 +652,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             }
 
             // Not using range-for here because we're changing the size of entity in the loop.
-            for(i = 0; i < entity->n; i++) {
+            for(size_t i = 0; i < entity->Size(); i++) {
                 Entity *e = &(entity->Get(i));
                 if((e->group.v != opA.v) && !(e->h == predef.origin))
                     continue;
@@ -712,7 +711,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
 
             for(a = a0; a < n; a++) {
                 // Not using range-for here because we're changing the size of entity in the loop.
-                for(i = 0; i < entity->n; i++) {
+                for(size_t i = 0; i < entity->Size(); i++) {
                     Entity *e = &(entity->Get(i));
                     if(e->group != opA) continue;
 
@@ -748,7 +747,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
 
             for(a = a0; a < n; a++) {
                 // Not using range-for here because we're changing the size of entity in the loop.
-                for(i = 0; i < entity->n; i++) {
+                for(size_t i = 0; i < entity->Size(); i++) {
                     Entity *e = &(entity->Get(i));
                     if(e->group != opA) continue;
 
@@ -775,8 +774,8 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             AddParam(param, h.param(6), 0);
 
             // Not using range-for here because we're changing the size of entity in the loop.
-            for(i = 0; i < impEntity.n; i++) {
-                Entity *ie = &(impEntity[i]);
+            for(size_t i = 0; i < impEntity.Size(); i++) {
+                Entity *ie = &(impEntity.Get(i));
                 CopyEntity(entity, ie, 0, 0,
                     h.param(0), h.param(1), h.param(2),
                     h.param(3), h.param(4), h.param(5), h.param(6), NO_PARAM,
@@ -792,14 +791,14 @@ bool Group::IsSolvedOkay() {
            (this->allowRedundant && this->solved.how == SolveResult::REDUNDANT_OKAY);
 }
 
-void Group::AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index) {
+void Group::AddEq(IdList<Equation> *l, Expr *expr, int index) {
     Equation eq;
     eq.e = expr;
     eq.h = h.equation(index);
     l->Add(&eq);
 }
 
-void Group::GenerateEquations(IdList<Equation,hEquation> *l) {
+void Group::GenerateEquations(IdList<Equation> *l) {
     if(type == Type::LINKED) {
         // Normalize the quaternion
         ExprQuaternion q = {
@@ -868,7 +867,7 @@ hEntity Group::Remap(hEntity in, int copyNumber) {
     return h.entity(it->second.v);
 }
 
-void Group::MakeExtrusionLines(IdList<Entity,hEntity> *el, hEntity in) {
+void Group::MakeExtrusionLines(IdList<Entity> *el, hEntity in) {
     Entity *ep = SK.GetEntity(in);
 
     Entity en = {};
@@ -904,7 +903,7 @@ void Group::MakeExtrusionLines(IdList<Entity,hEntity> *el, hEntity in) {
     }
 }
 
-void Group::MakeLatheCircles(IdList<Entity,hEntity> *el, IdList<Param,hParam> *param, hEntity in, Vector pt, Vector axis) {
+void Group::MakeLatheCircles(IdList<Entity> *el, IdList<Param> *param, hEntity in, Vector pt, Vector axis) {
     Entity *ep = SK.GetEntity(in);
 
     Entity en = {};
@@ -951,7 +950,7 @@ void Group::MakeLatheCircles(IdList<Entity,hEntity> *el, IdList<Param,hParam> *p
     }
 }
 
-void Group::MakeLatheSurfacesSelectable(IdList<Entity, hEntity> *el, hEntity in, Vector axis) {
+void Group::MakeLatheSurfacesSelectable(IdList<Entity> *el, hEntity in, Vector axis) {
     Entity *ep = SK.GetEntity(in);
 
     Entity en = {};
@@ -986,7 +985,7 @@ void Group::MakeLatheSurfacesSelectable(IdList<Entity, hEntity> *el, hEntity in,
 // For Revolve and Helix groups the end faces are remapped from an arbitrary
 // point on the sketch. We reference the transformed point but there is
 // no existing normal so we need to define the rotation and timesApplied.
-void Group::MakeRevolveEndFaces(IdList<Entity,hEntity> *el, hEntity pt, int ai, int af)
+void Group::MakeRevolveEndFaces(IdList<Entity> *el, hEntity pt, int ai, int af)
 {
     if(pt.v == 0) return;
     Group *src = SK.GetGroup(opA);
@@ -1023,7 +1022,7 @@ void Group::MakeRevolveEndFaces(IdList<Entity,hEntity> *el, hEntity pt, int ai, 
     el->Add(&en);
 }
 
-void Group::MakeExtrusionTopBottomFaces(IdList<Entity,hEntity> *el, hEntity pt)
+void Group::MakeExtrusionTopBottomFaces(IdList<Entity> *el, hEntity pt)
 {
     if(pt.v == 0) return;
     Group *src = SK.GetGroup(opA);
@@ -1049,7 +1048,7 @@ void Group::MakeExtrusionTopBottomFaces(IdList<Entity,hEntity> *el, hEntity pt)
     el->Add(&en);
 }
 
-void Group::CopyEntity(IdList<Entity,hEntity> *el,
+void Group::CopyEntity(IdList<Entity> *el,
                        Entity *ep, int timesApplied, int remap,
                        hParam dx, hParam dy, hParam dz,
                        hParam qw, hParam qvx, hParam qvy, hParam qvz, hParam dist,
