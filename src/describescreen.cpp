@@ -539,8 +539,8 @@ void TextWindow::DescribeSelection() {
             }
         }
     } else {
-        int n = SS.GW.selection.n;
-        Printf(false, "%FtSELECTED:%E %d item%s", n, n == 1 ? "" : "s");
+        size_t n = SS.GW.selection.size();
+        Printf(false, "%FtSELECTED:%E %zu item%s", n, n == 1 ? "" : "s");
     }
 
     if(shown.screen == Screen::STYLE_INFO &&

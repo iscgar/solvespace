@@ -78,26 +78,25 @@ void GraphicsWindow::Selection::Draw(bool isHovered, Canvas *canvas) const {
 }
 
 void GraphicsWindow::ClearSelection() {
-    selection.Clear();
+    selection.clear();
     SS.ScheduleShowTW();
     Invalidate();
 }
 
 void GraphicsWindow::ClearNonexistentSelectionItems() {
-    bool change = false;
-    selection.ClearTags();
-    for(Selection &s : selection) {
+    auto end = std::remove_if(selection.begin(), selection.end(), [](const Selection &s) {
         if(s.constraint.v && !(SK.constraint.FindByIdNoOops(s.constraint))) {
-            s.tag = 1;
-            change = true;
+            return true;
         }
         if(s.entity.v && !(SK.entity.FindByIdNoOops(s.entity))) {
-            s.tag = 1;
-            change = true;
+            return true;
         }
+        return false;
+    });
+    if(end != selection.end()) {
+        selection.erase(end, selection.end());
+        Invalidate();
     }
-    selection.RemoveTagged();
-    if(change) Invalidate();
 }
 
 //-----------------------------------------------------------------------------
@@ -132,32 +131,27 @@ void GraphicsWindow::MakeUnselected(Selection *stog, bool coincidentPointTrick){
     if(stog->IsEmpty()) return;
 
     // If an item was selected, then we just un-select it.
-    selection.ClearTags();
-    for(Selection &s : selection) {
-        if(s.Equals(stog)) {
-            s.tag = 1;
-        }
-    }
+    auto end = std::remove_if(selection.begin(), selection.end(), [stog](const Selection &s) {
+        return s.Equals(stog);
+    });
     // If two points are coincident, then it's impossible to hover one of
     // them. But make sure to deselect both, to avoid mysterious seeming
     // inability to deselect if the bottom one did somehow get selected.
     if(stog->entity.v && coincidentPointTrick) {
         Entity *e = SK.GetEntity(stog->entity);
         if(e->IsPoint()) {
-            Vector ep = e->PointGetNum();
-            for(Selection &s : selection) {
-                if(!s.entity.v) continue;
+            const Vector ep = e->PointGetNum();
+            end = std::remove_if(selection.begin(), end, [stog, &ep](const Selection &s) {
+                if(s.entity.v) return false;
                 if(s.entity == stog->entity)
-                    continue;
+                    return false;
                 Entity *se = SK.GetEntity(s.entity);
-                if(!se->IsPoint()) continue;
-                if(ep.Equals(se->PointGetNum())) {
-                    s.tag = 1;
-                }
-            }
+                if(!se->IsPoint()) return false;
+                return ep.Equals(se->PointGetNum());
+            });
         }
     }
-    selection.RemoveTagged();
+    selection.erase(end, selection.end());
 }
 
 //-----------------------------------------------------------------------------
@@ -182,21 +176,21 @@ void GraphicsWindow::MakeSelected(Selection *stog) {
     if(stog->entity.v != 0 && SK.GetEntity(stog->entity)->IsFace()) {
         // In the interest of speed for the triangle drawing code,
         // only MAX_SELECTABLE_FACES faces may be selected at a time.
-        unsigned int c = 0;
-        selection.ClearTags();
-        for(Selection &s : selection) {
+        size_t c = 0;
+        auto end = std::remove_if(selection.begin(), selection.end(), [&c](const Selection &s) {
             hEntity he = s.entity;
             if(he.v != 0 && SK.GetEntity(he)->IsFace()) {
                 c++;
                 // See also GraphicsWindow::GroupSelection "if(e->IsFace())"
                 // and Group::DrawMesh "case DrawMeshAs::SELECTED:"
-                if(c >= MAX_SELECTABLE_FACES) s.tag = 1;
+                if(c >= MAX_SELECTABLE_FACES) return true;
             }
-        }
-        selection.RemoveTagged();
+            return false;
+        });
+        selection.erase(end, selection.end());
     }
 
-    selection.Add(stog);
+    selection.push_back(*stog);
 }
 
 //-----------------------------------------------------------------------------
@@ -242,30 +236,28 @@ void GraphicsWindow::SelectByMarquee() {
 //-----------------------------------------------------------------------------
 void GraphicsWindow::GroupSelection() {
     gs = {};
-    int i;
-    for(i = 0; i < selection.n; i++) {
-        Selection *s = &(selection[i]);
-        if(s->entity.v) {
+    for(const Selection &s : selection) {
+        if(s.entity.v) {
             (gs.n)++;
 
-            Entity *e = SK.entity.FindById(s->entity);
+            Entity *e = SK.entity.FindById(s.entity);
 
             if(e->IsStylable()) gs.stylables++;
 
             // A list of points, and a list of all entities that aren't points.
             if(e->IsPoint()) {
                 gs.points++;
-                gs.point.push_back(s->entity);
+                gs.point.push_back(s.entity);
             } else {
                 gs.entities++;
-                gs.entity.push_back(s->entity);
+                gs.entity.push_back(s.entity);
             }
 
             // And an auxiliary list of normals, including normals from
             // workplanes.
             if(e->IsNormal()) {
                 gs.anyNormals++;
-                gs.anyNormal.push_back(s->entity);
+                gs.anyNormal.push_back(s.entity);
             } else if(e->IsWorkplane()) {
                 gs.anyNormals++;
                 gs.anyNormal.push_back(e->Normal()->h);
@@ -274,13 +266,13 @@ void GraphicsWindow::GroupSelection() {
             // And of vectors (i.e., stuff with a direction to constrain)
             if(e->HasVector()) {
                 gs.vectors++;
-                gs.vector.push_back(s->entity);
+                gs.vector.push_back(s.entity);
             }
 
             // Faces (which are special, associated/drawn with triangles)
             if(e->IsFace()) {
                 gs.faces++;
-                gs.face.push_back(s->entity);
+                gs.face.push_back(s.entity);
             }
 
             if(e->HasEndpoints()) {
@@ -304,10 +296,10 @@ void GraphicsWindow::GroupSelection() {
                 default: break;
             }
         }
-        if(s->constraint.v) {
+        if(s.constraint.v) {
             gs.constraints++;
-            gs.constraint.push_back(s->constraint);
-            Constraint *c = SK.GetConstraint(s->constraint);
+            gs.constraint.push_back(s.constraint);
+            Constraint *c = SK.GetConstraint(s.constraint);
             if(c->IsStylable()) gs.stylables++;
             if(c->HasLabel()) gs.constraintLabels++;
         }

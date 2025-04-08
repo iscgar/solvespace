@@ -205,7 +205,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
                     ClearSelection();
                     MakeSelected(dragEntity);
                 }
-                if(e->type == Entity::Type::CIRCLE && selection.n <= 1) {
+                if(e->type == Entity::Type::CIRCLE && selection.size() <= 1) {
                     // Drag the radius.
                     pending.circle = dragEntity;
                     pending.operation = Pending::DRAGGING_RADIUS;
@@ -773,7 +773,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
     // If only one item is selected, then it must be the one that we just
     // selected from the hovered item; in which case unselect all and hovered
     // are equivalent.
-    if(!hover.IsEmpty() && selection.n > 1) {
+    if(!hover.IsEmpty() && selection.size() > 1) {
         menu->AddItem(_("Unselect Hovered"), [this] {
             if(!hover.IsEmpty()) {
                 MakeUnselected(&hover, /*coincidentPointTrick=*/true);

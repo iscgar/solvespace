@@ -400,6 +400,19 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
                     sprintf(buf, "%d", v);
                     break;
                 }
+                case 'z':
+                    switch(fmt[1]) {
+                        case 0: goto done; // Truncated directive
+                        case 'u': {
+                            size_t v = va_arg(vl, size_t);
+                            sprintf(buf, "%zu", v);
+                            break;
+                        }
+                        default:
+                            ssassert(false, "Invalid character following `z' directive");
+                    }
+                    ++fmt;
+                    break;
                 case 'x': {
                     unsigned int v = va_arg(vl, unsigned int);
                     sprintf(buf, "%08x", v);

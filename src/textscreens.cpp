@@ -208,20 +208,20 @@ void TextWindow::ScreenSelectEntity(int link, uint32_t v) {
     GraphicsWindow::Selection sel = {};
     hEntity he = { v };
     sel.entity = he;
-    SS.GW.selection.Add(&sel);
+    SS.GW.selection.push_back(sel);
 }
 void TextWindow::ScreenSelectRequest(int link, uint32_t v) {
     SS.GW.ClearSelection();
     GraphicsWindow::Selection sel = {};
     hRequest hr = { v };
     sel.entity = hr.entity(0);
-    SS.GW.selection.Add(&sel);
+    SS.GW.selection.push_back(sel);
 }
 void TextWindow::ScreenSelectConstraint(int link, uint32_t v) {
     SS.GW.ClearSelection();
     GraphicsWindow::Selection sel = {};
     sel.constraint.v = v;
-    SS.GW.selection.Add(&sel);
+    SS.GW.selection.push_back(sel);
 }
 
 void TextWindow::ScreenChangeGroupOption(int link, uint32_t v) {
