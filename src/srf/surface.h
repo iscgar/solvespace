@@ -95,9 +95,9 @@ public:
     void MakePwlInto(SEdgeList *sel, double chordTol=0, double max_dt=0.0) const;
     void MakePwlInto(List<SCurvePt> *l, double chordTol=0, double max_dt=0.0) const;
     void MakePwlInto(SContour *sc, double chordTol=0, double max_dt=0.0) const;
-    void MakePwlInto(List<Vector> *l, double chordTol=0, double max_dt=0.0) const;
-    void MakePwlWorker(List<Vector> *l, double ta, double tb, double chordTol, double max_dt) const;
-    void MakePwlInitialWorker(List<Vector> *l, double ta, double tb, double chordTol, double max_dt) const;
+    void MakePwlInto(std::vector<Vector> *l, double chordTol=0, double max_dt=0.0) const;
+    void MakePwlWorker(std::vector<Vector> *l, double ta, double tb, double chordTol, double max_dt) const;
+    void MakePwlInitialWorker(std::vector<Vector> *l, double ta, double tb, double chordTol, double max_dt) const;
     void MakeNonrationalCubicInto(SBezierList *bl, double tolerance, int depth = 0) const;
 
     void AllIntersectionsWith(const SBezier *sbb, SPointList *spl) const;

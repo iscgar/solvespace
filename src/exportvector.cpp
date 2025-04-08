@@ -363,18 +363,17 @@ public:
     }
 
     void writeBezierAsPwl(const SBezier *sb) {
-        List<Vector> lv = {};
+        std::vector<Vector> lv;
         sb->MakePwlInto(&lv, SS.ExportChordTolMm());
         hStyle hs = { (uint32_t)sb->auxA };
         DRW_Polyline polyline;
         assignEntityDefaults(&polyline, hs);
-        for(int i = 0; i < lv.n; i++) {
+        for(size_t i = 0; i < lv.size(); i++) {
             Vector *v = &lv[i];
             DRW_Vertex *vertex = new DRW_Vertex(v->x, v->y, v->z, 0.0);
             polyline.vertlist.push_back(vertex);
         }
         dxf->writePolyline(&polyline);
-        lv.Clear();
     }
 
     void makeKnotsFor(DRW_Spline *spline) {

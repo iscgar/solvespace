@@ -66,7 +66,7 @@ void GraphicsWindow::FixConstraintsForRequestBeingDeleted(hRequest hr) {
     }
 }
 void GraphicsWindow::FixConstraintsForPointBeingDeleted(hEntity hpt) {
-    List<hEntity> ld = {};
+    std::vector<hEntity> ld;
 
     SK.constraint.ClearTags();
     for(Constraint &c : SK.constraint) {
@@ -74,11 +74,11 @@ void GraphicsWindow::FixConstraintsForPointBeingDeleted(hEntity hpt) {
         if(c.group != SS.GW.activeGroup) continue;
 
         if(c.ptA == hpt) {
-            ld.Add(&(c.ptB));
+            ld.push_back(c.ptB);
             c.tag = 1;
         }
         if(c.ptB == hpt) {
-            ld.Add(&(c.ptA));
+            ld.push_back(c.ptA);
             c.tag = 1;
         }
     }
@@ -94,10 +94,9 @@ void GraphicsWindow::FixConstraintsForPointBeingDeleted(hEntity hpt) {
     // those two points were implicitly coincident with each other. By
     // deleting hpt (and all constraints that mention it), we will delete
     // that relationship. So put it back here now.
-    for(int i = 1; i < ld.n; i++) {
+    for(size_t i = 1; i < ld.size(); i++) {
         Constraint::ConstrainCoincident(ld[i-1], ld[i]);
     }
-    ld.Clear();
 }
 
 //-----------------------------------------------------------------------------

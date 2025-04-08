@@ -254,7 +254,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
         Vector axis = alongt.WithMagnitude(1);
 
         List<SInter> inters = {};
-        List<Vector> lv = {};
+        std::vector<Vector> lv;
 
         double a_axis0 = (   ctrl[0][0]).Dot(axis),
                a_axis1 = (   ctrl[0][1]).Dot(axis),
@@ -278,9 +278,8 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
 
         oft.MakePwlInto(&lv);
 
-        int i;
-        for(i = 0; i < lv.n - 1; i++) {
-            Vector pa = lv[i], pb = lv[i+1];
+        for(size_t i = 1; i < lv.size(); i++) {
+            Vector pa = lv[i-1], pb = lv[i];
             pa = pa.Minus(axis.ScaledBy(pa.Dot(axis)));
             pb = pb.Minus(axis.ScaledBy(pb.Dot(axis)));
             pa = pa.Plus(axisc);
@@ -307,7 +306,6 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
         }
 
         inters.Clear();
-        lv.Clear();
     } else {
         if((degm == 1 && degn == 1) || (b->degm == 1 && b->degn == 1)) {
             // we should only be here if just one surface is a plane because the

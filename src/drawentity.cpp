@@ -23,12 +23,11 @@ void Entity::GenerateEdges(SEdgeList *el) {
     for(int i = 0; i < sbl->l.n; i++) {
         SBezier *sb = &(sbl->l[i]);
 
-        List<Vector> lv = {};
+        std::vector<Vector> lv;
         sb->MakePwlInto(&lv);
-        for(int j = 1; j < lv.n; j++) {
+        for(size_t j = 1; j < lv.size(); j++) {
             el->AddEdge(lv[j-1], lv[j], Style::ForEntity(h).v, i);
         }
-        lv.Clear();
     }
 }
 

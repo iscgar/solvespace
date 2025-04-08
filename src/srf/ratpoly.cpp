@@ -170,35 +170,29 @@ void SBezier::SplitAt(double t, SBezier *bef, SBezier *aft) const {
 }
 
 void SBezier::MakePwlInto(SEdgeList *sel, double chordTol, double max_dt) const {
-    List<Vector> lv = {};
+    std::vector<Vector> lv;
     MakePwlInto(&lv, chordTol, max_dt);
-    int i;
-    for(i = 1; i < lv.n; i++) {
+    for(size_t i = 1; i < lv.size(); i++) {
         sel->AddEdge(lv[i-1], lv[i]);
     }
-    lv.Clear();
 }
 void SBezier::MakePwlInto(List<SCurvePt> *l, double chordTol, double max_dt) const {
-    List<Vector> lv = {};
+    std::vector<Vector> lv;
     MakePwlInto(&lv, chordTol, max_dt);
-    int i;
-    for(i = 0; i < lv.n; i++) {
+    for(size_t i = 0; i < lv.size(); i++) {
         SCurvePt scpt;
         scpt.tag    = 0;
         scpt.p      = lv[i];
-        scpt.vertex = (i == 0) || (i == (lv.n - 1));
+        scpt.vertex = (i == 0) || (i == (lv.size() - 1));
         l->Add(&scpt);
     }
-    lv.Clear();
 }
 void SBezier::MakePwlInto(SContour *sc, double chordTol, double max_dt) const {
-    List<Vector> lv = {};
+    std::vector<Vector> lv = {};
     MakePwlInto(&lv, chordTol, max_dt);
-    int i;
-    for(i = 0; i < lv.n; i++) {
+    for(size_t i = 0; i < lv.size(); i++) {
         sc->AddPoint(lv[i]);
     }
-    lv.Clear();
 }
 //--------------------------------------------------------------------------------------
 // all variants of MakePwlInto come here. Split a rational Bezier into Piecewise Linear
@@ -206,7 +200,7 @@ void SBezier::MakePwlInto(SContour *sc, double chordTol, double max_dt) const {
 // max_dt allows to force curves to be split into spans of no more than a certain
 // length based on t-parameter. RemoveShortSegments() may delete points when dt <= 0.1
 //--------------------------------------------------------------------------------------
-void SBezier::MakePwlInto(List<Vector> *l, double chordTol, double max_dt) const {
+void SBezier::MakePwlInto(std::vector<Vector> *l, double chordTol, double max_dt) const {
     if(EXACT(chordTol == 0)) {
         // Use the default chord tolerance.
         chordTol = SS.ChordTolMm();
@@ -217,16 +211,16 @@ void SBezier::MakePwlInto(List<Vector> *l, double chordTol, double max_dt) const
     if (EXACT(max_dt == 0.0)) {
         max_dt = (deg == 1) ? 1.0 : 0.25;
     }
-    l->Add(&(ctrl[0]));
+    l->push_back(ctrl[0]);
     // don't split first degee (lines) unless asked to by the caller via max_dt
     if((deg == 1) && (max_dt >= 1.0)) {
-        l->Add(&(ctrl[1]));
+        l->push_back(ctrl[1]);
     } else {
         MakePwlInitialWorker(l, 0.0, 0.5, chordTol, max_dt);
         MakePwlInitialWorker(l, 0.5, 1.0, chordTol, max_dt);
     }
 }
-void SBezier::MakePwlWorker(List<Vector> *l, double ta, double tb, double chordTol, double max_dt) const
+void SBezier::MakePwlWorker(std::vector<Vector> *l, double ta, double tb, double chordTol, double max_dt) const
 {
     Vector pa = PointAt(ta);
     Vector pb = PointAt(tb);
@@ -237,14 +231,14 @@ void SBezier::MakePwlWorker(List<Vector> *l, double ta, double tb, double chordT
     double step = 1.0/SS.GetMaxSegments();
     if(((tb - ta) < step || d < chordTol) && ((tb-ta) <= max_dt) ) {
         // A previous call has already added the beginning of our interval.
-        l->Add(&pb);
+        l->push_back(pb);
     } else {
         double tm = (ta + tb) / 2;
         MakePwlWorker(l, ta, tm, chordTol, max_dt);
         MakePwlWorker(l, tm, tb, chordTol, max_dt);
     }
 }
-void SBezier::MakePwlInitialWorker(List<Vector> *l, double ta, double tb, double chordTol, double max_dt) const
+void SBezier::MakePwlInitialWorker(std::vector<Vector> *l, double ta, double tb, double chordTol, double max_dt) const
 {
     Vector pa = PointAt(ta);
     Vector pb = PointAt(tb);
@@ -267,7 +261,7 @@ void SBezier::MakePwlInitialWorker(List<Vector> *l, double ta, double tb, double
     double step = 1.0/SS.GetMaxSegments();
     if( ((tb - ta) < step || d < chordTol) && ((tb-ta) <= max_dt) ) {
         // A previous call has already added the beginning of our interval.
-        l->Add(&pb);
+        l->push_back(pb);
     } else {
         double tm = (ta + tb) / 2;
         MakePwlWorker(l, ta, tm, chordTol, max_dt);
