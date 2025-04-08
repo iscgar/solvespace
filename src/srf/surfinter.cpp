@@ -219,7 +219,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             // extrusion, and dp component doesn't matter so zero
             p0 = n.ScaledBy(d).Plus(alu.ScaledBy(pm.Dot(alu)));
 
-            List<SInter> inters = {};
+            std::vector<SInter> inters;
             sext->AllPointsIntersecting(p0, p0.Plus(dp), &inters,
                 /*asSegment=*/false, /*trimmed=*/false, /*inclTangent=*/true);
 
@@ -229,8 +229,6 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                 bezier = SBezier::From((si.p).Minus(al), (si.p).Plus(al));
                 AddExactIntersectionCurve(&bezier, b, agnstA, agnstB, into);
             }
-
-            inters.Clear();
         } else {
             // Direction of extrusion is not parallel to plane; so
             // intersection is projection of extruded curve into our plane.
@@ -253,7 +251,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
         // intersect along some number of lines parallel to the axis.
         Vector axis = alongt.WithMagnitude(1);
 
-        List<SInter> inters = {};
+        std::vector<SInter> inters;
         std::vector<Vector> lv;
 
         double a_axis0 = (   ctrl[0][0]).Dot(axis),
@@ -304,8 +302,6 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             bezier = SBezier::From(p.Plus(axis0), p.Plus(axis1));
             AddExactIntersectionCurve(&bezier, b, agnstA, agnstB, into);
         }
-
-        inters.Clear();
     } else {
         if((degm == 1 && degn == 1) || (b->degm == 1 && b->degn == 1)) {
             // we should only be here if just one surface is a plane because the
@@ -359,11 +355,11 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             srfA->MakeEdgesInto(shA, &el, MakeAs::XYZ, NULL);
 
             for(const SEdge &se : el.l) {
-                List<SInter> lsi = {};
+                std::vector<SInter> lsi = {};
 
                 srfB->AllPointsIntersecting(se.a, se.b, &lsi,
                     /*asSegment=*/true, /*trimmed=*/true, /*inclTangent=*/false);
-                if(lsi.IsEmpty())
+                if(lsi.empty())
                     continue;
 
                 // Find the other surface that this curve trims.
@@ -396,7 +392,6 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                         spl.l.Add(&sp);
                     }
                 }
-                lsi.Clear();
             }
 
             el.Clear();
