@@ -222,6 +222,7 @@ if(ENABLE_GUI OR ENABLE_CLI)
         undoredo.cpp
         util.cpp
         view.cpp
+        platform/platformbase.cpp
         platform/platform.cpp
         platform/gui.cpp
         render/render.cpp
