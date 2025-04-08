@@ -208,11 +208,11 @@ public:
 
     SBsp2       *more;
 
-    void InsertTriangleHow(BspClass how, STriangle *tr, SMesh *m, SBsp3 *bsp3);
-    void InsertTriangle(STriangle *tr, SMesh *m, SBsp3 *bsp3);
+    void InsertTriangleHow(BspClass how, const STriangle *tr, SMesh *m, SBsp3 *bsp3);
+    void InsertTriangle(const STriangle *tr, SMesh *m, SBsp3 *bsp3);
     Vector IntersectionWith(Vector a, Vector b) const;
-    void InsertEdge(SEdge *nedge, Vector nnp, Vector out);
-    static SBsp2 *InsertOrCreateEdge(SBsp2 *where, SEdge *nedge,
+    void InsertEdge(const SEdge *nedge, Vector nnp, Vector out);
+    static SBsp2 *InsertOrCreateEdge(SBsp2 *where, const SEdge *nedge,
                                      Vector nnp, Vector out);
     static SBsp2 *Alloc();
 };
@@ -235,15 +235,15 @@ public:
 
     Vector IntersectionWith(Vector a, Vector b) const;
 
-    void InsertHow(BspClass how, STriangle *str, SMesh *instead);
-    void Insert(STriangle *str, SMesh *instead);
-    static SBsp3 *InsertOrCreate(SBsp3 *where, STriangle *str, SMesh *instead);
+    void InsertHow(BspClass how, const STriangle *str, SMesh *instead);
+    void Insert(const STriangle *str, SMesh *instead);
+    static SBsp3 *InsertOrCreate(SBsp3 *where, const STriangle *str, SMesh *instead);
 
-    void InsertConvexHow(BspClass how, STriMeta meta, Vector *vertex, size_t n,
+    void InsertConvexHow(BspClass how, STriMeta meta, const Vector *vertex, size_t n,
                                 SMesh *instead);
-    SBsp3 *InsertConvex(STriMeta meta, Vector *vertex, size_t n, SMesh *instead);
+    SBsp3 *InsertConvex(STriMeta meta, const Vector *vertex, size_t n, SMesh *instead);
 
-    void InsertInPlane(bool pos2, STriangle *tr, SMesh *m);
+    void InsertInPlane(bool pos2, const STriangle *tr, SMesh *m);
 
     void GenerateInPaintOrder(SMesh *m) const;
 };
@@ -259,7 +259,7 @@ public:
     bool    isTransparent;
 
     void Clear();
-    void AddTriangle(const STriangle *st);
+    void AddTriangle(const STriangle &st);
     void AddTriangle(STriMeta meta, Vector a, Vector b, Vector c);
     void AddTriangle(STriMeta meta, Vector n,
                      Vector a, Vector b, Vector c);
@@ -268,15 +268,15 @@ public:
 
     void Simplify(int start);
 
-    void AddAgainstBsp(SMesh *srcm, SBsp3 *bsp3);
-    void MakeFromUnionOf(SMesh *a, SMesh *b);
-    void MakeFromDifferenceOf(SMesh *a, SMesh *b);
-    void MakeFromIntersectionOf(SMesh *a, SMesh *b);
+    void AddAgainstBsp(const SMesh *srcm, SBsp3 *bsp3);
+    void MakeFromUnionOf(const SMesh *a, const SMesh *b);
+    void MakeFromDifferenceOf(const SMesh *a, const SMesh *b);
+    void MakeFromIntersectionOf(const SMesh *a, const SMesh *b);
 
-    void MakeFromCopyOf(SMesh *a);
-    void MakeFromTransformationOf(SMesh *a, Vector trans,
+    void MakeFromCopyOf(const SMesh *a);
+    void MakeFromTransformationOf(const SMesh *a, Vector trans,
                                   Quaternion q, double scale);
-    void MakeFromAssemblyOf(SMesh *a, SMesh *b);
+    void MakeFromAssemblyOf(const SMesh *a, const SMesh *b);
 
     void MakeEdgesInPlaneInto(SEdgeList *sel, Vector n, double d);
     void MakeOutlinesInto(SOutlineList *sol, EdgeKind type);
@@ -320,7 +320,7 @@ public:
     void AddEdge(Vector a, Vector b, Vector nl, Vector nr, int tag = 0);
     void ListTaggedInto(SEdgeList *el, int auxA = 0, int auxB = 0);
 
-    void MakeFromCopyOf(SOutlineList *ol);
+    void MakeFromCopyOf(const SOutlineList *ol);
 };
 
 class SKdNode {

@@ -200,7 +200,7 @@ Canvas::hStroke Canvas::GetStroke(const Stroke &stroke) {
         if(s.Equals(stroke)) return s.h;
     }
     Stroke strokeCopy = stroke;
-    return strokes.AddAndAssignId(&strokeCopy);
+    return strokes.AddAndAssignId(std::move(strokeCopy));
 }
 
 Canvas::hFill Canvas::GetFill(const Fill &fill) {
@@ -208,7 +208,7 @@ Canvas::hFill Canvas::GetFill(const Fill &fill) {
         if(f.Equals(fill)) return f.h;
     }
     Fill fillCopy = fill;
-    return fills.AddAndAssignId(&fillCopy);
+    return fills.AddAndAssignId(std::move(fillCopy));
 }
 
 BitmapFont *Canvas::GetBitmapFont() {

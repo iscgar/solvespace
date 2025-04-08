@@ -217,7 +217,7 @@ void ConstraintBase::ModifyToSatisfy() {
     } else {
         // We'll fix these ones up by looking at their symbolic equation;
         // that means no extra work.
-        IdList<Equation> l = {};
+        IdList<Equation> l;
         // Generate the equations even if this is a reference dimension
         GenerateEquations(&l, /*forReference=*/true);
         ssassert(l.Size() == 1, "Expected constraint to generate a single equation");
@@ -225,8 +225,6 @@ void ConstraintBase::ModifyToSatisfy() {
         // These equations are written in the form f(...) - d = 0, where
         // d is the value of the valA.
         valA += (l.begin()->e)->Eval();
-
-        l.Clear();
     }
 }
 
@@ -235,7 +233,7 @@ void ConstraintBase::AddEq(IdList<Equation> *l, Expr *expr, int index) const
     Equation eq;
     eq.e = expr;
     eq.h = h.equation(index);
-    l->Add(&eq);
+    l->Add(eq);
 }
 
 void ConstraintBase::AddEq(IdList<Equation> *l, const ExprVector &v,
@@ -259,7 +257,7 @@ void ConstraintBase::Generate(IdList<Param> *l) {
             Param p = {};
             valP = h.param(0);
             p.h = valP;
-            l->Add(&p);
+            l->Add(p);
             break;
         }
 

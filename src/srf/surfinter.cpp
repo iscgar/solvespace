@@ -45,10 +45,10 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
     }// end omp critical
     if(existing) {
         for(const SCurvePt &v : existing->pts) {
-            sc.pts.Add(&v);
+            sc.pts.Add(v);
         }
         if(backwards) sc.pts.Reverse();
-        split = sc;
+        split = std::move(sc);
         sc = {};
     } else {
         sb->MakePwlInto(&(sc.pts));
@@ -104,7 +104,7 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
     split.source = SCurve::Source::INTERSECTION;
 #pragma omp critical(into)
     {
-        into->curve.AddAndAssignId(&split);
+        into->curve.AddAndAssignId(std::move(split));
     }
 }
 
@@ -389,7 +389,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                         sp.auxv = n.Cross((se.b).Minus(se.a));
                         sp.auxv = (sp.auxv).WithMagnitude(1);
 
-                        spl.l.Add(&sp);
+                        spl.l.Add(sp);
                     }
                 }
             }
@@ -418,7 +418,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             SCurvePt padd = {};
             padd.vertex = true;
             padd.p = start;
-            sc.pts.Add(&padd);
+            sc.pts.Add(padd);
 
             Point2d pa, pb;
             Vector np, npc = Vector::From(0, 0, 0);
@@ -474,7 +474,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
 
                 padd.p = npc;
                 padd.vertex = (a == maxsteps);
-                sc.pts.Add(&padd);
+                sc.pts.Add(padd);
 
                 start = npc;
             }
@@ -486,7 +486,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             sc.Clear();
 #pragma omp critical(into)
             {
-                into->curve.AddAndAssignId(&split);
+                into->curve.AddAndAssignId(std::move(split));
             }
         }
         spl.Clear();

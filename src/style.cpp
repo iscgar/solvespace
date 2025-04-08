@@ -86,7 +86,7 @@ void Style::CreateDefaultStyle(hStyle h) {
         ns.name = "new-custom-style";
     }
 
-    SK.style.Add(&ns);
+    SK.style.Add(ns);
 }
 
 void Style::FillDefaultStyle(Style *s, const Default *d, bool factory) {

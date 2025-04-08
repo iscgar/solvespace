@@ -37,13 +37,12 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
 
     // So we can now generate the top and bottom surfaces of the extrusion,
     // planes within a translated (and maybe mirrored) version of that csys.
-    SSurface s0, s1;
-    s0 = SSurface::FromPlane(orig.Plus(t0), u, v);
+    SSurface s0 = SSurface::FromPlane(orig.Plus(t0), u, v);
     s0.color = color;
-    s1 = SSurface::FromPlane(orig.Plus(t1).Plus(u), u.ScaledBy(-1), v);
+    SSurface s1 = SSurface::FromPlane(orig.Plus(t1).Plus(u), u.ScaledBy(-1), v);
     s1.color = color;
-    hSSurface hs0 = surface.AddAndAssignId(&s0),
-              hs1 = surface.AddAndAssignId(&s1);
+    hSSurface hs0 = surface.AddAndAssignId(std::move(s0)),
+              hs1 = surface.AddAndAssignId(std::move(s1));
 
     // Now go through the input curves. For each one, generate its surface
     // of extrusion, its two translated trim curves, and one trim line. We
@@ -56,7 +55,7 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
             // it to the list
             SSurface ss = SSurface::FromExtrusionOf(&sb, t0, t1);
             ss.color = color;
-            hSSurface hsext = surface.AddAndAssignId(&ss);
+            hSSurface hsext = surface.AddAndAssignId(std::move(ss));
 
             // Translate the curve by t0 and t1 to produce two trim curves
             SCurve sc = {};
@@ -65,7 +64,7 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
             (sc.exact).MakePwlInto(&(sc.pts));
             sc.surfA = hs0;
             sc.surfB = hsext;
-            hSCurve hc0 = curve.AddAndAssignId(&sc);
+            hSCurve hc0 = curve.AddAndAssignId(std::move(sc));
 
             sc = {};
             sc.isExact = true;
@@ -73,20 +72,20 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
             (sc.exact).MakePwlInto(&(sc.pts));
             sc.surfA = hs1;
             sc.surfB = hsext;
-            hSCurve hc1 = curve.AddAndAssignId(&sc);
+            hSCurve hc1 = curve.AddAndAssignId(std::move(sc));
 
             STrimBy stb0, stb1;
             // The translated curves trim the flat top and bottom surfaces.
             stb0 = STrimBy::EntireCurve(this, hc0, /*backwards=*/false);
             stb1 = STrimBy::EntireCurve(this, hc1, /*backwards=*/true);
-            (surface.FindById(hs0))->trim.Add(&stb0);
-            (surface.FindById(hs1))->trim.Add(&stb1);
+            (surface.FindById(hs0))->trim.Add(stb0);
+            (surface.FindById(hs1))->trim.Add(stb1);
 
             // The translated curves also trim the surface of extrusion.
             stb0 = STrimBy::EntireCurve(this, hc0, /*backwards=*/true);
             stb1 = STrimBy::EntireCurve(this, hc1, /*backwards=*/false);
-            (surface.FindById(hsext))->trim.Add(&stb0);
-            (surface.FindById(hsext))->trim.Add(&stb1);
+            (surface.FindById(hsext))->trim.Add(stb0);
+            (surface.FindById(hsext))->trim.Add(stb1);
 
             // And form the trim line
             Vector pt = sb.Finish();
@@ -94,7 +93,7 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
             sc.isExact = true;
             sc.exact = SBezier::From(pt.Plus(t0), pt.Plus(t1));
             (sc.exact).MakePwlInto(&(sc.pts));
-            hSCurve hl = curve.AddAndAssignId(&sc);
+            hSCurve hl = curve.AddAndAssignId(std::move(sc));
             // save this for later
             TrimLine tl;
             tl.hc = hl;
@@ -108,11 +107,10 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
 
             TrimLine *tlp = &(trimLines[WRAP(i-1, trimLines.size())]);
 
-            STrimBy stb;
-            stb = STrimBy::EntireCurve(this, tl->hc, /*backwards=*/true);
-            ss->trim.Add(&stb);
+            STrimBy stb = STrimBy::EntireCurve(this, tl->hc, /*backwards=*/true);
+            ss->trim.Add(stb);
             stb = STrimBy::EntireCurve(this, tlp->hc, /*backwards=*/false);
-            ss->trim.Add(&stb);
+            ss->trim.Add(stb);
 
             (curve.FindById(tl->hc))->surfA = ss->h;
             (curve.FindById(tlp->hc))->surfB = ss->h;
@@ -186,15 +184,14 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
 
     // So we can now generate the end caps of the extrusion within
     // a translated and rotated (and maybe mirrored) version of that csys.
-    SSurface s0, s1;
-    s0 = SSurface::FromPlane(orig.RotatedAbout(pt, axis, angles).Plus(axis.ScaledBy(dists)),
+    SSurface s0 = SSurface::FromPlane(orig.RotatedAbout(pt, axis, angles).Plus(axis.ScaledBy(dists)),
                              u.RotatedAbout(axis, angles), v.RotatedAbout(axis, angles));
     s0.color = color;
 
     hEntity face0 = group->Remap(Entity::NO_ENTITY, startMapping);
     s0.face = face0.v;
 
-    s1 = SSurface::FromPlane(
+    SSurface s1 = SSurface::FromPlane(
         orig.Plus(u).RotatedAbout(pt, axis, anglef).Plus(axis.ScaledBy(distf)),
         u.ScaledBy(-1).RotatedAbout(axis, anglef), v.RotatedAbout(axis, anglef));
     s1.color = color;
@@ -202,8 +199,8 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
     hEntity face1 = group->Remap(Entity::NO_ENTITY, endMapping);
     s1.face = face1.v;
 
-    hSSurface hs0 = surface.AddAndAssignId(&s0);
-    hSSurface hs1 = surface.AddAndAssignId(&s1);
+    hSSurface hs0 = surface.AddAndAssignId(std::move(s0));
+    hSSurface hs1 = surface.AddAndAssignId(std::move(s1));
 
     // Now we actually build and trim the swept surfaces. One loop at a time.
     for(const SBezierLoop &sbl : sbls->l) {
@@ -232,7 +229,7 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                             ss.face = hface.v;
                         }
                     }
-                    revs[j] = surface.AddAndAssignId(&ss);
+                    revs[j] = surface.AddAndAssignId(std::move(ss));
                 }
             }
             hsl.emplace_back(std::move(revs));
@@ -273,7 +270,7 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                         scpt.tag    = 0;
                         scpt.p      = sc.exact.PointAt(t_values[x]);
                         scpt.vertex = (x == 0) || (x == (t_values.size() - 1));
-                        sc.pts.Add(&scpt);
+                        sc.pts.Add(scpt);
                     }
 
                     // the surfaces already exists so trim with this curve
@@ -289,13 +286,13 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                         sc.surfB = hs0; // staring cap
                     }
 
-                    hSCurve hcb = curve.AddAndAssignId(&sc);
+                    hSCurve hcb = curve.AddAndAssignId(std::move(sc));
 
                     STrimBy stb;
                     stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/true);
-                    (surface.FindById(sc.surfA))->trim.Add(&stb);
+                    (surface.FindById(sc.surfA))->trim.Add(stb);
                     stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/false);
-                    (surface.FindById(sc.surfB))->trim.Add(&stb);
+                    (surface.FindById(sc.surfB))->trim.Add(stb);
                 } else if(j == 0) { // curve was on the rotation axis and is shared by the end caps.
                     sc         = {};
                     sc.isExact = true;
@@ -303,13 +300,13 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                     (sc.exact).MakePwlInto(&(sc.pts));
                     sc.surfA    = hs1; // end cap
                     sc.surfB    = hs0; // staring cap
-                    hSCurve hcb = curve.AddAndAssignId(&sc);
+                    hSCurve hcb = curve.AddAndAssignId(std::move(sc));
 
                     STrimBy stb;
                     stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/true);
-                    (surface.FindById(sc.surfA))->trim.Add(&stb);
+                    (surface.FindById(sc.surfA))->trim.Add(stb);
                     stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/false);
-                    (surface.FindById(sc.surfB))->trim.Add(&stb);
+                    (surface.FindById(sc.surfB))->trim.Add(stb);
                 }
 
                 // And if this input curve and the one after it both generated
@@ -328,13 +325,13 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                     sc.surfA = revs[j];
                     sc.surfB = revsp[j];
 
-                    hSCurve hcc = curve.AddAndAssignId(&sc);
+                    hSCurve hcc = curve.AddAndAssignId(std::move(sc));
 
                     STrimBy stb;
                     stb = STrimBy::EntireCurve(this, hcc, /*backwards=*/false);
-                    (surface.FindById(sc.surfA))->trim.Add(&stb);
+                    (surface.FindById(sc.surfA))->trim.Add(stb);
                     stb = STrimBy::EntireCurve(this, hcc, /*backwards=*/true);
-                    (surface.FindById(sc.surfB))->trim.Add(&stb);
+                    (surface.FindById(sc.surfB))->trim.Add(stb);
                 }
             }
         }
@@ -379,7 +376,7 @@ void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector 
                             ss.face = hface.v;
                         }
                     }
-                    revs[j] = surface.AddAndAssignId(&ss);
+                    revs[j] = surface.AddAndAssignId(std::move(ss));
                 }
             }
             hsl.emplace_back(std::move(revs));
@@ -408,13 +405,13 @@ void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector 
                     sc.surfA = revs[j];
                     sc.surfB = revs[WRAP(j-1, 4)];
 
-                    hSCurve hcb = curve.AddAndAssignId(&sc);
+                    hSCurve hcb = curve.AddAndAssignId(std::move(sc));
 
                     STrimBy stb;
                     stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/true);
-                    (surface.FindById(sc.surfA))->trim.Add(&stb);
+                    (surface.FindById(sc.surfA))->trim.Add(stb);
                     stb = STrimBy::EntireCurve(this, hcb, /*backwards=*/false);
-                    (surface.FindById(sc.surfB))->trim.Add(&stb);
+                    (surface.FindById(sc.surfB))->trim.Add(stb);
                 }
 
                 // And if this input curve and the one after it both generated
@@ -433,13 +430,13 @@ void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector 
                     sc.surfA = revs[j];
                     sc.surfB = revsp[j];
 
-                    hSCurve hcc = curve.AddAndAssignId(&sc);
+                    hSCurve hcc = curve.AddAndAssignId(std::move(sc));
 
                     STrimBy stb;
                     stb = STrimBy::EntireCurve(this, hcc, /*backwards=*/false);
-                    (surface.FindById(sc.surfA))->trim.Add(&stb);
+                    (surface.FindById(sc.surfA))->trim.Add(stb);
                     stb = STrimBy::EntireCurve(this, hcc, /*backwards=*/true);
-                    (surface.FindById(sc.surfB))->trim.Add(&stb);
+                    (surface.FindById(sc.surfB))->trim.Add(stb);
                 }
             }
         }
@@ -546,13 +543,13 @@ void SShell::MakeFromTransformationOf(SShell *a,
     surface.ReserveMore(a->surface.Size());
     for(SSurface &s : a->surface) {
         SSurface n = SSurface::FromTransformationOf(&s, t, q, scale, /*includingTrims=*/true);
-        surface.Add(&n); // keeping the old ID
+        surface.Add(std::move(n)); // keeping the old ID
     }
 
     curve.ReserveMore(a->curve.Size());
     for(SCurve &c : a->curve) {
         SCurve n = SCurve::FromTransformationOf(&c, t, q, scale);
-        curve.Add(&n); // keeping the old ID
+        curve.Add(std::move(n)); // keeping the old ID
     }
 }
 

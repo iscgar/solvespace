@@ -155,8 +155,7 @@ bool Slvs_IsCircle(Slvs_Entity e) {
 Slvs_hParam Slvs_AddParam(double val) {
     Param pa = {};
     pa.val   = val;
-    SK.param.AddAndAssignId(&pa);
-    return pa.h.v;
+    return SK.param.AddAndAssignId(std::move(pa)).v;
 }
 
 // entities
@@ -169,10 +168,10 @@ Slvs_Entity Slvs_AddPoint2D(uint32_t grouph, double u, double v, Slvs_Entity wor
     e.workplane.v = workplane.h;
     e.param[0].v  = uph;
     e.param[1].v  = vph;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
-    Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    Slvs_Entity ce = {};
+    ce.h = he.v;
     ce.type = SLVS_E_POINT_IN_2D;
     ce.group = grouph;
     ce.wrkpl = workplane.h;
@@ -192,10 +191,10 @@ Slvs_Entity Slvs_AddPoint3D(uint32_t grouph, double x, double y, double z) {
     e.param[0].v  = xph;
     e.param[1].v  = yph;
     e.param[2].v  = zph;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
-    Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    Slvs_Entity ce = {};
+    ce.h = he.v;
     ce.type = SLVS_E_POINT_IN_3D;
     ce.group = grouph;
     ce.wrkpl = SLVS_FREE_IN_3D;
@@ -213,10 +212,10 @@ Slvs_Entity Slvs_AddNormal2D(uint32_t grouph, Slvs_Entity workplane) {
     e.type        = EntityBase::Type::NORMAL_IN_2D;
     e.group.v     = grouph;
     e.workplane.v = workplane.h;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
-    Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    Slvs_Entity ce = {};
+    ce.h = he.v;
     ce.type = SLVS_E_NORMAL_IN_2D;
     ce.group = grouph;
     ce.wrkpl = workplane.h;
@@ -236,10 +235,10 @@ Slvs_Entity Slvs_AddNormal3D(uint32_t grouph, double qw, double qx, double qy, d
     e.param[1].v  = xph;
     e.param[2].v  = yph;
     e.param[3].v  = zph;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
-    Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    Slvs_Entity ce = {};
+    ce.h = he.v;
     ce.type = SLVS_E_NORMAL_IN_3D;
     ce.group = grouph;
     ce.wrkpl = SLVS_FREE_IN_3D;
@@ -260,10 +259,10 @@ Slvs_Entity Slvs_AddDistance(uint32_t grouph, double value, Slvs_Entity workplan
     e.group.v     = grouph;
     e.workplane.v = workplane.h;
     e.param[0].v  = valueph;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
-    Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    Slvs_Entity ce = {};
+    ce.h = he.v;
     ce.type = SLVS_E_DISTANCE;
     ce.group = grouph;
     ce.wrkpl = workplane.h;
@@ -285,10 +284,10 @@ Slvs_Entity Slvs_AddLine2D(uint32_t grouph, Slvs_Entity ptA, Slvs_Entity ptB, Sl
     e.workplane.v = workplane.h;
     e.point[0].v  = ptA.h;
     e.point[1].v  = ptB.h;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
-    Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    Slvs_Entity ce = {};
+    ce.h = he.v;
     ce.type = SLVS_E_LINE_SEGMENT;
     ce.group = grouph;
     ce.wrkpl = workplane.h;
@@ -309,10 +308,10 @@ Slvs_Entity Slvs_AddLine3D(uint32_t grouph, Slvs_Entity ptA, Slvs_Entity ptB) {
     e.workplane.v = EntityBase::FREE_IN_3D.v;
     e.point[0].v  = ptA.h;
     e.point[1].v  = ptB.h;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
-    Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    Slvs_Entity ce = {};
+    ce.h = he.v;
     ce.type = SLVS_E_LINE_SEGMENT;
     ce.group = grouph;
     ce.wrkpl = SLVS_FREE_IN_3D;
@@ -341,10 +340,10 @@ Slvs_Entity Slvs_AddCubic(uint32_t grouph, Slvs_Entity ptA, Slvs_Entity ptB, Slv
     e.point[1].v  = ptB.h;
     e.point[2].v  = ptC.h;
     e.point[3].v  = ptD.h;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
-    Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    Slvs_Entity ce = {};
+    ce.h = he.v;
     ce.type = SLVS_E_CUBIC;
     ce.group = grouph;
     ce.wrkpl = workplane.h;
@@ -377,10 +376,10 @@ Slvs_Entity Slvs_AddArc(uint32_t grouph, Slvs_Entity normal, Slvs_Entity center,
     e.point[0].v  = center.h;
     e.point[1].v  = start.h;
     e.point[2].v  = end.h;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
     Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    ce.h = he.v;
     ce.type = SLVS_E_ARC_OF_CIRCLE;
     ce.group = grouph;
     ce.wrkpl = workplane.h;
@@ -409,10 +408,10 @@ Slvs_Entity Slvs_AddCircle(uint32_t grouph, Slvs_Entity normal, Slvs_Entity cent
     e.normal.v    = normal.h;
     e.point[0].v  = center.h;
     e.distance.v  = radius.h;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
     Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    ce.h = he.v;
     ce.type = SLVS_E_CIRCLE;
     ce.group = grouph;
     ce.wrkpl = workplane.h;
@@ -429,10 +428,10 @@ Slvs_Entity Slvs_AddWorkplane(uint32_t grouph, Slvs_Entity origin, Slvs_Entity n
     e.workplane.v = SLVS_FREE_IN_3D;
     e.point[0].v  = origin.h;
     e.normal.v    = nm.h;
-    SK.entity.AddAndAssignId(&e);
+    const hEntity he = SK.entity.AddAndAssignId(std::move(e));
 
     Slvs_Entity ce = Slvs_Entity {};
-    ce.h = e.h.v;
+    ce.h = he.v;
     ce.type = SLVS_E_WORKPLANE;
     ce.group = grouph;
     ce.wrkpl = SLVS_FREE_IN_3D;
@@ -469,10 +468,10 @@ Slvs_Constraint Slvs_AddConstraint(uint32_t grouph,
     c.entityD.v      = entityD.h;
     c.other          = other ? true : false;
     c.other2         = other2 ? true : false;
-    SK.constraint.AddAndAssignId(&c);
+    const hConstraint hc = SK.constraint.AddAndAssignId(std::move(c));
 
-    Slvs_Constraint cc = Slvs_Constraint {};
-    cc.h = c.h.v;
+    Slvs_Constraint cc = {};
+    cc.h = hc.v;
     cc.type = type;
     cc.group = grouph;
     cc.wrkpl = workplane.h;
@@ -788,37 +787,35 @@ Slvs_SolveResult Slvs_SolveSketch(uint32_t shg, int calculateFaileds = 0)
     g.h.v = shg;
 
     // add params from entities on sketch
-    for(EntityBase &ent : SK.entity) {
-        EntityBase *e = &ent;
+    for(const EntityBase &e : SK.entity) {
         // skip entities from other groups
-        if (e->group.v != shg) {
+        if (e.group.v != shg) {
             continue;
         }
-        for (hParam &parh : e->param) {
+        for (hParam parh : e.param) {
             if (parh.v != 0) {
                 // get params for this entity and add it to the system
                 Param *p = SK.GetParam(parh);
                 p->known = false;
-                SYS.param.Add(p);
+                SYS.param.Add(*p);
             }
         }
     }
 
     // add params from constraints
-    IdList<Param> constraintParams = {};
-    for(ConstraintBase &con : SK.constraint) {
-        ConstraintBase *c = &con;
-        if(c->group.v != shg)
+    IdList<Param> constraintParams;
+    for(ConstraintBase &c : SK.constraint) {
+        if(c.group.v != shg)
             continue;
-        c->Generate(&constraintParams);
+        c.Generate(&constraintParams);
         if(!constraintParams.IsEmpty()) {
             for(Param &p : constraintParams) {
-                p.h    = SK.param.AddAndAssignId(&p);
-                c->valP = p.h;
-                SYS.param.Add(&p);
+                p.h = SK.param.AddAndAssignId(Param(p));
+                c.valP = p.h;
+                SYS.param.Add(p);
             }
             constraintParams.Clear();
-            c->ModifyToSatisfy();
+            c.ModifyToSatisfy();
         }
     }
 
@@ -909,9 +906,9 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
 
         p.h.v = sp->h;
         p.val = sp->val;
-        SK.param.Add(&p);
+        SK.param.Add(p);
         if(sp->group == shg) {
-            SYS.param.Add(&p);
+            SYS.param.Add(p);
         }
     }
 
@@ -933,7 +930,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
         e.param[2].v    = se->param[2];
         e.param[3].v    = se->param[3];
 
-        SK.entity.Add(&e);
+        SK.entity.Add(e);
     }
     IdList<Param> params = {};
     for(size_t i = 0; i < ssys->constraints; i++) {
@@ -956,15 +953,15 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
         c.Generate(&params);
         if(!params.IsEmpty()) {
             for(Param &p : params) {
-                p.h = SK.param.AddAndAssignId(&p);
+                p.h = SK.param.AddAndAssignId(Param(p));
                 c.valP = p.h;
-                SYS.param.Add(&p);
+                SYS.param.Add(p);
             }
             params.Clear();
             c.ModifyToSatisfy();
         }
 
-        SK.constraint.Add(&c);
+        SK.constraint.Add(c);
     }
 
     for(size_t i = 0; i < ssys->ndragged; i++) {
