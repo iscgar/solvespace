@@ -534,7 +534,7 @@ void SolveSpaceUI::WriteEqSystemForGroup(hGroup hg) {
 void SolveSpaceUI::SolveGroup(hGroup hg, bool andFindFree) {
     WriteEqSystemForGroup(hg);
     Group *g = SK.GetGroup(hg);
-    g->solved.remove.Clear();
+    g->solved.remove.clear();
     g->solved.findToFixTimeout = SS.timeoutRedundantConstr;
     SolveResult how = sys.Solve(g, &(g->solved.dof),
                                    &(g->solved.remove),

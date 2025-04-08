@@ -371,7 +371,7 @@ void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
     g->GenerateEquations(&eq);
 }
 
-void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad, bool forceDofCheck) {
+void System::FindWhichToRemoveToFixJacobian(Group *g, std::vector<hConstraint> *bad, bool forceDofCheck) {
     auto time = GetMilliseconds();
     g->solved.timeout = false;
     int a;
@@ -411,13 +411,13 @@ void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad, bo
             int rank = CalculateRank();
             if(rank == mat.m) {
                 // We fixed it by removing this constraint
-                bad->Add(&(c->h));
+                bad->push_back(c->h);
             }
         }
     }
 }
 
-SolveResult System::Solve(Group *g, int *dof, List<hConstraint> *bad,
+SolveResult System::Solve(Group *g, int *dof, std::vector<hConstraint> *bad,
                           bool andFindBad, bool andFindFree, bool forceDofCheck)
 {
     WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g);
@@ -525,7 +525,7 @@ didnt_converge:
             // Don't double-show constraints that generated multiple
             // unsatisfied equations
             if(!c->tag) {
-                bad->Add(&(c->h));
+                bad->push_back(c->h);
                 c->tag = 1;
             }
         }
@@ -534,7 +534,7 @@ didnt_converge:
     return rankOk ? SolveResult::DIDNT_CONVERGE : SolveResult::REDUNDANT_DIDNT_CONVERGE;
 }
 
-SolveResult System::SolveRank(Group *g, int *rank, int *dof, List<hConstraint> *bad,
+SolveResult System::SolveRank(Group *g, int *rank, int *dof, std::vector<hConstraint> *bad,
                               bool andFindBad, bool andFindFree)
 {
     WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g);

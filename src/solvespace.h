@@ -277,7 +277,7 @@ public:
     void EvalJacobian();
 
     void WriteEquationsExceptFor(hConstraint hc, Group *g);
-    void FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad,
+    void FindWhichToRemoveToFixJacobian(Group *g, std::vector<hConstraint> *bad,
                                         bool forceDofCheck);
     void SolveBySubstitution();
 
@@ -287,12 +287,13 @@ public:
 
     void MarkParamsFree(bool findFree);
 
-    SolveResult Solve(Group *g, int *dof = NULL, List<hConstraint> *bad = NULL,
+    SolveResult Solve(Group *g, int *dof = NULL,
+                      std::vector<hConstraint> *bad = NULL,
                       bool andFindBad = false, bool andFindFree = false,
                       bool forceDofCheck = false);
 
     SolveResult SolveRank(Group *g, int *rank = NULL, int *dof = NULL,
-                          List<hConstraint> *bad = NULL,
+                          std::vector<hConstraint> *bad = NULL,
                           bool andFindBad = false, bool andFindFree = false);
 
     void Clear();

@@ -188,11 +188,11 @@ public:
     RgbaColor   color;
 
     struct {
-        SolveResult         how;
-        int                 dof;
-        int                 findToFixTimeout;
-        bool                timeout;
-        List<hConstraint>   remove;
+        SolveResult              how;
+        int                      dof;
+        int                      findToFixTimeout;
+        bool                     timeout;
+        std::vector<hConstraint> remove;
     } solved;
 
     enum class Subtype : uint32_t {

@@ -665,7 +665,7 @@ void TextWindow::ShowGroupSolveInfo() {
         default: ssassert(false, "Unexpected solve result");
     }
 
-    for(int i = 0; i < g->solved.remove.n; i++) {
+    for(size_t i = 0; i < g->solved.remove.size(); i++) {
         hConstraint hc = g->solved.remove[i];
         Constraint *c = SK.constraint.FindByIdNoOops(hc);
         if(!c) continue;
