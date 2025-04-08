@@ -151,11 +151,11 @@ typedef struct {
      * param[] is actually an in/out variable; if the solver is successful,
      * then the new values (that satisfy the constraints) are written to it. */
     Slvs_Param          *param;
-    int                 params;
+    size_t              params;
     Slvs_Entity         *entity;
-    int                 entities;
+    size_t              entities;
     Slvs_Constraint     *constraint;
-    int                 constraints;
+    size_t              constraints;
 
     /* If a parameter corresponds to a point (distance, normal, etc.) being
      * dragged, then specify it here. This will cause the solver to favor
@@ -168,7 +168,7 @@ typedef struct {
      * e.g in case the dragged entity has less than two degrees of freedom in
      * a workplane or less than 3 degrees of freedom in free space). */
     Slvs_hParam         *dragged;
-    int                 ndragged;
+    size_t              ndragged;
 
 
     /* If the solver fails, then it can determine which constraints are
@@ -190,7 +190,7 @@ typedef struct {
      * failing constraints, faileds should be greater than or equal to
      * constraints. */
     Slvs_hConstraint    *failed;
-    int                 faileds;
+    size_t              faileds;
 
     /* The solver indicates the number of unconstrained degrees of freedom. */
     int                 dof;
@@ -207,7 +207,7 @@ typedef struct {
 typedef struct {
     int                 result;
     int                 dof;
-    int                 bad;
+    size_t              bad;
 } Slvs_SolveResult;
 
 /* Our base coordinate system has basis vectors

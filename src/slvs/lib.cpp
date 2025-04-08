@@ -851,14 +851,14 @@ Slvs_SolveResult Slvs_SolveSketch(uint32_t shg, int calculateFaileds = 0)
     //     std::cout << "SketchConstraintBase( " << con.ToString() << " )\n";
     // }
 
-    List<hConstraint> badList;
+    std::vector<hConstraint> badList;
     bool andFindBad = calculateFaileds ? true : false;
 
     int dof = 0;
     SolveResult status = SYS.Solve(&g, &dof, &badList, andFindBad, false, false);
     Slvs_SolveResult sr = {};
     sr.dof = dof;
-    sr.bad = badList.n;
+    sr.bad = badList.size();
     sr.result = 0;
     switch(status) {
         case SolveResult::OKAY: {
@@ -903,8 +903,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
     SK.param.Clear();
     SK.entity.Clear();
     SK.constraint.Clear();
-    int i;
-    for(i = 0; i < ssys->params; i++) {
+    for(size_t i = 0; i < ssys->params; i++) {
         Slvs_Param *sp = &(ssys->param[i]);
         Param p = {};
 
@@ -916,7 +915,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
         }
     }
 
-    for(i = 0; i < ssys->entities; i++) {
+    for(size_t i = 0; i < ssys->entities; i++) {
         Slvs_Entity *se = &(ssys->entity[i]);
         EntityBase e = {};
         e.type = Slvs_CTypeToEntityBaseType(se->type);
@@ -937,7 +936,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
         SK.entity.Add(&e);
     }
     IdList<Param, hParam> params = {};
-    for(i = 0; i < ssys->constraints; i++) {
+    for(size_t i = 0; i < ssys->constraints; i++) {
         Slvs_Constraint *sc = &(ssys->constraint[i]);
         ConstraintBase c = {};
         c.type = Slvs_CTypeToConstraintBaseType(sc->type);
@@ -968,7 +967,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
         SK.constraint.Add(&c);
     }
 
-    for(i = 0; i < ssys->ndragged; i++) {
+    for(size_t i = 0; i < ssys->ndragged; i++) {
         if(ssys->dragged[i]) {
             hParam hp = { ssys->dragged[i] };
             SYS.dragged.Add(&hp);
@@ -978,7 +977,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
     Group g = {};
     g.h.v = shg;
 
-    List<hConstraint> bad = {};
+    std::vector<hConstraint> bad;
 
     // Now we're finally ready to solve!
     bool andFindBad = ssys->calculateFaileds ? true : false;
@@ -1007,7 +1006,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
     }
 
     // Write the new parameter values back to our caller.
-    for(i = 0; i < ssys->params; i++) {
+    for(size_t i = 0; i < ssys->params; i++) {
         Slvs_Param *sp = &(ssys->param[i]);
         hParam hp = { sp->h };
         sp->val = SK.GetParam(hp)->val;
@@ -1015,13 +1014,12 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
 
     if(ssys->failed) {
         // Copy over any the list of problematic constraints.
-        for(i = 0; i < ssys->faileds && i < bad.n; i++) {
+        for(size_t i = 0; i < ssys->faileds && i < bad.size(); i++) {
             ssys->failed[i] = bad[i].v;
         }
-        ssys->faileds = bad.n;
+        ssys->faileds = bad.size();
     }
 
-    bad.Clear();
     SYS.Clear();
     SK.param.Clear();
     SK.entity.Clear();

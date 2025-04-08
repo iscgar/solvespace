@@ -35,7 +35,7 @@ cdef extern from "slvs.h" nogil:
     ctypedef struct Slvs_SolveResult:
         int result
         int dof
-        int bad
+        size_t bad
 
     void Slvs_QuaternionU(double qw, double qx, double qy, double qz,
                              double *x, double *y, double *z)
