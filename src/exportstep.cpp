@@ -178,7 +178,7 @@ int StepFileWriter::ExportCurveLoop(const SBezierLoop *loop, bool inner) {
     return fb;
 }
 
-void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl) {
+void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl, std::vector<int> *advancedFaces) {
     int i, j, srfid = id;
 
     // First, we create the untrimmed surface. We always specify a rational
@@ -266,7 +266,7 @@ void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl) {
         }
 
         fprintf(f, "),#%d,.T.);\n", srfid);
-        advancedFaces.Add(&advFaceId);
+        advancedFaces->push_back(advFaceId);
 
         // Export the surface color and transparency
         // https://www.cax-if.org/documents/rec_prac_styling_org_v16.pdf sections 4.4.2 4.2.4 etc.
@@ -343,7 +343,7 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
     WriteHeader();
 	WriteProductHeader();
 
-    advancedFaces = {};
+    std::vector<int> advancedFaces;
 
     for(SSurface &ss : shell->surface) {
         if(ss.trim.IsEmpty())
@@ -359,7 +359,7 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
         ss.ScaleSelfBy(1.0/SS.exportScale);
         sbl.ScaleSelfBy(1.0/SS.exportScale);
 
-        ExportSurface(&ss, &sbl);
+        ExportSurface(&ss, &sbl, &advancedFaces);
 
         sbl.Clear();
     }
@@ -367,7 +367,7 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
     // Not using range-for loop here because we're using the index to determine
     // whether or not we're at the last face
     fprintf(f, "#%d=CLOSED_SHELL('',(", id);
-    for(int i = 0; i < advancedFaces.n; ++i) {
+    for(size_t i = 0; i < advancedFaces.size(); ++i) {
         if(i > 0) fprintf(f, ",");
         fprintf(f, "#%d", advancedFaces[i]);
     }
@@ -381,14 +381,13 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
     WriteFooter();
 
     fclose(f);
-    advancedFaces.Clear();
 }
 
 void StepFileWriter::WriteWireframe() {
     // Not using range-for loop here because we're using the index to determine
     // whether or not we're at the last curve
     fprintf(f, "#%d=GEOMETRIC_CURVE_SET('curves',(", id);
-    for(int i = 0; i < curves.n; ++i) {
+    for(size_t i = 0; i < curves.size(); ++i) {
         if(i > 0) fprintf(f, ",");
         fprintf(f, "#%d", curves[i]);
     }
@@ -399,6 +398,6 @@ void StepFileWriter::WriteWireframe() {
         id+2, id+1);
 
     id += 3;
-    curves.Clear();
+    curves.clear();
 }
 
