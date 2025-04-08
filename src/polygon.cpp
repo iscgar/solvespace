@@ -508,17 +508,12 @@ void SEdgeList::MergeCollinearSegments(Vector a, Vector b) {
     l.RemoveTagged();
 }
 
-void SPointList::Clear() {
-    l.Clear();
-}
-
 bool SPointList::ContainsPoint(Vector pt) const {
     return (IndexForPoint(pt) >= 0);
 }
 
 int SPointList::IndexForPoint(Vector pt) const {
-    int i;
-    for(i = 0; i < l.Size(); i++) {
+    for(size_t i = 0; i < l.size(); i++) {
         const SPoint *p = &(l[i]);
         if(pt.Equals(p->p)) {
             return i;
@@ -538,13 +533,13 @@ void SPointList::IncrementTagFor(Vector pt) {
     SPoint pa;
     pa.p = pt;
     pa.tag = 1;
-    l.Add(pa);
+    l.push_back(pa);
 }
 
 void SPointList::Add(Vector pt) {
     SPoint p = {};
     p.p = pt;
-    l.Add(p);
+    l.push_back(p);
 }
 
 void SContour::AddPoint(Vector p) {

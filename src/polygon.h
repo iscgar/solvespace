@@ -103,9 +103,8 @@ public:
 
 class SPointList {
 public:
-    List<SPoint>    l;
+    std::vector<SPoint> l;
 
-    void Clear();
     bool ContainsPoint(Vector pt) const;
     int IndexForPoint(Vector pt) const;
     void IncrementTagFor(Vector pt);

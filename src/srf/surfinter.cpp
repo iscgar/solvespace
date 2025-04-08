@@ -389,7 +389,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                         sp.auxv = n.Cross((se.b).Minus(se.a));
                         sp.auxv = (sp.auxv).WithMagnitude(1);
 
-                        spl.l.Add(sp);
+                        spl.l.push_back(sp);
                     }
                 }
             }
@@ -397,7 +397,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             el.Clear();
         }
 
-        while(spl.l.Size() >= 2) {
+        while(spl.l.size() >= 2) {
             SCurve sc = {};
             sc.surfA = h;
             sc.surfB = b->h;
@@ -406,9 +406,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
 
             Vector start  = spl.l[0].p,
                    startv = spl.l[0].auxv;
-            spl.l.ClearTags();
-            spl.l[0].tag = 1;
-            spl.l.RemoveTagged();
+            spl.l.erase(spl.l.begin());
 
             // Our chord tolerance is whatever the user specified
             double maxtol = SS.ChordTolMm();
@@ -479,7 +477,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                 start = npc;
             }
 
-            spl.l.RemoveTagged();
+            RemoveTagged(spl.l);
 
             // And now we split and insert the curve
             SCurve split = sc.MakeCopySplitAgainst(agnstA, agnstB, this, b);
@@ -489,7 +487,6 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                 into->curve.AddAndAssignId(std::move(split));
             }
         }
-        spl.Clear();
     }
 }
 

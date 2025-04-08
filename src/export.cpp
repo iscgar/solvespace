@@ -1102,8 +1102,6 @@ void SolveSpaceUI::ExportMeshAsThreeJsTo(FILE *f, const Platform::Path &filename
                 CO(SS.GW.projUp),
                 CO(SS.GW.projRight));
     }
-
-    spl.Clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -1231,8 +1229,6 @@ void SolveSpaceUI::ExportMeshAsVrmlTo(FILE *f, const Platform::Path &filename, S
         fputs("        ]\n"
               "      }\n"
               "    }\n", f);
-
-        spl.Clear();
     }
 
     fputs("  ]\n"

@@ -581,7 +581,7 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
             sp.tag = 0;
         }
     }
-    choosing.l.RemoveTagged();
+    RemoveTagged(choosing.l);
 
     // The list of edges to trim our new surface, a combination of edges from
     // our original and intersecting edge lists.
@@ -669,12 +669,11 @@ SSurface SSurface::MakeCopyTrimAgainst(SShell *parent,
 #pragma omp critical
     {
         into->booleanFailed = true;
-        dbp("failed: I=%d, avoid=%d", I+dbg_index, choosing.l.Size());
+        dbp("failed: I=%d, avoid=%zu", I+dbg_index, choosing.l.size());
         DEBUGEDGELIST(&final, &ret);
     }
     poly.Clear();
 
-    choosing.Clear();
     final.Clear();
     inter.Clear();
     orig.Clear();
