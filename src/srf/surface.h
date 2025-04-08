@@ -242,7 +242,6 @@ public:
 // An intersection point between a line and a surface
 class SInter {
 public:
-    int         tag;
     Vector      p;
     SSurface    *srf;
     Point2d     pinter;
@@ -319,7 +318,7 @@ public:
     double DepartureFromCoplanar() const;
     void SplitInHalf(bool byU, SSurface *sa, SSurface *sb);
     void AllPointsIntersecting(Vector a, Vector b,
-                               List<SInter> *l,
+                               std::vector<SInter> *l,
                                bool asSegment, bool trimmed, bool inclTangent);
     void AllPointsIntersectingUntrimmed(Vector a, Vector b,
                                         int *cnt, int *level,
@@ -396,7 +395,7 @@ public:
     void CopySurfacesTrimAgainst(SShell *sha, SShell *shb, SShell *into, SSurface::CombineAs type);
     void MakeIntersectionCurvesAgainst(SShell *against, SShell *into);
     void MakeClassifyingBsps(SShell *useCurvesFrom);
-    void AllPointsIntersecting(Vector a, Vector b, List<SInter> *il,
+    void AllPointsIntersecting(Vector a, Vector b, std::vector<SInter> *il,
                                 bool asSegment, bool trimmed, bool inclTangent);
     void MakeCoincidentEdgesInto(SSurface *proto, bool sameNormal,
                                  SEdgeList *el, SShell *useCurvesFrom);
