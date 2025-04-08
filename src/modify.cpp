@@ -677,7 +677,7 @@ void GraphicsWindow::SplitLinesOrCurves() {
         sbla.AllIntersectionsWith(&sblb, &inters);
 
         // If there's multiple points, then take the one closest to the mouse pointer.
-        if(!inters.l.IsEmpty()) {
+        if(!inters.l.empty()) {
             double dmin = VERY_POSITIVE;
             for(const SPoint &sp : inters.l) {
                 double d = ProjectPoint(sp.p).DistanceTo(currentMousePosition);
@@ -733,7 +733,6 @@ void GraphicsWindow::SplitLinesOrCurves() {
     }
 
     // All done, clean up and regenerate.
-    inters.Clear();
     sbla.Clear();
     sblb.Clear();
     ClearSelection();
