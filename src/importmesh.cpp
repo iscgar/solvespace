@@ -67,8 +67,8 @@ static hEntity newPoint(EntityList *el, int *id, Vector p) {
 
 // check if a vertex is unique and add it via newPoint if it is.
 static void addVertex(EntityList *el, Vector v) {
-    if(el->n < 15000) {
-        int id = el->n;
+    if(el->Size() < 15000) {
+        int id = el->Size();
         newPoint(el, &id, v);
     }
 }

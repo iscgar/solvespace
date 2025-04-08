@@ -715,7 +715,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
         if(gs.points == 1) {
             Entity *p = SK.GetEntity(gs.point[0]);
             Constraint *c = nullptr;
-            IdList<Constraint,hConstraint> *lc = &(SK.constraint);
+            IdList<Constraint> *lc = &(SK.constraint);
             for(Constraint &ci : *lc) {
                 if(ci.type != Constraint::Type::POINTS_COINCIDENT) continue;
                 if(ci.ptA == p->h || ci.ptB == p->h) {

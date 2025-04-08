@@ -16,7 +16,7 @@ void SolveSpace::Platform::FatalError(const std::string &message) {
     abort();
 }
 
-void Group::GenerateEquations(IdList<Equation,hEquation> *) {
+void Group::GenerateEquations(IdList<Equation> *) {
     // Nothing to do for now.
 }
 
@@ -805,7 +805,7 @@ Slvs_SolveResult Slvs_SolveSketch(uint32_t shg, int calculateFaileds = 0)
     }
 
     // add params from constraints
-    IdList<Param, hParam> constraintParams = {};
+    IdList<Param> constraintParams = {};
     for(ConstraintBase &con : SK.constraint) {
         ConstraintBase *c = &con;
         if(c->group.v != shg)
@@ -935,7 +935,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
 
         SK.entity.Add(&e);
     }
-    IdList<Param, hParam> params = {};
+    IdList<Param> params = {};
     for(size_t i = 0; i < ssys->constraints; i++) {
         Slvs_Constraint *sc = &(ssys->constraint[i]);
         ConstraintBase c = {};
