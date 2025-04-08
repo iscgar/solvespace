@@ -491,7 +491,7 @@ class Sketch {
 public:
     // These are user-editable, and define the sketch.
     IdList<Group,hGroup>            group;
-    List<hGroup>                    groupOrder;
+    std::vector<hGroup>             groupOrder;
     IdList<CONSTRAINT,hConstraint>  constraint;
     IdList<Request,hRequest>        request;
     IdList<Style,hStyle>            style;
@@ -525,7 +525,7 @@ public:
     // The state for undo/redo
     typedef struct UndoState {
         IdList<Group,hGroup>            group;
-        List<hGroup>                    groupOrder;
+        std::vector<hGroup>             groupOrder;
         IdList<Request,hRequest>        request;
         IdList<Constraint,hConstraint>  constraint;
         IdList<Param,hParam>            param;

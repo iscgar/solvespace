@@ -129,13 +129,13 @@ bool SolveSpaceUI::PruneConstraints(hGroup hg) {
 }
 
 void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox) {
-    int first = 0, last = 0, i;
+    int first = 0, last = 0;
 
     uint64_t startMillis = GetMilliseconds(),
              endMillis;
 
-    SK.groupOrder.Clear();
-    for(auto &g : SK.group) { SK.groupOrder.Add(&g.h); }
+    SK.groupOrder.clear();
+    for(auto &g : SK.group) { SK.groupOrder.push_back(g.h); }
     std::sort(SK.groupOrder.begin(), SK.groupOrder.end(),
         [](const hGroup &ha, const hGroup &hb) {
             return SK.GetGroup(ha)->order < SK.GetGroup(hb)->order;
@@ -149,7 +149,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
             // Start from the first dirty group, and solve until the active group,
             // since all groups after the active group are hidden.
             // Not using range-for because we're tracking the indices.
-            for(i = 0; i < SK.groupOrder.n; i++) {
+            for(int i = 0; i < (int)SK.groupOrder.size(); i++) {
                 Group *g = SK.GetGroup(SK.groupOrder[i]);
                 if((!g->clean) || !g->IsSolvedOkay()) {
                     first = min(first, i);
@@ -179,13 +179,10 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
             break;
 
         case Generate::UNTIL_ACTIVE: {
-            for(i = 0; i < SK.groupOrder.n; i++) {
-                if(SK.groupOrder[i] == SS.GW.activeGroup)
-                    break;
-            }
-
+            const auto it = std::find(SK.groupOrder.begin(), SK.groupOrder.end(), SS.GW.activeGroup);
             first = 0;
-            last  = i;
+            last  = (int)std::distance(SK.groupOrder.begin(), it);
+
             break;
         }
     }
@@ -215,7 +212,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
     SK.entity.ReserveMore(oldEntityCount);
 
     // Not using range-for because we're using the index inside the loop.
-    for(i = 0; i < SK.groupOrder.n; i++) {
+    for(int i = 0; i < (int)SK.groupOrder.size(); i++) {
         hGroup hg = SK.groupOrder[i];
 
         // The group may depend on entities or other groups, to define its
@@ -560,8 +557,8 @@ SolveResult SolveSpaceUI::TestRankForGroup(hGroup hg, int *rank) {
 }
 
 bool SolveSpaceUI::ActiveGroupsOkay() {
-    for(int i = 0; i < SK.groupOrder.n; i++) {
-        Group *g = SK.GetGroup(SK.groupOrder[i]);
+    for(hGroup hg : SK.groupOrder) {
+        Group *g = SK.GetGroup(hg);
         if(!g->IsSolvedOkay())
             return false;
         if(g->h == SS.GW.activeGroup)
