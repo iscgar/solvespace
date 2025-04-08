@@ -533,7 +533,7 @@ Vector SSurface::NormalAtMaybeSwapped(double u, double v, bool swapped) const {
     return du.Cross(dv).WithMagnitude(1.0);
 }
 
-void SSurface::MakeTriangulationGridInto(List<double> *l, double vs, double vf,
+void SSurface::MakeTriangulationGridInto(std::vector<double> *l, double vs, double vf,
                                          bool swapped, int depth) const
 {
     double worst = 0;
@@ -571,7 +571,7 @@ void SSurface::MakeTriangulationGridInto(List<double> *l, double vs, double vf,
     double step = 1.0/SS.GetMaxSegments();
     if( ((vf - vs) < step || worst < SS.ChordTolMm())
         && ((worst_twist > 0.999) || (depth > 3)) ) {
-        l->Add(&vf);
+        l->push_back(vf);
     } else {
         MakeTriangulationGridInto(l, vs, (vs+vf)/2, swapped, depth+1);
         MakeTriangulationGridInto(l, (vs+vf)/2, vf, swapped, depth+1);
@@ -589,36 +589,33 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
 
     // Build a rectangular grid, with horizontal and vertical lines in the
     // uv plane. The spacing of these lines is adaptive, so calculate that.
-    List<double> li, lj;
-    li = {};
-    lj = {};
+    std::vector<double> li, lj;
     double v[5] = {0.0, 0.25, 0.5, 0.75, 1.0};
-    li.Add(&v[0]);
+    li.push_back(v[0]);
     srf->MakeTriangulationGridInto(&li, 0, 1, /*swapped=*/true, 0);
-    lj.Add(&v[0]);
+    lj.push_back(v[0]);
     srf->MakeTriangulationGridInto(&lj, 0, 1, /*swapped=*/false, 0);
 
     // force 2nd order grid to have at least 4 segments in each direction
-    if ((li.n < 5) && (srf->degm>1)) { // 4 segments minimum
-        li.Clear();
-        li.Add(&v[0]);li.Add(&v[1]);li.Add(&v[2]);li.Add(&v[3]);li.Add(&v[4]);
+    if ((li.size() < 5) && (srf->degm>1)) { // 4 segments minimum
+        li.clear();
+        li.insert(li.end(), std::begin(v), std::end(v));
     }
-    if ((lj.n < 5) && (srf->degn>1)) { // 4 segments minimum
-        lj.Clear();
-        lj.Add(&v[0]);lj.Add(&v[1]);lj.Add(&v[2]);lj.Add(&v[3]);lj.Add(&v[4]);
+    if ((lj.size() < 5) && (srf->degn>1)) { // 4 segments minimum
+        lj.clear();
+        lj.insert(lj.end(), std::begin(v), std::end(v));
     }
 
-    if ((li.n > 3) && (lj.n > 3)) {
+    if ((li.size() > 3) && (lj.size() > 3)) {
         // Now iterate over each quad in the grid. If it's outside the polygon,
         // or if it intersects the polygon, then we discard it. Otherwise we
         // generate two triangles in the mesh, and cut it out of our polygon.
         // Quads around the perimeter would be rejected by AnyEdgeCrossings.
-        std::vector<bool> bottom(lj.n, false); // did we use this quad?
+        std::vector<bool> bottom(lj.size(), false); // did we use this quad?
         Vector tu = {0,0,0}, tv = {0,0,0};
-        int i, j;
-        for(i = 1; i < (li.n-1); i++) {
+        for(size_t i = 1; i < (li.size()-1); i++) {
             bool prev_flag = false;
-            for(j = 1; j < (lj.n-1); j++) {
+            for(size_t j = 1; j < (lj.size()-1); j++) {
                 bool this_flag = true;
                 double us = li[i], uf = li[i+1],
                        vs = lj[j], vf = lj[j+1];
@@ -635,7 +632,7 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
                 //  |
                 //  +-------------> j/v axis
 
-                if( (i==(li.n-2)) || (j==(lj.n-2)) ||
+                if( (i==(li.size()-2)) || (j==(lj.size()-2)) ||
                    orig.AnyEdgeCrossings(a, b, NULL) ||
                    orig.AnyEdgeCrossings(b, c, NULL) ||
                    orig.AnyEdgeCrossings(c, d, NULL) ||
@@ -704,8 +701,6 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
     }
     orig.Clear();
     holes.Clear();
-    li.Clear();
-    lj.Clear();
     UvTriangulateInto(mesh, srf);
 }
 

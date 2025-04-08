@@ -247,11 +247,11 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
             const SBezier *sb = &(sbl.l[i]);
 
             // we will need the grid t-values for this entire row of surfaces
-            List<double> t_values;
+            std::vector<double> t_values;
             t_values = {};
             if (revs[0].v) { 
                 double ps = 0.0;
-                t_values.Add(&ps);
+                t_values.push_back(ps);
                 (surface.FindById(revs[0]))->MakeTriangulationGridInto(
                         &t_values, 0.0, 1.0, true, 0);
             }
@@ -270,11 +270,11 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                     sc.isExact = true;
                     sc.exact   = sb->TransformedBy(ts, qs, 1.0);
                     // make the PWL for the curve based on t value list
-                    for(int x = 0; x < t_values.n; x++) {
+                    for(size_t x = 0; x < t_values.size(); x++) {
                         SCurvePt scpt;
                         scpt.tag    = 0;
                         scpt.p      = sc.exact.PointAt(t_values[x]);
-                        scpt.vertex = (x == 0) || (x == (t_values.n - 1));
+                        scpt.vertex = (x == 0) || (x == (t_values.size() - 1));
                         sc.pts.Add(&scpt);
                     }
 
@@ -339,7 +339,6 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                     (surface.FindById(sc.surfB))->trim.Add(&stb);
                 }
             }
-            t_values.Clear();
         }
 
         hsl.Clear();
