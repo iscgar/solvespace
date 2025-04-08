@@ -522,10 +522,6 @@ public:
         return *new(this) IdList(std::forward<IdList>(other));
     }
 
-    ~IdList() {
-        Clear();
-    }
-
     bool IsEmpty() const noexcept {
         return Size() == 0;
     }
