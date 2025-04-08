@@ -31,9 +31,7 @@ void TextWindow::ScreenToggleTtfKerning(int link, uint32_t v) {
 }
 
 void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
-    int i = (int)v;
-    if(i < 0) return;
-    if(i >= SS.fonts.l.n) return;
+    if(v >= SS.fonts.l.size()) return;
 
     SS.GW.GroupSelection();
     auto const &gs = SS.GW.gs;
@@ -46,7 +44,7 @@ void TextWindow::ScreenSetTtfFont(int link, uint32_t v) {
     if(!r) return;
 
     SS.UndoRemember();
-    r->font = SS.fonts.l[i].FontFileBaseName();
+    r->font = SS.fonts.l[v].FontFileBaseName();
     SS.MarkGroupDirty(r->group);
     SS.ScheduleShowTW();
 }
@@ -224,7 +222,7 @@ void TextWindow::DescribeSelection() {
                     Printf(true, "  select new font");
                     SS.fonts.LoadAll();
                     // Not using range-for here because we use i inside the output.
-                    for(int i = 0; i < SS.fonts.l.n; i++) {
+                    for(size_t i = 0; i < SS.fonts.l.size(); i++) {
                         TtfFont *tf = &(SS.fonts.l[i]);
                         if(e->font == tf->FontFileBaseName()) {
                             Printf(false, "%Bp    %s",
