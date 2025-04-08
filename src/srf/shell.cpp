@@ -49,7 +49,7 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
     // of extrusion, its two translated trim curves, and one trim line. We
     // go through by loops so that we can assign the lines correctly.
     for(const SBezierLoop &sbl : sbls->l) {
-        List<TrimLine> trimLines = {};
+        std::vector<TrimLine> trimLines;
 
         for(const SBezier &sb : sbl.l) {
             // Generate the surface of extrusion of this curve, and add
@@ -99,15 +99,14 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
             TrimLine tl;
             tl.hc = hl;
             tl.hs = hsext;
-            trimLines.Add(&tl);
+            trimLines.emplace_back(std::move(tl));
         }
 
-        int i;
-        for(i = 0; i < trimLines.n; i++) {
+        for(size_t i = 0; i < trimLines.size(); i++) {
             TrimLine *tl = &(trimLines[i]);
             SSurface *ss = surface.FindById(tl->hs);
 
-            TrimLine *tlp = &(trimLines[WRAP(i-1, trimLines.n)]);
+            TrimLine *tlp = &(trimLines[WRAP(i-1, trimLines.size())]);
 
             STrimBy stb;
             stb = STrimBy::EntireCurve(this, tl->hc, /*backwards=*/true);
@@ -118,7 +117,6 @@ void SShell::MakeFromExtrusionOf(const SBezierLoopSet *sbls, Vector t0, Vector t
             (curve.FindById(tl->hc))->surfA = ss->h;
             (curve.FindById(tlp->hc))->surfB = ss->h;
         }
-        trimLines.Clear();
     }
 }
 
@@ -209,7 +207,7 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
 
     // Now we actually build and trim the swept surfaces. One loop at a time.
     for(const SBezierLoop &sbl : sbls->l) {
-        List<std::vector<hSSurface>> hsl = {};
+        std::vector<std::vector<hSSurface>> hsl;
 
         // This is where all the NURBS are created and Remapped to the generating curve
         for(const SBezier &sb : sbl.l) {
@@ -237,7 +235,7 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                     revs[j] = surface.AddAndAssignId(&ss);
                 }
             }
-            hsl.Add(&revs);
+            hsl.emplace_back(std::move(revs));
         }
         // Still the same loop. Need to create trim curves
         // Not using range-for here because we need the index to access `hsl` as well
@@ -340,8 +338,6 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
                 }
             }
         }
-
-        hsl.Clear();
     }
 
     if(dist == 0) {
@@ -359,7 +355,7 @@ void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector 
 
     // Now we actually build and trim the surfaces.
     for(const SBezierLoop &sbl : sbls->l) {
-        List<std::vector<hSSurface>> hsl = {};
+        std::vector<std::vector<hSSurface>> hsl;
 
         for(const SBezier &sb : sbl.l) {
             std::vector<hSSurface> revs(4);
@@ -386,7 +382,7 @@ void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector 
                     revs[j] = surface.AddAndAssignId(&ss);
                 }
             }
-            hsl.Add(&revs);
+            hsl.emplace_back(std::move(revs));
         }
 
         // Not using range-for here because we need the index to access `hsl` as well
@@ -447,8 +443,6 @@ void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector 
                 }
             }
         }
-
-        hsl.Clear();
     }
 
     MakeFirstOrderRevolvedSurfaces(pt, axis, i0);
