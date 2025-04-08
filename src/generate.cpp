@@ -8,6 +8,8 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
+namespace SolveSpace {
+
 void SolveSpaceUI::MarkGroupDirtyByEntity(hEntity he) {
     Entity *e = SK.GetEntity(he);
     MarkGroupDirty(e->group);
@@ -352,7 +354,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
         deleted = {};
     }
 
-    FreeAllTemporary();
+    Platform::FreeAllTemporary();
     allConsistent = true;
     SS.GW.persistentDirty = true;
     SS.centerOfMass.dirty = true;
@@ -545,7 +547,7 @@ void SolveSpaceUI::SolveGroup(hGroup hg, bool andFindFree) {
         g->dofCheckOk = true;
     }
     g->solved.how = how;
-    FreeAllTemporary();
+    Platform::FreeAllTemporary();
 }
 
 SolveResult SolveSpaceUI::TestRankForGroup(hGroup hg, int *rank) {
@@ -555,7 +557,7 @@ SolveResult SolveSpaceUI::TestRankForGroup(hGroup hg, int *rank) {
     if(g->suppressDofCalculation || g->allowRedundant) return SolveResult::OKAY;
     WriteEqSystemForGroup(hg);
     SolveResult result = sys.SolveRank(g, rank);
-    FreeAllTemporary();
+    Platform::FreeAllTemporary();
     return result;
 }
 
@@ -570,3 +572,4 @@ bool SolveSpaceUI::ActiveGroupsOkay() {
     return true;
 }
 
+} // namespace SolveSpace
