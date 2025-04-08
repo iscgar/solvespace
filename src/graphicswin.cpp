@@ -1251,7 +1251,7 @@ void GraphicsWindow::MenuEdit(Command id) {
 
                     Vector p = ep->PointGetNum();
                     ep->PointForceTo(SS.GW.SnapToGrid(p));
-                    SS.GW.pending.points.Add(&hp);
+                    SS.GW.pending.points.push_back(hp);
                     SS.MarkGroupDirty(ep->group);
                 } else if(s.constraint.v) {
                     Constraint *c = SK.GetConstraint(s.constraint);
