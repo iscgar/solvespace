@@ -119,7 +119,7 @@ int StepFileWriter::ExportCurve(const SBezier *sb) {
 int StepFileWriter::ExportCurveLoop(const SBezierLoop *loop, bool inner) {
     ssassert(loop->l.n >= 1, "Expected at least one loop");
 
-    List<int> listOfTrims = {};
+    std::vector<int> listOfTrims;
 
     // Generate "exactly closed" contours, with the same vertex id for the
     // finish of a previous edge and the start of the next one. So we need
@@ -152,8 +152,7 @@ int StepFileWriter::ExportCurveLoop(const SBezierLoop *loop, bool inner) {
         fprintf(f, "#%d=ORIENTED_EDGE('',*,*,#%d,.T.);\n",
             id+1, id);
 
-        int oe = id+1;
-        listOfTrims.Add(&oe);
+        listOfTrims.push_back(id+1);
         id += 2;
 
         prevFinish = thisFinish;
@@ -162,7 +161,7 @@ int StepFileWriter::ExportCurveLoop(const SBezierLoop *loop, bool inner) {
     // Not using range-for loop here because we're using the index to determine
     // whether or not we're at the last trim
     fprintf(f, "#%d=EDGE_LOOP('',(", id);
-    for(int i = 0; i < listOfTrims.n; ++i) {
+    for(size_t i = 0; i < listOfTrims.size(); ++i) {
         if(i > 0) fprintf(f, ",");
         fprintf(f, "#%d", listOfTrims[i]);
     }
@@ -173,7 +172,6 @@ int StepFileWriter::ExportCurveLoop(const SBezierLoop *loop, bool inner) {
             fb, inner ? "FACE_BOUND" : "FACE_OUTER_BOUND", id);
 
     id += 2;
-    listOfTrims.Clear();
 
     return fb;
 }
