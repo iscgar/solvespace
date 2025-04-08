@@ -1292,7 +1292,7 @@ void GCodeFileWriter::FinishAndCloseFile() {
         double depth = (SS.gCode.depth / SS.gCode.passes)*(i+1);
 
         for(const SContour &sc : sp.l) {
-            if(sc.l.n < 2) continue;
+            if(sc.l.Size() < 2) continue;
 
             const SPoint *pt = sc.l.begin();
             fprintf(f, "G00 X%s Y%s\r\n",

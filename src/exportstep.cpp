@@ -117,7 +117,7 @@ int StepFileWriter::ExportCurve(const SBezier *sb) {
 }
 
 int StepFileWriter::ExportCurveLoop(const SBezierLoop *loop, bool inner) {
-    ssassert(loop->l.n >= 1, "Expected at least one loop");
+    ssassert(loop->l.Size() >= 1, "Expected at least one loop");
 
     std::vector<int> listOfTrims;
 
@@ -132,12 +132,12 @@ int StepFileWriter::ExportCurveLoop(const SBezierLoop *loop, bool inner) {
 
     // Not using range-for loop here because we're using the index to determine
     // whether or not we're at the last curve
-    for(int i = 0; i < loop->l.n; ++i) {
+    for(int i = 0; i < loop->l.Size(); ++i) {
         const SBezier *sb = &loop->l[i];
         int curveId = ExportCurve(sb);
 
         int thisFinish;
-        if(i < loop->l.n - 1) {
+        if(i < loop->l.Size() - 1) {
             fprintf(f, "#%d=CARTESIAN_POINT('',(%.10f,%.10f,%.10f));\n",
                 id, CO(sb->Finish()));
             fprintf(f, "#%d=VERTEX_POINT('',#%d);\n", id+1, id);
@@ -255,7 +255,7 @@ void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl, std::vector<i
         // and all of its holes.
         // Not using range-for loop here because we're using the index to determine
         // whether or not we're at the first loop (the outer loop)
-        for(int i = 0; i < sbls.l.n; ++i) {
+        for(int i = 0; i < sbls.l.Size(); ++i) {
             const SBezierLoop *loop = &sbls.l[i];
             int fb = ExportCurveLoop(loop, /*inner=*/i > 0);
 
