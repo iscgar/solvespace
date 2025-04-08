@@ -188,7 +188,7 @@ void SSurface::SplitInHalf(bool byU, SSurface *sa, SSurface *sb) {
 //-----------------------------------------------------------------------------
 void SSurface::AllPointsIntersectingUntrimmed(Vector a, Vector b,
                                               int *cnt, int *level,
-                                              List<Inter> *l, bool asSegment,
+                                              std::vector<Point2d> *l, bool asSegment,
                                               SSurface *sorig)
 {
     // Test if the line intersects our axis-aligned bounding box; if no, then
@@ -209,15 +209,15 @@ void SSurface::AllPointsIntersectingUntrimmed(Vector a, Vector b,
                     ctrl[0   ][degn]).Plus(
                     ctrl[degm][0   ]).Plus(
                     ctrl[degm][degn]).ScaledBy(0.25);
-        Inter inter;
-        sorig->ClosestPointTo(p, &(inter.p.x), &(inter.p.y), /*mustConverge=*/false);
-        if(sorig->PointIntersectingLine(a, b, &(inter.p.x), &(inter.p.y))) {
-            Vector p = sorig->PointAt(inter.p.x, inter.p.y);
+        Point2d inter;
+        sorig->ClosestPointTo(p, &(inter.x), &(inter.y), /*mustConverge=*/false);
+        if(sorig->PointIntersectingLine(a, b, &(inter.x), &(inter.y))) {
+            Vector p = sorig->PointAt(inter.x, inter.y);
             // Debug check, verify that the point lies in both surfaces
             // (which it ought to, since the surfaces should be coincident)
             double u, v;
             ClosestPointTo(p, &u, &v);
-            l->Add(&inter);
+            l->push_back(inter);
         } else {
             // Might not converge if line is almost tangent to surface...
         }
@@ -252,7 +252,7 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
     Vector ba = b.Minus(a);
     double bam = ba.Magnitude();
 
-    List<Inter> inters = {};
+    std::vector<Point2d> inters;
 
     // All the intersections between the line and the surface; either special
     // cases that we can quickly solve in closed form, or general numerical.
@@ -269,9 +269,9 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
            (n.Dot(b) > d + LENGTH_EPS && n.Dot(a) < d - LENGTH_EPS))
         {
             Vector p = Vector::AtIntersectionOfPlaneAndLine(n, d, a, b, NULL);
-            Inter inter;
-            ClosestPointTo(p, &(inter.p.x), &(inter.p.y));
-            inters.Add(&inter);
+            Point2d inter;
+            ClosestPointTo(p, &(inter.x), &(inter.y));
+            inters.push_back(inter);
         }
     } else if(IsCylinder(&axis, &center, &radius, &start, &finish)) {
         // This one can be solved in closed form too.
@@ -325,9 +325,9 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
 
             Vector p = a.Plus((b.Minus(a)).ScaledBy(t));
 
-            Inter inter;
-            ClosestPointTo(p, &(inter.p.x), &(inter.p.y));
-            inters.Add(&inter);
+            Point2d inter;
+            ClosestPointTo(p, &(inter.x), &(inter.y));
+            inters.push_back(inter);
         }
     } else {
         // General numerical solution by subdivision, fallback
@@ -336,20 +336,15 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
     }
 
     // Remove duplicate intersection points
-    inters.ClearTags();
-    int i, j;
-    for(i = 0; i < inters.n; i++) {
-        for(j = i + 1; j < inters.n; j++) {
-            if(inters[i].p.Equals(inters[j].p)) {
-                inters[j].tag = 1;
-            }
-        }
-    }
-    inters.RemoveTagged();
+    std::sort(inters.begin(), inters.end(), [](const Point2d &a, const Point2d &b) {
+        return a.LessThan(b);
+    });
+    auto end = std::unique(inters.begin(), inters.end(), [](const Point2d &a, const Point2d &b) {
+        return a.Equals(b);
+    });
+    inters.erase(end, inters.end());
 
-    for(i = 0; i < inters.n; i++) {
-        Point2d puv = inters[i].p;
-
+    for(const Point2d &puv : inters) {
         // Make sure the point lies within the finite line segment
         Vector pxyz = PointAt(puv.x, puv.y);
         double t = (pxyz.Minus(a)).DivProjected(ba);
@@ -373,8 +368,6 @@ void SSurface::AllPointsIntersecting(Vector a, Vector b,
         si.onEdge = (c != SBspUv::Class::INSIDE);
         l->push_back(si);
     }
-
-    inters.Clear();
 }
 
 void SShell::AllPointsIntersecting(Vector a, Vector b,

@@ -986,6 +986,36 @@ bool Point2d::Equals(Point2d v, double tol) const {
     return (this->Minus(v)).MagSquared() < tol*tol;
 }
 
+bool Point2d::LessThan(const Point2d &v, double tol) const {
+    const double dx = x - v.x;
+    if(dx < -tol) {
+        return true;
+    }
+    if(dx > tol) {
+        return false;
+    }
+    const double dy = y - v.y;
+    if(dy < -tol) {
+        return true;
+    }
+    if(dy > tol) {
+        return false;
+    }
+    // Check equal magnitude
+    const double mag = this->Minus(v).MagSquared();
+    if(mag < tol * tol) {
+        return false;
+    }
+    // Fall back to non-tolerance difference
+    if(dx < 0) {
+        return true;
+    }
+    if(dx > 0) {
+        return false;
+    }
+    return dy < 0;
+}
+
 BBox BBox::From(const Vector &p0, const Vector &p1) {
     BBox bbox;
     bbox.minp.x = min(p0.x, p1.x);

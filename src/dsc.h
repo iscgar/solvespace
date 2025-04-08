@@ -244,6 +244,7 @@ public:
     Point2d WithMagnitude(double v) const;
     Point2d Normal() const;
     bool Equals(Point2d v, double tol=LENGTH_EPS) const;
+    bool LessThan(const Point2d &v, double tol=LENGTH_EPS) const;
 };
 
 // A simple list
