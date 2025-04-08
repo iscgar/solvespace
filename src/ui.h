@@ -750,7 +750,7 @@ public:
         Selection   selection;
     };
 
-    List<Hover> hoverList;
+    std::vector<Hover> hoverList;
     Selection hover;
     bool hoverWasSelectedOnMousedown;
     std::vector<Selection> selection;

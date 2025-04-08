@@ -339,7 +339,7 @@ Lighting GraphicsWindow::GetLighting() const {
 
 GraphicsWindow::Selection GraphicsWindow::ChooseFromHoverToSelect() {
     Selection sel = {};
-    if(hoverList.IsEmpty())
+    if(hoverList.empty())
         return sel;
 
     Group *activeGroup = SK.GetGroup(SS.GW.activeGroup);
@@ -372,7 +372,7 @@ GraphicsWindow::Selection GraphicsWindow::ChooseFromHoverToSelect() {
 // but ignores points known not to be draggable
 GraphicsWindow::Selection GraphicsWindow::ChooseFromHoverToDrag() {
     Selection sel = {};
-    if(hoverList.IsEmpty())
+    if(hoverList.empty())
         return sel;
 
     Group *activeGroup = SK.GetGroup(SS.GW.activeGroup);
@@ -403,7 +403,7 @@ GraphicsWindow::Selection GraphicsWindow::ChooseFromHoverToDrag() {
 }
 
 void GraphicsWindow::HitTestMakeSelection(Point2d mp) {
-    hoverList = {};
+    hoverList.clear();
     Selection sel = {};
 
     // Did the view projection change? If so, invalidate bounding boxes.
@@ -453,7 +453,7 @@ void GraphicsWindow::HitTestMakeSelection(Point2d mp) {
             hov.zIndex   = canvas.maxZIndex;
             hov.depth    = canvas.minDepth;
             hov.selection.entity = e.h;
-            hoverList.Add(&hov);
+            hoverList.push_back(hov);
         }
     }
 
@@ -466,7 +466,7 @@ void GraphicsWindow::HitTestMakeSelection(Point2d mp) {
                 hov.distance = canvas.minDistance;
                 hov.zIndex   = canvas.maxZIndex;
                 hov.selection.constraint = c.h;
-                hoverList.Add(&hov);
+                hoverList.push_back(hov);
             }
         }
     }
