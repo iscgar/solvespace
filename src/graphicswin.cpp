@@ -607,7 +607,7 @@ void GraphicsWindow::LoopOverPoints(const std::vector<Entity *> &entities,
 
     Group *g = SK.GetGroup(activeGroup);
     g->GenerateDisplayItems();
-    for(int i = 0; i < g->displayMesh.l.n; i++) {
+    for(int i = 0; i < g->displayMesh.l.Size(); i++) {
         STriangle *tr = &(g->displayMesh.l[i]);
         if(!includeMesh) {
             bool found = false;
@@ -623,9 +623,9 @@ void GraphicsWindow::LoopOverPoints(const std::vector<Entity *> &entities,
         HandlePointForZoomToFit(tr->c, pmax, pmin, wmin, usePerspective, camera);
     }
     if(!includeMesh) return;
-    for(int i = 0; i < g->polyLoops.l.n; i++) {
+    for(int i = 0; i < g->polyLoops.l.Size(); i++) {
         SContour *sc = &(g->polyLoops.l[i]);
-        for(int j = 0; j < sc->l.n; j++) {
+        for(int j = 0; j < sc->l.Size(); j++) {
             HandlePointForZoomToFit(sc->l[j].p, pmax, pmin, wmin, usePerspective, camera);
         }
     }

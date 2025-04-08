@@ -909,7 +909,7 @@ void SolveSpaceUI::MenuAnalyze(Command id) {
 
             if(inters) {
                 Error("%d edges interfere with other triangles, bad.",
-                    SS.nakedEdges.l.n);
+                    SS.nakedEdges.l.Size());
             } else {
                 Message(_("The assembly does not interfere, good."));
             }
@@ -1038,7 +1038,7 @@ void SolveSpaceUI::MenuAnalyze(Command id) {
                 if(f) {
                     int i;
                     SContour *sc = &(SS.traced.path);
-                    for(i = 0; i < sc->l.n; i++) {
+                    for(i = 0; i < sc->l.Size(); i++) {
                         Vector p = sc->l[i].p;
                         double s = SS.exportScale;
                         fprintf(f, "%.10f, %.10f, %.10f\r\n",
@@ -1084,14 +1084,14 @@ void SolveSpaceUI::ShowNakedEdges(bool reportOnlyWhenNotOkay) {
 
     std::string cntMsg = ssprintf(
         _("\n\nThe model contains %d triangles, from %d surfaces."),
-        g->displayMesh.l.n, g->runningShell.surface.n);
+        g->displayMesh.l.Size(), g->runningShell.surface.n);
 
     if(SS.nakedEdges.l.IsEmpty()) {
         Message(_("%s\n\n%s\n\nZero problematic edges, good.%s"),
             intersMsg, leaksMsg, cntMsg.c_str());
     } else {
         Error(_("%s\n\n%s\n\n%d problematic edges, bad.%s"),
-            intersMsg, leaksMsg, SS.nakedEdges.l.n, cntMsg.c_str());
+            intersMsg, leaksMsg, SS.nakedEdges.l.Size(), cntMsg.c_str());
     }
 }
 

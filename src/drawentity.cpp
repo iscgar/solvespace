@@ -20,7 +20,7 @@ std::string Entity::DescriptionString() const {
 void Entity::GenerateEdges(SEdgeList *el) {
     SBezierList *sbl = GetOrGenerateBezierCurves();
 
-    for(int i = 0; i < sbl->l.n; i++) {
+    for(int i = 0; i < sbl->l.Size(); i++) {
         SBezier *sb = &(sbl->l[i]);
 
         std::vector<Vector> lv;
@@ -386,7 +386,7 @@ void Entity::ComputeInterpolatingSpline(SBezierList *sbl, bool periodic) const {
 void Entity::GenerateBezierCurves(SBezierList *sbl) const {
     SBezier sb;
 
-    int i = sbl->l.n;
+    int i = sbl->l.Size();
 
     switch(type) {
         case Type::LINE_SEGMENT: {
@@ -485,7 +485,7 @@ void Entity::GenerateBezierCurves(SBezierList *sbl) const {
     }
 
     // Record our style for all of the Beziers that we just created.
-    for(; i < sbl->l.n; i++) {
+    for(; i < sbl->l.Size(); i++) {
         sbl->l[i].auxA = Style::ForEntity(h).v;
     }
 }

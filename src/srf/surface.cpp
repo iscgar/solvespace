@@ -159,7 +159,7 @@ SSurface SSurface::FromTransformationOf(SSurface *a, Vector t, Quaternion q, dou
     }
 
     if(includingTrims) {
-        ret.trim.ReserveMore(a->trim.n);
+        ret.trim.ReserveMore(a->trim.Size());
         for(const STrimBy &stb : a->trim) {
             STrimBy n = stb;
             if(needScale) {
@@ -225,12 +225,12 @@ void SSurface::MakeTrimEdgesInto(SEdgeList *sel, MakeAs flags,
 
     int i, first, last, increment;
     if(stb->backwards) {
-        first = sc->pts.n - 1;
+        first = sc->pts.Size() - 1;
         last = 0;
         increment = -1;
     } else {
         first = 0;
-        last = sc->pts.n - 1;
+        last = sc->pts.Size() - 1;
         increment = 1;
     }
     for(i = first; i != (last + increment); i += increment) {
@@ -339,14 +339,14 @@ void SSurface::MakeSectionEdgesInto(SShell *shell, SEdgeList *sel, SBezierList *
                    f = stb.backwards ? stb.start : stb.finish;
 
             int sp, fp;
-            for(sp = 0; sp < sc->pts.n; sp++) {
+            for(sp = 0; sp < sc->pts.Size(); sp++) {
                 if(s.Equals(sc->pts[sp].p)) break;
             }
-            if(sp >= sc->pts.n) return;
-            for(fp = sp; fp < sc->pts.n; fp++) {
+            if(sp >= sc->pts.Size()) return;
+            for(fp = sp; fp < sc->pts.Size(); fp++) {
                 if(f.Equals(sc->pts[fp].p)) break;
             }
-            if(fp >= sc->pts.n) return;
+            if(fp >= sc->pts.Size()) return;
             // So now the curve we want goes from elem[sp] to elem[fp]
 
             while(sp < fp) {
@@ -413,7 +413,7 @@ void SSurface::TriangulateInto(SShell *shell, SMesh *sm) {
 
     SPolygon poly = {};
     if(el.AssemblePolygon(&poly, NULL, /*keepDir=*/true)) {
-        int i, start = sm->l.n;
+        int i, start = sm->l.Size();
         if(degm == 1 && degn == 1) {
             // A surface with curvature along one direction only; so
             // choose the triangulation with chords that lie as much
@@ -431,7 +431,7 @@ void SSurface::TriangulateInto(SShell *shell, SMesh *sm) {
         }
 
         STriMeta meta = { face, color };
-        for(i = start; i < sm->l.n; i++) {
+        for(i = start; i < sm->l.Size(); i++) {
             STriangle *st = &(sm->l[i]);
             st->meta = meta;
             st->an = NormalAt(st->a.x, st->a.y);

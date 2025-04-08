@@ -7,6 +7,7 @@
 #ifndef SOLVESPACE_DSC_H
 #define SOLVESPACE_DSC_H
 
+#include <algorithm>
 #include <type_traits>
 #include <vector>
 
@@ -250,113 +251,85 @@ public:
 // A simple list
 template<class T>
 class List {
-    T *elem            = nullptr;
-    int elemsAllocated = 0;
+    std::vector<T> elem;
 
 public:
-    int  n = 0;
-
-    bool IsEmpty() const { return n == 0; }
-
-    void ReserveMore(int howMuch) {
-        if(n + howMuch > elemsAllocated) {
-            elemsAllocated = n + howMuch;
-            T *newElem = (T *)::operator new[]((size_t)elemsAllocated*sizeof(T));
-            for(int i = 0; i < n; i++) {
-                new(&newElem[i]) T(std::move(elem[i]));
-                elem[i].~T();
-            }
-            ::operator delete[](elem);
-            elem = newElem;
-        }
+    bool IsEmpty() const {
+        return elem.empty();
     }
 
-    void AllocForOneMore() {
-        if(n >= elemsAllocated) {
-            ReserveMore((elemsAllocated + 32)*2 - n);
+    int Size() const {
+        return (int)elem.size();
+    }
+
+    void ReserveMore(int howMuch) {
+        if(howMuch > 0) {
+            elem.reserve(elem.capacity() + howMuch);
         }
     }
 
     void Add(const T *t) {
-        AllocForOneMore();
-        new(&elem[n++]) T(*t);
+        elem.push_back(*t);
+    }
+
+    void Add(T &&t) {
+        elem.emplace_back(std::forward<T>(t));
     }
 
     void AddToBeginning(const T *t) {
-        AllocForOneMore();
-        new(&elem[n]) T();
-        std::move_backward(elem, elem + 1, elem + n + 1);
-        elem[0] = *t;
-        n++;
+        elem.insert(elem.begin(), *t);
     }
 
     T *First() {
-        return IsEmpty() ? nullptr : &(elem[0]);
+        return IsEmpty() ? nullptr : &elem.front();
     }
     const T *First() const {
-        return IsEmpty() ? nullptr : &(elem[0]);
+        return IsEmpty() ? nullptr : &elem.front();
     }
 
-    T *Last() { return IsEmpty() ? nullptr : &(elem[n - 1]); }
-    const T *Last() const { return IsEmpty() ? nullptr : &(elem[n - 1]); }
+    T *Last() {
+        return IsEmpty() ? nullptr : &elem.back();
+    }
+    const T *Last() const {
+        return IsEmpty() ? nullptr : &elem.back();
+    }
 
     T &Get(size_t i) { return elem[i]; }
     T const &Get(size_t i) const { return elem[i]; }
     T &operator[](size_t i) { return Get(i); }
     T const &operator[](size_t i) const { return Get(i); }
 
-    T *begin() { return elem; }
-    T *end() { return elem + n; }
-    const T *begin() const { return elem; }
-    const T *end() const { return elem + n; }
+    T *begin() { return elem.data(); }
+    T *end() { return elem.data() + Size(); }
+    const T *begin() const { return elem.data(); }
+    const T *end() const { return elem.data() + Size(); }
     const T *cbegin() const { return begin(); }
     const T *cend() const { return end(); }
 
     void ClearTags() {
-        for(auto & elt : *this) {
+        for(auto &elt : *this) {
             elt.tag = 0;
         }
     }
 
     void Clear() {
-        for(int i = 0; i < n; i++)
-            elem[i].~T();
-        if(elem) ::operator delete[](elem);
-        elem = NULL;
-        n = elemsAllocated = 0;
+        elem.clear();
     }
 
     void RemoveTagged() {
-        auto newEnd = std::remove_if(this->begin(), this->end(), [](T &t) {
-            if(t.tag) {
-                return true;
-            }
-            return false;
+        auto newEnd = std::remove_if(this->begin(), this->end(), [](const T &t) {
+            return t.tag != 0;
         });
-        auto oldEnd = this->end();
-        n = newEnd - begin();
-        if (newEnd != nullptr && oldEnd != nullptr) {
-            while(newEnd != oldEnd) {
-                newEnd->~T();
-                ++newEnd;
-            }
-        }
-        // and elemsAllocated is untouched, because we didn't resize
+        elem.resize(newEnd - begin());
     }
 
     void RemoveLast(int cnt) {
-        ssassert(n >= cnt, "Removing more elements than the list contains");
-        for(int i = n - cnt; i < n; i++)
-            elem[i].~T();
-        n -= cnt;
-        // and elemsAllocated is untouched, same as in RemoveTagged
+        ssassert(Size() >= cnt, "Removing more elements than the list contains");
+        elem.resize(Size() - cnt);
     }
 
     void Reverse() {
-        int i;
-        for(i = 0; i < (n/2); i++) {
-            swap(elem[i], elem[(n-1)-i]);
-        }
+        std::reverse(elem.begin(), elem.end());
     }
 };
 

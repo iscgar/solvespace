@@ -16,7 +16,7 @@ SBsp3 *SBsp3::FromMesh(const SMesh *m) {
     for(auto const &elt : m->l) { mc.AddTriangle(&elt); }
 
     srand(0); // Let's be deterministic, at least!
-    int n = mc.l.n;
+    int n = mc.l.Size();
     while(n > 1) {
         int k = rand() % n;
         n--;

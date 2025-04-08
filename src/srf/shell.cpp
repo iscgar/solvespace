@@ -239,8 +239,8 @@ void SShell::MakeFromHelicalRevolutionOf(const SBezierLoopSet *sbls, Vector pt, 
         }
         // Still the same loop. Need to create trim curves
         // Not using range-for here because we need the index to access `hsl` as well
-        for(int i = 0; i < sbl.l.n; i++) {
-            const std::vector<hSSurface> &revs = hsl[i], &revsp = hsl[WRAP(i - 1, sbl.l.n)];
+        for(int i = 0; i < sbl.l.Size(); i++) {
+            const std::vector<hSSurface> &revs = hsl[i], &revsp = hsl[WRAP(i - 1, sbl.l.Size())];
 
             const SBezier *sb = &(sbl.l[i]);
 
@@ -386,9 +386,9 @@ void SShell::MakeFromRevolutionOf(const SBezierLoopSet *sbls, Vector pt, Vector 
         }
 
         // Not using range-for here because we need the index to access `hsl` as well
-        for(int i = 0; i < sbl.l.n; i++) {
+        for(int i = 0; i < sbl.l.Size(); i++) {
             const std::vector<hSSurface> &revs  = hsl[i],
-                     &revsp = hsl[WRAP(i-1, sbl.l.n)];
+                     &revsp = hsl[WRAP(i-1, sbl.l.Size())];
 
             const SBezier *sb = &(sbl.l[i]);
 
