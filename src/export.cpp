@@ -302,7 +302,6 @@ void SolveSpaceUI::ExportWireframeCurves(SEdgeList *sel, SBezierList *sbl,
     }
 
     out->OutputLinesAndMesh(&sblss, NULL);
-    sblss.Clear();
 }
 
 void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *sm,
@@ -368,7 +367,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
                    g = min(1.0, tt.meta.color.greenF() * lighting),
                    b = min(1.0, tt.meta.color.blueF()  * lighting);
             tt.meta.color = RGBf(r, g, b);
-            smp.AddTriangle(&tt);
+            smp.AddTriangle(tt);
         }
     }
 
@@ -569,7 +568,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
     for(const SEdge &e : sel->l) {
         SBezier sb = SBezier::From(e.a, e.b);
         sb.auxA = e.auxA;
-        sbl->l.Add(&sb);
+        sbl->l.Add(sb);
     }
     for(SBezier &b : sbl->l) {
         for(int i = 0; i <= b.deg; i++) {
@@ -593,7 +592,7 @@ void SolveSpaceUI::ExportLinesAndMesh(SEdgeList *sel, SBezierList *sbl, SMesh *s
                              &allClosed, &notClosedAt,
                              NULL, NULL,
                              &leftovers);
-    sblss.l.Add(&leftovers);
+    sblss.l.Add(std::move(leftovers));
 
     // Now write the lines and triangles to the output file
     out->OutputLinesAndMesh(&sblss, &sms);
@@ -670,7 +669,7 @@ Vector VectorFileWriter::Transform(Vector &pos) const {
     return pos.InPerspective(u, v, n, origin, cameraTan).ScaledBy(1.0 / scale);
 }
 
-void VectorFileWriter::OutputLinesAndMesh(SBezierLoopSetSet *sblss, SMesh *sm) {
+void VectorFileWriter::OutputLinesAndMesh(const SBezierLoopSetSet *sblss, SMesh *sm) {
     // First calculate the bounding box.
     ptMin = Vector::From(VERY_POSITIVE, VERY_POSITIVE, VERY_POSITIVE);
     ptMax = Vector::From(VERY_NEGATIVE, VERY_NEGATIVE, VERY_NEGATIVE);

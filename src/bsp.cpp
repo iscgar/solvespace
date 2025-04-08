@@ -13,7 +13,7 @@ SBsp3 *SBsp3::Alloc() { return (SBsp3 *)AllocTemporary(sizeof(SBsp3)); }
 
 SBsp3 *SBsp3::FromMesh(const SMesh *m) {
     SMesh mc = {};
-    for(auto const &elt : m->l) { mc.AddTriangle(&elt); }
+    for(auto const &elt : m->l) { mc.AddTriangle(elt); }
 
     srand(0); // Let's be deterministic, at least!
     int n = mc.l.Size();
@@ -38,7 +38,7 @@ Vector SBsp3::IntersectionWith(Vector a, Vector b) const {
     return (a.ScaledBy(db/dab)).Plus(b.ScaledBy(-da/dab));
 }
 
-void SBsp3::InsertInPlane(bool pos2, STriangle *tr, SMesh *m) {
+void SBsp3::InsertInPlane(bool pos2, const STriangle *tr, SMesh *m) {
     Vector tc = ((tr->a).Plus(tr->b).Plus(tr->c)).ScaledBy(1.0/3);
 
     bool onFace = false;
@@ -78,7 +78,7 @@ void SBsp3::InsertInPlane(bool pos2, STriangle *tr, SMesh *m) {
     }
 }
 
-void SBsp3::InsertHow(BspClass how, STriangle *tr, SMesh *instead) {
+void SBsp3::InsertHow(BspClass how, const STriangle *tr, SMesh *instead) {
     switch(how) {
         case BspClass::POS:
             if(instead && !pos) goto alt;
@@ -138,7 +138,7 @@ public:
     bool       *isOn;
 
     // triangle operations
-    STriangle  *tr;
+    const STriangle  *tr;
     STriangle  *btri; // also as alone
     STriangle  *ctri;
 
@@ -182,7 +182,7 @@ public:
         vneg = &vpos[size];
     }
 
-    void ClassifyTriangle(STriangle *tri, SBsp3 *node) {
+    void ClassifyTriangle(const STriangle *tri, SBsp3 *node) {
         tr   = tri;
         bsp  = node;
         onc  = 0;
@@ -208,7 +208,7 @@ public:
         }
     }
 
-    bool ClassifyConvex(Vector *vertex, size_t cnt, SBsp3 *node, bool insertEdge) {
+    bool ClassifyConvex(const Vector *vertex, size_t cnt, SBsp3 *node, bool insertEdge) {
         bsp  = node;
         onc  = 0;
         posc = 0;
@@ -248,7 +248,7 @@ public:
         return true;
     }
 
-    bool ClassifyConvexVertices(Vector *vertex, size_t cnt, bool insertEdges) {
+    bool ClassifyConvexVertices(const Vector *vertex, size_t cnt, bool insertEdges) {
         Vector inter[2];
         int inters = 0;
 
@@ -376,7 +376,7 @@ public:
         return posc == 2 && negc == 1;
     }
 
-    static SBsp3 *Triangulate(SBsp3 *bsp, const STriMeta &meta, Vector *vertex,
+    static SBsp3 *Triangulate(SBsp3 *bsp, const STriMeta &meta, const Vector *vertex,
                               size_t cnt, SMesh *instead) {
         for(size_t i = 0; i < cnt - 2; i++) {
             STriangle tr = STriangle::From(meta, vertex[0], vertex[i + 1], vertex[i + 2]);
@@ -386,7 +386,7 @@ public:
     }
 };
 
-void SBsp3::InsertConvexHow(BspClass how, STriMeta meta, Vector *vertex, size_t n,
+void SBsp3::InsertConvexHow(BspClass how, STriMeta meta, const Vector *vertex, size_t n,
                             SMesh *instead) {
     switch(how) {
         case BspClass::POS:
@@ -413,7 +413,7 @@ void SBsp3::InsertConvexHow(BspClass how, STriMeta meta, Vector *vertex, size_t 
     }
 }
 
-SBsp3 *SBsp3::InsertConvex(STriMeta meta, Vector *vertex, size_t cnt, SMesh *instead) {
+SBsp3 *SBsp3::InsertConvex(STriMeta meta, const Vector *vertex, size_t cnt, SMesh *instead) {
     BspUtil *u = BspUtil::Alloc();
     if(u->ClassifyConvex(vertex, cnt, this, !instead)) {
         if(u->posc == 0) {
@@ -436,7 +436,7 @@ SBsp3 *SBsp3::InsertConvex(STriMeta meta, Vector *vertex, size_t cnt, SMesh *ins
     return BspUtil::Triangulate(this, meta, vertex, cnt, instead);
 }
 
-SBsp3 *SBsp3::InsertOrCreate(SBsp3 *where, STriangle *tr, SMesh *instead) {
+SBsp3 *SBsp3::InsertOrCreate(SBsp3 *where, const STriangle *tr, SMesh *instead) {
     if(where == NULL) {
         if(instead) {
             // ruevs: I do not think this code is reachable, but in
@@ -461,7 +461,7 @@ SBsp3 *SBsp3::InsertOrCreate(SBsp3 *where, STriangle *tr, SMesh *instead) {
     return where;
 }
 
-void SBsp3::Insert(STriangle *tr, SMesh *instead) {
+void SBsp3::Insert(const STriangle *tr, SMesh *instead) {
     BspUtil *u = BspUtil::Alloc();
     u->ClassifyTriangle(tr, this);
 
@@ -518,7 +518,7 @@ void SBsp3::GenerateInPaintOrder(SMesh *m) const {
 
     const SBsp3 *flip = this;
     while(flip) {
-        m->AddTriangle(&(flip->tri));
+        m->AddTriangle(flip->tri);
         flip = flip->more;
     }
 
@@ -540,7 +540,7 @@ Vector SBsp2::IntersectionWith(Vector a, Vector b) const {
     return (a.ScaledBy(db/dab)).Plus(b.ScaledBy(-da/dab));
 }
 
-SBsp2 *SBsp2::InsertOrCreateEdge(SBsp2 *where, SEdge *nedge, Vector nnp, Vector out) {
+SBsp2 *SBsp2::InsertOrCreateEdge(SBsp2 *where, const SEdge *nedge, Vector nnp, Vector out) {
     if(where == NULL) {
         // Brand new node; so allocate for it, and fill us in.
         SBsp2 *r = Alloc();
@@ -557,7 +557,7 @@ SBsp2 *SBsp2::InsertOrCreateEdge(SBsp2 *where, SEdge *nedge, Vector nnp, Vector 
     return where;
 }
 
-void SBsp2::InsertEdge(SEdge *nedge, Vector nnp, Vector out) {
+void SBsp2::InsertEdge(const SEdge *nedge, Vector nnp, Vector out) {
 
     double dt[2] = { (nedge->a).Dot(no), (nedge->b).Dot(no) };
 
@@ -613,7 +613,7 @@ void SBsp2::InsertEdge(SEdge *nedge, Vector nnp, Vector out) {
     ssassert(false, "Impossible");
 }
 
-void SBsp2::InsertTriangleHow(BspClass how, STriangle *tr, SMesh *m, SBsp3 *bsp3) {
+void SBsp2::InsertTriangleHow(BspClass how, const STriangle *tr, SMesh *m, SBsp3 *bsp3) {
     switch(how) {
         case BspClass::POS:
             if(pos) {
@@ -635,7 +635,7 @@ void SBsp2::InsertTriangleHow(BspClass how, STriangle *tr, SMesh *m, SBsp3 *bsp3
     }
 }
 
-void SBsp2::InsertTriangle(STriangle *tr, SMesh *m, SBsp3 *bsp3) {
+void SBsp2::InsertTriangle(const STriangle *tr, SMesh *m, SBsp3 *bsp3) {
     double dt[3] = { (tr->a).Dot(no), (tr->b).Dot(no), (tr->c).Dot(no) };
 
     bool isPos[3] = {}, isNeg[3] = {}, isOn[3] = {};

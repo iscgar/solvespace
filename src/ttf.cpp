@@ -114,9 +114,9 @@ void TtfFontList::PlotString(const std::string &font, const std::string &str,
         // No text or no font; so draw a big X for an error marker.
         SBezier sb;
         sb = SBezier::From(origin, origin.Plus(u).Plus(v));
-        sbl->l.Add(&sb);
+        sbl->l.Add(sb);
         sb = SBezier::From(origin.Plus(v), origin.Plus(u));
-        sbl->l.Add(&sb);
+        sbl->l.Add(sb);
     }
 }
 
@@ -294,7 +294,7 @@ static int LineTo(const FT_Vector *p, void *cc)
     SBezier sb = SBezier::From(
         Transform(data, data->px, data->py),
         Transform(data, p->x,     p->y));
-    data->beziers->l.Add(&sb);
+    data->beziers->l.Add(sb);
     data->px = p->x;
     data->py = p->y;
     return 0;
@@ -307,7 +307,7 @@ static int ConicTo(const FT_Vector *c, const FT_Vector *p, void *cc)
         Transform(data, data->px, data->py),
         Transform(data, c->x,     c->y),
         Transform(data, p->x,     p->y));
-    data->beziers->l.Add(&sb);
+    data->beziers->l.Add(sb);
     data->px = p->x;
     data->py = p->y;
     return 0;
@@ -321,7 +321,7 @@ static int CubicTo(const FT_Vector *c1, const FT_Vector *c2, const FT_Vector *p,
         Transform(data, c1->x,    c1->y),
         Transform(data, c2->x,    c2->y),
         Transform(data, p->x,     p->y));
-    data->beziers->l.Add(&sb);
+    data->beziers->l.Add(sb);
     data->px = p->x;
     data->py = p->y;
     return 0;

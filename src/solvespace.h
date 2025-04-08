@@ -338,7 +338,7 @@ public:
                                 const Vector &origin, double cameraTan, double scale);
     Vector Transform(Vector &pos) const;
 
-    void OutputLinesAndMesh(SBezierLoopSetSet *sblss, SMesh *sm);
+    void OutputLinesAndMesh(const SBezierLoopSetSet *sblss, SMesh *sm);
 
     void BezierAsPwl(const SBezier *sb);
     void BezierAsNonrationalCubic(const SBezier *sb, int depth=0);

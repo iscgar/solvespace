@@ -217,8 +217,7 @@ haveEdge:
     }
     avoidPts->push_back(b);
 
-    l.Clear();
-    l = merged.l;
+    l = std::move(merged.l);
     return true;
 }
 
@@ -352,7 +351,7 @@ void SContour::ClipEarInto(SMesh *m, int bp, double scaledEps) {
         // A vertex with more than two edges will cause us to generate
         // zero-area triangles, which must be culled.
     } else {
-        m->AddTriangle(&tr);
+        m->AddTriangle(tr);
     }
 
     // By deleting the point at bp, we may change the ear-ness of the points
@@ -435,7 +434,7 @@ void SContour::UvTriangulateInto(SMesh *m, SSurface *srf) {
                         tr.a = center;
                         tr.b = l[pstart+x].p;
                         tr.c = l[pstart+x+1].p;
-                        m->AddTriangle(&tr);
+                        m->AddTriangle(tr);
                     }
                     for (int x=1; x<j; x++) {
                         l[pstart+x].tag = 1;
@@ -444,7 +443,7 @@ void SContour::UvTriangulateInto(SMesh *m, SSurface *srf) {
                     tr.a = center;
                     tr.b = l[pstart+j].p;
                     tr.c = l[pstart].p;
-                    m->AddTriangle(&tr);    
+                    m->AddTriangle(tr);
                 }
                 pstart = i-1;
                 elen = ab.Dot(ab);
@@ -658,21 +657,21 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
                         tr.a = a;
                         tr.b = b;
                         tr.c = c;
-                        mesh->AddTriangle(&tr);
+                        mesh->AddTriangle(tr);
                         tr.a = a;
                         tr.b = c;
                         tr.c = d;
-                        mesh->AddTriangle(&tr);
+                        mesh->AddTriangle(tr);
                     } else{
                         STriangle tr = {};
                         tr.a = a;
                         tr.b = b;
                         tr.c = d;
-                        mesh->AddTriangle(&tr);
+                        mesh->AddTriangle(tr);
                         tr.a = b;
                         tr.b = c;
                         tr.c = d;
-                        mesh->AddTriangle(&tr);
+                        mesh->AddTriangle(tr);
                     }
                     if (!prev_flag) // add our own left edge
                         holes.AddEdge(d, a);
@@ -693,8 +692,8 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
         SPolygon hp = {};
         holes.AssemblePolygon(&hp, NULL, /*keepDir=*/true);
 
-        for(const SContour &sc : hp.l) {
-            l.Add(&sc);
+        for(SContour &sc : hp.l) {
+            l.Add(std::move(sc));
         }
         hp.l.Clear();
     }
@@ -721,7 +720,7 @@ void SPolygon::TriangulateInto(SMesh *m) const {
     p.UvTriangulateInto(&pm, &srf);
     for(STriangle st : pm.l) {
         st = st.Transform(u, v, n);
-        m->AddTriangle(&st);
+        m->AddTriangle(st);
     }
 
     p.Clear();

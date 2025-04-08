@@ -59,10 +59,11 @@ static hEntity newPoint(EntityList *el, int *id, Vector p) {
     en.actVisible = true;
     en.forceHidden = false;
 
-    en.h.v = *id + en.group.v*65536; 
-    *id = *id+1;   
-    el->Add(&en);
-    return en.h;
+    hEntity he = { *id + en.group.v*65536 };
+    *id = *id+1;
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 // check if a vertex is unique and add it via newPoint if it is.
@@ -90,9 +91,10 @@ static hEntity newNormal(EntityList *el, int *id, Quaternion normal, hEntity p) 
     en.forceHidden = false;
 
     *id = *id+1;
-    en.h.v = *id + en.group.v*65536;    
-    el->Add(&en);
-    return en.h;
+    hEntity he = { *id + en.group.v*65536 };
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 static hEntity newLine(EntityList *el, int *id, hEntity p0, hEntity p1) {
@@ -108,10 +110,11 @@ static hEntity newLine(EntityList *el, int *id, hEntity p0, hEntity p1) {
     en.actVisible = true;
     en.forceHidden = false;
 
-    en.h.v = *id + en.group.v*65536;
+    hEntity he = { *id + en.group.v*65536 };
     *id = *id + 1;
-    el->Add(&en);
-    return en.h;
+    en.h = he;
+    el->Add(std::move(en));
+    return he;
 }
 
 namespace SolveSpace {
@@ -193,7 +196,7 @@ bool LinkStl(const Platform::Path &filename, EntityList *el, SMesh *m, SShell *s
             tr.meta.color.alpha = 255;        
         }
 
-        m->AddTriangle(&tr);
+        m->AddTriangle(tr);
         Vector normal = tr.Normal().WithMagnitude(1.0);
         addUnique(verts, tr.a, normal);
         addUnique(verts, tr.b, normal);

@@ -270,8 +270,8 @@ public:
         }
     }
 
-    void Add(const T *t) {
-        elem.push_back(*t);
+    void Add(const T &t) {
+        elem.push_back(t);
     }
 
     void Add(T &&t) {
@@ -550,12 +550,6 @@ public:
         }
     }
 
-    Handle AddAndAssignId(T *t) {
-        t->h.v = MaximumId() + 1;
-        InsertAt(Size(), *t);
-        return t->h;
-    }
-
     Handle AddAndAssignId(T &&t) {
         t.h.v = MaximumId() + 1;
         InsertAt(Size(), std::forward<T>(t));
@@ -567,12 +561,12 @@ public:
         elemstore.reserve(total_reserve);
     }
 
-    void Add(T *t) {
-        const size_t idx = FindInsertionPoint(t->h);
+    void Add(const T &t) {
+        const size_t idx = FindInsertionPoint(t.h);
         if(idx < Size()) {
-            ssassert(GetTarget(elemstore[idx].target())->h.v != t->h.v, "Handle isn't unique");
+            ssassert(GetTarget(elemstore[idx].target())->h.v != t.h.v, "Handle isn't unique");
         }
-        InsertAt(idx, *t);
+        InsertAt(idx, t);
     }
 
     void Add(T &&t) {

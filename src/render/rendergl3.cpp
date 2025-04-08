@@ -317,7 +317,7 @@ void OpenGl3Renderer::DoLine(const Vector &a, const Vector &b, hStroke hcs) {
     if(eli == NULL) {
         SEdgeListItem item = {};
         item.h = hcs;
-        lines.Add(&item);
+        lines.Add(std::move(item));
         eli = lines.FindByIdNoOops(hcs);
     }
 
@@ -329,7 +329,7 @@ void OpenGl3Renderer::DoPoint(Vector p, hStroke hs) {
     if(pli == NULL) {
         SPointListItem item = {};
         item.h = hs;
-        points.Add(&item);
+        points.Add(std::move(item));
         pli = points.FindByIdNoOops(hs);
     }
 
@@ -485,7 +485,7 @@ void OpenGl3Renderer::DrawVectorText(const std::string &text, double height,
     if(eli == NULL) {
         SEdgeListItem item = {};
         item.h = hcs;
-        lines.Add(&item);
+        lines.Add(std::move(item));
         eli = lines.FindByIdNoOops(hcs);
     }
     SEdgeList &lines = eli->lines;
@@ -499,7 +499,7 @@ void OpenGl3Renderer::DrawQuad(const Vector &a, const Vector &b, const Vector &c
     if(li == NULL) {
         SMeshListItem item = {};
         item.h = hcf;
-        meshes.Add(&item);
+        meshes.Add(std::move(item));
         li = meshes.FindByIdNoOops(hcf);
     }
     li->mesh.AddQuad(a, b, c, d);
@@ -532,7 +532,7 @@ void OpenGl3Renderer::DrawFaces(const SMesh &m, const std::vector<uint32_t> &fac
     for(uint32_t f : faces) {
         for(const STriangle &t : m.l) {
             if(f != t.meta.face) continue;
-            facesMesh.l.Add(&t);
+            facesMesh.l.Add(t);
         }
     }
 
@@ -552,7 +552,7 @@ void OpenGl3Renderer::DrawPixmap(std::shared_ptr<const Pixmap> pm,
     if(mli == NULL) {
         SMeshListItem item = {};
         item.h = hcf;
-        meshes.Add(&item);
+        meshes.Add(std::move(item));
         mli = meshes.FindByIdNoOops(hcf);
     }
 
@@ -970,7 +970,7 @@ public:
         if(!eb) {
             EdgeBuffer neb = {};
             neb.h = hcs;
-            edgeBuffer.Add(&neb);
+            edgeBuffer.Add(std::move(neb));
             eb = edgeBuffer.FindById(hcs);
         }
 
@@ -982,7 +982,7 @@ public:
         if(!eb) {
             EdgeBuffer neb = {};
             neb.h = hcs;
-            edgeBuffer.Add(&neb);
+            edgeBuffer.Add(std::move(neb));
             eb = edgeBuffer.FindById(hcs);
         }
 
@@ -1015,7 +1015,7 @@ public:
         if(!pb) {
             PointBuffer npb = {};
             npb.h = hcs;
-            pointBuffer.Add(&npb);
+            pointBuffer.Add(std::move(npb));
             pb = pointBuffer.FindById(hcs);
         }
 

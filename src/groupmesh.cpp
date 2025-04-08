@@ -109,14 +109,13 @@ void Group::GenerateForStepAndRepeat(T *steps, T *outs, Group::CombineAs forWhat
         a0++; n++;
     }
 
-    int a;
     // create all the transformed copies
     std::vector <T> transd(n);
     std::vector <T> workA(n);
     workA[0] = {};
     // first generate a shell/mesh with each transformed copy
 #pragma omp parallel for
-    for(a = a0; a < n; a++) {
+    for(int a = a0; a < n; a++) {
         transd[a] = {};
         workA[a] = {};
         int ap = a*2 - (subtype == Subtype::ONE_SIDED ? 0 : (n-1));
@@ -137,7 +136,7 @@ void Group::GenerateForStepAndRepeat(T *steps, T *outs, Group::CombineAs forWhat
                 trans.Minus(q.Rotate(trans)), q, 1.0);
         }
     }
-    for(a = a0; a < n; a++) {
+    for(int a = a0; a < n; a++) {
         // We need to rewrite any plane face entities to the transformed ones.
         int remap = (a == (n - 1)) ? REMAP_LAST : a;
         transd[a].RemapFaces(this, remap);
@@ -147,7 +146,7 @@ void Group::GenerateForStepAndRepeat(T *steps, T *outs, Group::CombineAs forWhat
     std::vector<T> *scratch = &workA;
     // do the boolean operations on pairs of equal size
     while(n > 1) {
-        for(a = 0; a < n; a+=2) {
+        for(int a = 0; a < n; a+=2) {
             scratch->at(a/2).Clear();
             // combine a pair of shells
             if((a==0) && (a0==1)) { // if the first was skipped just copy the 2nd
@@ -170,8 +169,7 @@ void Group::GenerateForStepAndRepeat(T *steps, T *outs, Group::CombineAs forWhat
         swap(scratch, soFar);
         n = (n+1)/2;
     }
-    outs->Clear();
-    *outs = soFar->at(0);
+    *outs = std::move(soFar->at(0));
 }
 
 template<class T>
@@ -474,7 +472,7 @@ void Group::GenerateDisplayItems() {
                 trn.an = n;
                 trn.bn = n;
                 trn.cn = n;
-                displayMesh.AddTriangle(&trn);
+                displayMesh.AddTriangle(trn);
             }
 
             displayOutlines.Clear();
