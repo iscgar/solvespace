@@ -39,6 +39,18 @@ operator<(T const &lhs, T const &rhs) {
     return lhs.v < rhs.v;
 }
 
+template<class T>
+size_t RemoveTagged(std::vector<T> &v) {
+    auto end = std::remove_if(v.begin(), v.end(), [](const T &t) {
+        return t.tag != 0;
+    });
+    const size_t erased = std::distance(end, v.end());
+    if(erased) {
+        v.erase(end, v.end());
+    }
+    return erased;
+}
+
 class Vector;
 class Vector4;
 class Point2d;
