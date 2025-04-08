@@ -310,12 +310,11 @@ public:
     void WriteProductHeader();
     int ExportCurve(const SBezier *sb);
     int ExportCurveLoop(const SBezierLoop *loop, bool inner);
-    void ExportSurface(SSurface *ss, SBezierList *sbl);
+    void ExportSurface(SSurface *ss, SBezierList *sbl, std::vector<int> *advancedFaces);
     void WriteWireframe();
     void WriteFooter();
 
-    List<int> curves;
-    List<int> advancedFaces;
+    std::vector<int> curves;
     FILE *f;
     int id;
 };
