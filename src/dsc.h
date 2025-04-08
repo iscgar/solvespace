@@ -275,7 +275,7 @@ public:
     }
 
     void Add(T &&t) {
-        elem.emplace_back(std::forward<T>(t));
+        elem.emplace_back(std::move(t));
     }
 
     void AddToBeginning(const T *t) {
@@ -353,25 +353,21 @@ class IdList {
                   "Invalid handle value type");
 
     struct Storage {
-        struct Target {
-            size_t value;
-        };
-
-        Storage(Target target, const T &t) : target_and_used(target.value & TARGET_MASK) {
-            reset(t);
+        explicit Storage(const T &t) : used_(true) {
+            new(&data) T(t);
         }
 
-        Storage(Target target, T &&t) : target_and_used(target.value & TARGET_MASK) {
-            reset(std::forward<T>(t));
+        explicit Storage(T &&t) : used_(true) {
+            new(&data) T(std::move(t));
         }
 
-        Storage(const Storage &other) : target_and_used(other.target_and_used) {
+        Storage(const Storage &other) : used_(other.used()) {
             if(other.used()) {
                 new(&data) T(*other.get());
             }
         }
 
-        Storage(Storage &&other) noexcept(noexcept(T(std::move(std::declval<T>())))) : target_and_used(other.target_and_used) {
+        Storage(Storage &&other) noexcept(noexcept(T(std::move(std::declval<T>())))) : used_(other.used()) {
             if(other.used()) {
                 new(&data) T(std::move(*other.get()));
                 other.reset();
@@ -387,23 +383,19 @@ class IdList {
             return *new(this) Storage(other);
         }
 
-        Storage &operator=(Storage &&other) noexcept(noexcept(Storage(std::forward<Storage>(other)))) {
+        Storage &operator=(Storage &&other) noexcept(noexcept(Storage(std::move(other)))) {
             this->~Storage();
-            return *new(this) Storage(std::forward<Storage>(other));
+            return *new(this) Storage(std::move(other));
         }
 
         bool used() const noexcept {
-            return (target_and_used & USED_MASK) != 0;
-        }
-
-        Target target() const noexcept {
-            return {target_and_used & TARGET_MASK};
+            return used_;
         }
 
         void reset() {
             if(used()) {
                 get()->~T();
-                target_and_used &= TARGET_MASK;
+                used_ = false;
             }
         }
 
@@ -412,19 +404,15 @@ class IdList {
                 get()->~T();
             }
             new(&data) T(t);
-            target_and_used |= USED_MASK;
+            used_ = true;
         }
 
         void reset(T &&t) {
             if(used()) {
                 get()->~T();
             }
-            new(&data) T(std::forward<T>(t));
-            target_and_used |= USED_MASK;
-        }
-
-        void retarget(Target target) {
-            target_and_used = (target_and_used & USED_MASK) | (target.value & TARGET_MASK);
+            new(&data) T(std::move(t));
+            used_ = true;
         }
 
         T *get() noexcept {
@@ -435,14 +423,14 @@ class IdList {
         }
 
     private:
-        static constexpr size_t TARGET_MASK = std::numeric_limits<size_t>::max() >> 1;
-        static constexpr size_t USED_MASK   = TARGET_MASK + 1;
-
-        size_t target_and_used;
         typename std::aligned_storage<sizeof(T), alignof(T)>::type data;
+        bool used_;
     };
 
+    struct Target { uint32_t value; };
+
     std::vector<Storage> elemstore;
+    std::vector<Target> targets;
     size_t used = 0;
 
 public:
@@ -462,16 +450,16 @@ public:
 
     public:
         ValueType &operator*() noexcept {
-            return *l->GetTarget(l->elemstore[idx].target());
+            return *l->GetTarget(l->targets[idx]);
         }
         const ValueType &operator*() const noexcept {
-            return *l->GetTarget(l->elemstore[idx].target());
+            return *l->GetTarget(l->targets[idx]);
         }
         ValueType *operator->() noexcept {
-            return l->GetTarget(l->elemstore[idx].target());
+            return l->GetTarget(l->targets[idx]);
         }
         const ValueType *operator->() const noexcept {
-            return l->GetTarget(l->elemstore[idx].target());
+            return l->GetTarget(l->targets[idx]);
         }
 
         bool operator==(const IdListIterator &p) const noexcept {
@@ -509,14 +497,16 @@ public:
     IdList() noexcept = default;
 
     IdList(IdList &&other) noexcept(noexcept(std::vector<Storage>(std::move(other.elemstore)))) :
-            elemstore(std::move(other.elemstore)), used(other.used) {
+            elemstore(std::move(other.elemstore)), targets(std::move(other.targets)), used(other.used) {
         other.used = 0;
     }
 
-    IdList(const IdList &other) : elemstore(), used(other.Size()) {
+    IdList(const IdList &other) : elemstore(), targets(), used(other.Size()) {
         elemstore.reserve(used);
+        targets.reserve(used);
         for(size_t i = 0; i < used; ++i) {
-            elemstore.emplace_back(typename Storage::Target{i}, other.Get(i));
+            elemstore.emplace_back(other.Get(i));
+            targets.push_back({ uint32_t(i) });
         }
     }
 
@@ -525,9 +515,9 @@ public:
         return *new(this) IdList(other);
     }
 
-    IdList &operator=(IdList &&other) noexcept(noexcept(IdList(std::forward<IdList>(other)))) {
+    IdList &operator=(IdList &&other) noexcept(noexcept(IdList(std::move(other)))) {
         this->~IdList();
-        return *new(this) IdList(std::forward<IdList>(other));
+        return *new(this) IdList(std::move(other));
     }
 
     ~IdList() {
@@ -546,13 +536,13 @@ public:
         if(IsEmpty()) {
             return 0;
         } else {
-            return GetTarget(elemstore[Size()-1].target())->h.v;
+            return GetTarget(targets[Size()-1])->h.v;
         }
     }
 
     Handle AddAndAssignId(T &&t) {
         t.h.v = MaximumId() + 1;
-        InsertAt(Size(), std::forward<T>(t));
+        InsertAt(Size(), std::move(t));
         return t.h;
     }
 
@@ -564,7 +554,7 @@ public:
     void Add(const T &t) {
         const size_t idx = FindInsertionPoint(t.h);
         if(idx < Size()) {
-            ssassert(GetTarget(elemstore[idx].target())->h.v != t.h.v, "Handle isn't unique");
+            ssassert(GetTarget(targets[idx])->h.v != t.h.v, "Handle isn't unique");
         }
         InsertAt(idx, t);
     }
@@ -572,9 +562,9 @@ public:
     void Add(T &&t) {
         const size_t idx = FindInsertionPoint(t.h);
         if(idx < Size()) {
-            ssassert(GetTarget(elemstore[idx].target())->h.v != t.h.v, "Handle isn't unique");
+            ssassert(GetTarget(targets[idx])->h.v != t.h.v, "Handle isn't unique");
         }
-        InsertAt(idx, std::forward<T>(t));
+        InsertAt(idx, std::move(t));
     }
 
     T *FindById(Handle h) {
@@ -588,26 +578,22 @@ public:
         if(idx >= Size()) {
             return nullptr;
         }
-        return GetTarget(elemstore[idx].target());
+        return GetTarget(targets[idx]);
     }
 
     T &Get(size_t i) {
-        return *GetTarget(elemstore.at(i).target());
+        ssassert(i < Size(), "Out of bounds access");
+        return *GetTarget(targets[i]);
     }
     const T &Get(size_t i) const {
-        return *GetTarget(elemstore.at(i).target());
+        ssassert(i < Size(), "Out of bounds access");
+        return *GetTarget(targets[i]);
     }
 
-    iterator begin() noexcept { return IsEmpty() ? nullptr : iterator(this); }
-    iterator end() noexcept {
-        return IsEmpty() ? nullptr : iterator(this, Size());
-    }
-    const_iterator begin() const noexcept {
-        return IsEmpty() ? nullptr : const_iterator(this);
-    }
-    const_iterator end() const noexcept {
-        return IsEmpty() ? nullptr : const_iterator(this, Size());
-    }
+    iterator begin() noexcept { return iterator(this); }
+    iterator end() noexcept { return iterator(this, Size()); }
+    const_iterator begin() const noexcept { return const_iterator(this); }
+    const_iterator end() const noexcept { return const_iterator(this, Size()); }
 
     void ClearTags() noexcept {
         for(T &elt : *this) { elt.tag = 0; }
@@ -633,15 +619,15 @@ public:
             // only a single element is tagged, due to the bubbling behaviour this way is
             // twice as slow as simply finding the tagged element and calling `RemoveAt()`
             // on it.
-            const auto target = elemstore[i].target();
+            const auto target = targets[i];
             Storage &at_target = elemstore[target.value];
             if(at_target.get()->tag != 0) {
                 at_target.reset();
             } else {
                 if(transfer_idx < i) {
-                    const auto transfer_target = elemstore[transfer_idx].target();
-                    elemstore[transfer_idx].retarget(target);
-                    elemstore[i].retarget(transfer_target);
+                    const auto transfer_target = targets[transfer_idx];
+                    targets[transfer_idx] = target;
+                    targets[i] = transfer_target;
                 }
                 ++transfer_idx;
             }
@@ -658,39 +644,41 @@ public:
 
     void Clear() {
         elemstore.clear();
+        targets.clear();
         used = 0;
     }
 
 private:
-    T *GetTarget(typename Storage::Target target) noexcept {
+    T *GetTarget(Target target) noexcept {
         return elemstore[target.value].get();
     }
 
-    const T *GetTarget(typename Storage::Target target) const noexcept {
+    const T *GetTarget(Target target) const noexcept {
         return elemstore[target.value].get();
     }
 
     size_t FindIndexById(Handle h) const {
         const size_t idx = FindInsertionPoint(h);
-        if(idx >= Size() || GetTarget(elemstore[idx].target())->h.v != h.v) {
+        if(idx >= Size() || GetTarget(targets[idx])->h.v != h.v) {
             return Size();
         }
         return idx;
     }
 
     size_t FindInsertionPoint(Handle h) const {
-        auto it = std::lower_bound(elemstore.begin(), elemstore.begin() + Size(), h,
-                                   [this](const Storage &storage, Handle h) {
-                                       return GetTarget(storage.target())->h.v < h.v;
+        auto it = std::lower_bound(targets.begin(), targets.begin() + Size(), h,
+                                   [this](Target target, Handle h) {
+                                       return GetTarget(target)->h.v < h.v;
                                    });
-        return it - elemstore.begin();
+        return it - targets.begin();
     }
 
     void InsertAt(size_t idx, const T &t) {
         if(used >= elemstore.size()) {
-            elemstore.emplace_back(typename Storage::Target{elemstore.size()}, t);
+            targets.push_back({uint32_t(elemstore.size())});
+            elemstore.emplace_back(t);
         } else {
-            const typename Storage::Target target = elemstore[used].target();
+            const Target target = targets.back();
             elemstore[target.value].reset(t);
         }
         FixupInsert(idx);
@@ -698,30 +686,32 @@ private:
 
     void InsertAt(size_t idx, T &&t) {
         if(used >= elemstore.size()) {
-            elemstore.emplace_back(typename Storage::Target{elemstore.size()}, std::forward<T>(t));
+            targets.push_back({uint32_t(elemstore.size())});
+            elemstore.emplace_back(std::move(t));
         } else {
-            const typename Storage::Target target = elemstore[used].target();
-            elemstore[target.value].reset(std::forward<T>(t));
+            const Target target = targets.back();
+            elemstore[target.value].reset(std::move(t));
         }
         FixupInsert(idx);
     }
 
     void FixupInsert(size_t idx) {
-        const typename Storage::Target target = elemstore[used].target();
-        for(size_t i = used; i > idx; --i) {
-            elemstore[i].retarget(elemstore[i - 1].target());
+        if(idx < used || used < targets.size() - 1) {
+            const Target target = targets.back();
+            targets.pop_back();
+            targets.insert(targets.begin() + idx, target);
         }
-        elemstore[idx].retarget(target);
         ++used;
     }
 
     void RemoveAt(size_t idx) {
-        const typename Storage::Target target = elemstore[idx].target();
+        const Target target = targets[idx];
         elemstore[target.value].reset();
-        for(size_t i = idx + 1; i < used; ++i) {
-            elemstore[i - 1].retarget(elemstore[i].target());
+        --used;
+        if(idx < used) {
+            targets.erase(targets.begin() + idx);
+            targets.push_back(target);
         }
-        elemstore[--used].retarget(target);
     }
 };
 
