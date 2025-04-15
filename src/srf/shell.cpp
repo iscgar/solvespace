@@ -129,7 +129,7 @@ bool SShell::CheckNormalAxisRelationship(SBezierLoopSet *sbls, Vector pt, Vector
 // the sketch, on the side of the axis where the sketch is.
 {
     SBezierLoop *sbl;
-    Vector pto;
+    Vector pto = {};
     double md = VERY_NEGATIVE;
     for(sbl = sbls->l.First(); sbl; sbl = sbls->l.NextAfter(sbl)) {
         SBezier *sb;

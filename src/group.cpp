@@ -1188,8 +1188,13 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
 
             int i, points;
             bool hasNormal, hasDistance;
-            EntReqTable::GetEntityInfo(ep->type, ep->extraPoints,
-                NULL, &points, &hasNormal, &hasDistance);
+            if (!EntReqTable::GetEntityInfo(ep->type, ep->extraPoints,
+                    NULL, &points, &hasNormal, &hasDistance)) {
+                // Unreachable in practice, because we're matching on `ep->type`,
+                // so we'll always find this entity, but GCC complains about it,
+                // so add an assertion just in case
+                ssassert(false, "Couldn't get entity info, but this should not happen");
+            }
             for(i = 0; i < points; i++) {
                 en.point[i] = Remap(ep->point[i], remap);
             }

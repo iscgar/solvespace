@@ -69,10 +69,9 @@ Vector SBezier::Finish() const {
 }
 
 void SBezier::Reverse() {
-    int i;
-    for(i = 0; i < (deg+1)/2; i++) {
-        swap(ctrl[i], ctrl[deg-i]);
-        swap(weight[i], weight[deg-i]);
+    for(int start = 0, end = deg; start < end; ++start, --end) {
+        std::swap(ctrl[start], ctrl[end]);
+        std::swap(weight[start], weight[end]);
     }
 }
 
@@ -390,7 +389,10 @@ SBezierLoop SBezierLoop::FromCurves(SBezierList *sbl,
 {
     SBezierLoop loop = {};
 
-    if(sbl->l.n < 1) return loop;
+    if(sbl->l.n < 1) {
+        *allClosed = false;
+        return loop;
+    }
     sbl->l.ClearTags();
 
     SBezier *first = &(sbl->l[0]);

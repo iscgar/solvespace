@@ -57,8 +57,13 @@ void GraphicsWindow::StartDraggingByEntity(hEntity he) {
               e->type == Entity::Type::IMAGE)
     {
         int pts;
-        EntReqTable::GetEntityInfo(e->type, e->extraPoints,
-            NULL, &pts, NULL, NULL);
+        if(!EntReqTable::GetEntityInfo(e->type, e->extraPoints,
+                NULL, &pts, NULL, NULL)) {
+            // Unreachable in practice, because we're matching on `e->type`,
+            // so we'll always find this request, but GCC complains about it,
+            // so add an assertion just in case
+            ssassert(false, "Couldn't get entity info, but this should not happen");
+        }
         for(int i = 0; i < pts; i++) {
             AddPointToDraggedList(e->point[i]);
         }
