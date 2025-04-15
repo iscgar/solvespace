@@ -24,13 +24,12 @@ void GraphicsWindow::AddPointToDraggedList(hEntity hp) {
     // If an entity and its points are both selected, then its points could
     // end up in the list twice. This would be bad, because it would move
     // twice as far as the mouse pointer...
-    List<hEntity> *lhe = &(pending.points);
-    for(hEntity *hee = lhe->First(); hee; hee = lhe->NextAfter(hee)) {
-        if(*hee == hp) {
+    for(const hEntity &hee : pending.points) {
+        if(hee == hp) {
             // Exact same point.
             return;
         }
-        Entity *pe = SK.GetEntity(*hee);
+        Entity *pe = SK.GetEntity(hee);
         if(pe->type == p->type &&
            pe->type != Entity::Type::POINT_IN_2D &&
            pe->type != Entity::Type::POINT_IN_3D &&
@@ -71,11 +70,10 @@ void GraphicsWindow::StartDraggingByEntity(hEntity he) {
 }
 
 void GraphicsWindow::StartDraggingBySelection() {
-    List<Selection> *ls = &(selection);
-    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
-        if(!s->entity.v) continue;
+    for(const Selection &s : selection) {
+        if(!s.entity.v) continue;
 
-        StartDraggingByEntity(s->entity);
+        StartDraggingByEntity(s.entity);
     }
     // The user might select a point, and then click it again to start
     // dragging; but the point just got unselected by that click. So drag
@@ -341,9 +339,8 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
                 }
 
                 // Now apply this rotation to the points being dragged.
-                List<hEntity> *lhe = &(pending.points);
-                for(hEntity *he = lhe->First(); he; he = lhe->NextAfter(he)) {
-                    Entity *e = SK.GetEntity(*he);
+                for(const hEntity &he : pending.points) {
+                    Entity *e = SK.GetEntity(he);
                     if(e->type != Entity::Type::POINT_N_ROT_TRANS) {
                         if(ctrlDown) {
                             Vector p = e->PointGetNum();
@@ -352,7 +349,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
                             p = p.Plus(SS.extraLine.ptA);
                             e->PointForceTo(p);
                         } else {
-                            UpdateDraggedPoint(*he, x, y);
+                            UpdateDraggedPoint(he, x, y);
                         }
                     } else {
                         Quaternion q = e->PointGetQuaternion();
@@ -366,10 +363,9 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
                     SS.MarkGroupDirtyByEntity(e->h);
                 }
             } else {
-                List<hEntity> *lhe = &(pending.points);
-                for(hEntity *he = lhe->First(); he; he = lhe->NextAfter(he)) {
-                    UpdateDraggedPoint(*he, x, y);
-                    SS.MarkGroupDirtyByEntity(*he);
+                for(const hEntity &he : pending.points) {
+                    UpdateDraggedPoint(he, x, y);
+                    SS.MarkGroupDirtyByEntity(he);
                 }
             }
             orig.mouse = mp;

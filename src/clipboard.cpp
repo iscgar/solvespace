@@ -15,13 +15,12 @@ bool SolveSpaceUI::Clipboard::ContainsEntity(hEntity he) {
     if(he == Entity::NO_ENTITY)
         return true;
 
-    ClipboardRequest *cr;
-    for(cr = r.First(); cr; cr = r.NextAfter(cr)) {
-        if(cr->oldEnt == he)
+    for(const ClipboardRequest &cr : r) {
+        if(cr.oldEnt == he)
             return true;
 
         for(int i = 0; i < MAX_POINTS_IN_ENTITY; i++) {
-            if(cr->oldPointEnt[i] == he)
+            if(cr.oldPointEnt[i] == he)
                 return true;
         }
     }
@@ -32,14 +31,13 @@ hEntity SolveSpaceUI::Clipboard::NewEntityFor(hEntity he) {
     if(he == Entity::NO_ENTITY)
         return Entity::NO_ENTITY;
 
-    ClipboardRequest *cr;
-    for(cr = r.First(); cr; cr = r.NextAfter(cr)) {
-        if(cr->oldEnt == he)
-            return cr->newReq.entity(0);
+    for(const ClipboardRequest &cr : r) {
+        if(cr.oldEnt == he)
+            return cr.newReq.entity(0);
 
         for(int i = 0; i < MAX_POINTS_IN_ENTITY; i++) {
-            if(cr->oldPointEnt[i] == he)
-                return cr->newReq.entity(1+i);
+            if(cr.oldPointEnt[i] == he)
+                return cr.newReq.entity(1+i);
         }
     }
 
@@ -49,17 +47,16 @@ hEntity SolveSpaceUI::Clipboard::NewEntityFor(hEntity he) {
 void GraphicsWindow::DeleteSelection() {
     SK.request.ClearTags();
     SK.constraint.ClearTags();
-    List<Selection> *ls = &(selection);
-    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
+    for(const Selection &s : selection) {
         hRequest r = { 0 };
-        if(s->entity.v && s->entity.isFromRequest()) {
-            r = s->entity.request();
+        if(s.entity.v && s.entity.isFromRequest()) {
+            r = s.entity.request();
         }
         if(r.v && !r.IsFromReferences()) {
             SK.request.Tag(r, 1);
         }
-        if(s->constraint.v) {
-            SK.constraint.Tag(s->constraint, 1);
+        if(s.constraint.v) {
+            SK.constraint.Tag(s.constraint, 1);
         }
     }
 
@@ -79,11 +76,10 @@ void GraphicsWindow::CopySelection() {
            n = wrkpln->NormalN(),
            p = SK.GetEntity(wrkpl->point[0])->PointGetNum();
 
-    List<Selection> *ls = &(selection);
-    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
-        if(!s->entity.v) continue;
+    for(const Selection &s : selection) {
+        if(!s.entity.v) continue;
         // Work only on entities that have requests that will generate them.
-        Entity *e = SK.GetEntity(s->entity);
+        Entity *e = SK.GetEntity(s.entity);
         bool hasDistance;
         Request::Type req;
         int pts;
@@ -134,10 +130,10 @@ void GraphicsWindow::CopySelection() {
         SS.clipboard.r.Add(&cr);
     }
 
-    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
-        if(!s->constraint.v) continue;
+    for(const Selection &s : selection) {
+        if(!s.constraint.v) continue;
 
-        Constraint *c = SK.GetConstraint(s->constraint);
+        Constraint *c = SK.GetConstraint(s.constraint);
         if(c->type == Constraint::Type::COMMENT) {
             SS.clipboard.c.Add(c);
         }
@@ -184,16 +180,15 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
         return he;
     };
 
-    ClipboardRequest *cr;
-    for(cr = SS.clipboard.r.First(); cr; cr = SS.clipboard.r.NextAfter(cr)) {
-        hRequest hr = AddRequest(cr->type, /*rememberForUndo=*/false);
+    for(ClipboardRequest &cr : SS.clipboard.r) {
+        hRequest hr = AddRequest(cr.type, /*rememberForUndo=*/false);
         Request *r = SK.GetRequest(hr);
-        r->extraPoints  = cr->extraPoints;
-        r->style        = cr->style;
-        r->str          = cr->str;
-        r->font         = cr->font;
-        r->file         = cr->file;
-        r->construction = cr->construction;
+        r->extraPoints  = cr.extraPoints;
+        r->style        = cr.style;
+        r->str          = cr.str;
+        r->font         = cr.font;
+        r->file         = cr.file;
+        r->construction = cr.construction;
         // Need to regen to get the right number of points, if extraPoints
         // changed.
         SS.GenerateAll(SolveSpaceUI::Generate::REGEN);
@@ -208,7 +203,7 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
             ssassert(false, "Couldn't get request info, but this should not happen");
         }
         for(i = 0; i < pts; i++) {
-            Vector pt = cr->point[i];
+            Vector pt = cr.point[i];
             // We need the reflection to occur within the workplane; it may
             // otherwise correspond to just a rotation as projected.
             if(scale < 0) {
@@ -226,34 +221,33 @@ void GraphicsWindow::PasteClipboard(Vector trans, double theta, double scale) {
         }
         if(hasDistance) {
             SK.GetEntity(hr.entity(64))->DistanceForceTo(
-                                            cr->distance*fabs(scale));
+                                            cr.distance*fabs(scale));
         }
 
-        cr->newReq = hr;
+        cr.newReq = hr;
         MakeSelected(hr.entity(0));
         for(i = 0; i < pts; i++) {
             int j = (r->type == Request::Type::DATUM_POINT) ? i : i + 1;
             MakeSelected(hr.entity(j));
         }
     }
-    Constraint *cc;
-    for(cc = SS.clipboard.c.First(); cc; cc = SS.clipboard.c.NextAfter(cc)) {
+    for(const Constraint &cc : SS.clipboard.c) {
         Constraint c = {};
         c.group = SS.GW.activeGroup;
         c.workplane = SS.GW.ActiveWorkplane();
-        c.type = cc->type;
-        c.valA = cc->valA;
-        c.ptA = SS.clipboard.NewEntityFor(mapPoint(cc->ptA));
-        c.ptB = SS.clipboard.NewEntityFor(mapPoint(cc->ptB));
-        c.entityA = SS.clipboard.NewEntityFor(cc->entityA);
-        c.entityB = SS.clipboard.NewEntityFor(cc->entityB);
-        c.entityC = SS.clipboard.NewEntityFor(cc->entityC);
-        c.entityD = SS.clipboard.NewEntityFor(cc->entityD);
-        c.other = cc->other;
-        c.other2 = cc->other2;
-        c.reference = cc->reference;
-        c.disp = cc->disp;
-        c.comment = cc->comment;
+        c.type = cc.type;
+        c.valA = cc.valA;
+        c.ptA = SS.clipboard.NewEntityFor(mapPoint(cc.ptA));
+        c.ptB = SS.clipboard.NewEntityFor(mapPoint(cc.ptB));
+        c.entityA = SS.clipboard.NewEntityFor(cc.entityA);
+        c.entityB = SS.clipboard.NewEntityFor(cc.entityB);
+        c.entityC = SS.clipboard.NewEntityFor(cc.entityC);
+        c.entityD = SS.clipboard.NewEntityFor(cc.entityD);
+        c.other = cc.other;
+        c.other2 = cc.other2;
+        c.reference = cc.reference;
+        c.disp = cc.disp;
+        c.comment = cc.comment;
         bool dontAddConstraint = false;
         switch(c.type) {
             case Constraint::Type::COMMENT:

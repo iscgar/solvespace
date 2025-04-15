@@ -42,7 +42,7 @@ public:
         std::set<uint32_t> usedStyles;
 
         for(DxfFileWriter::BezierPath &path : writer->paths) {
-            for(SBezier *sb : path.beziers) {
+            for(const SBezier *sb : path.beziers) {
                 usedStyles.insert((uint32_t)sb->auxA);
             }
         }
@@ -115,7 +115,7 @@ public:
         PolylineBuilder builder;
 
         for(DxfFileWriter::BezierPath &path : writer->paths) {
-            for(SBezier *sb : path.beziers) {
+            for(const SBezier *sb : path.beziers) {
                 if(sb->deg != 1) continue;
                 builder.AddEdge(sb->ctrl[0], sb->ctrl[1], (uint32_t)sb->auxA);
             }
@@ -163,7 +163,7 @@ public:
         writePolylines();
 
         for(DxfFileWriter::BezierPath &path : writer->paths) {
-            for(SBezier *sb : path.beziers) {
+            for(const SBezier *sb : path.beziers) {
                 if(sb->deg == 1) continue;
                 writeBezier(sb);
             }
@@ -362,7 +362,7 @@ public:
         dxf->writeArc(&arc);
     }
 
-    void writeBezierAsPwl(SBezier *sb) {
+    void writeBezierAsPwl(const SBezier *sb) {
         List<Vector> lv = {};
         sb->MakePwlInto(&lv, SS.ExportChordTolMm());
         hStyle hs = { (uint32_t)sb->auxA };
@@ -400,7 +400,7 @@ public:
         } else ssassert(false, "Unexpected degree of spline");
     }
 
-    void writeSpline(SBezier *sb) {
+    void writeSpline(const SBezier *sb) {
         bool isRational = sb->IsRational();
         hStyle hs = { (uint32_t)sb->auxA };
         DRW_Spline spline;
@@ -417,7 +417,7 @@ public:
         dxf->writeSpline(&spline);
     }
 
-    void writeBezier(SBezier *sb) {
+    void writeBezier(const SBezier *sb) {
         hStyle hs = { (uint32_t)sb->auxA };
         Vector c;
         Vector n = Vector::From(0.0, 0.0, 1.0);
@@ -564,10 +564,10 @@ void DxfFileWriter::FinishPath(RgbaColor strokeRgb, double lineWidth,
 {
 }
 
-void DxfFileWriter::Triangle(STriangle *tr) {
+void DxfFileWriter::Triangle(const STriangle *tr) {
 }
 
-void DxfFileWriter::Bezier(SBezier *sb) {
+void DxfFileWriter::Bezier(const SBezier *sb) {
     paths.back().beziers.push_back(sb);
 }
 
@@ -763,7 +763,7 @@ void EpsFileWriter::MaybeMoveTo(Vector st, Vector fi) {
     prevPt = fi;
 }
 
-void EpsFileWriter::Triangle(STriangle *tr) {
+void EpsFileWriter::Triangle(const STriangle *tr) {
     fprintf(f,
 "%.3f %.3f %.3f setrgbcolor\r\n"
 "newpath\r\n"
@@ -787,7 +787,7 @@ void EpsFileWriter::Triangle(STriangle *tr) {
             MmToPts(sw));
 }
 
-void EpsFileWriter::Bezier(SBezier *sb) {
+void EpsFileWriter::Bezier(const SBezier *sb) {
     Vector c, n = Vector::From(0, 0, 1);
     double r;
     if(sb->deg == 1) {
@@ -1018,7 +1018,7 @@ void PdfFileWriter::MaybeMoveTo(Vector st, Vector fi) {
     prevPt = fi;
 }
 
-void PdfFileWriter::Triangle(STriangle *tr) {
+void PdfFileWriter::Triangle(const STriangle *tr) {
     double sw = max(ptMax.x - ptMin.x, ptMax.y - ptMin.y) / 1000;
 
     fprintf(f,
@@ -1038,7 +1038,7 @@ void PdfFileWriter::Triangle(STriangle *tr) {
             MmToPts(tr->c.x - ptMin.x), MmToPts(tr->c.y - ptMin.y));
 }
 
-void PdfFileWriter::Bezier(SBezier *sb) {
+void PdfFileWriter::Bezier(const SBezier *sb) {
     if(sb->deg == 1) {
         MaybeMoveTo(sb->ctrl[0], sb->ctrl[1]);
         fprintf(f,
@@ -1154,7 +1154,7 @@ void SvgFileWriter::MaybeMoveTo(Vector st, Vector fi) {
     prevPt = fi;
 }
 
-void SvgFileWriter::Triangle(STriangle *tr) {
+void SvgFileWriter::Triangle(const STriangle *tr) {
     fprintf(f,
 "<polygon points='%.3f,%.3f %.3f,%.3f %.3f,%.3f' "
     "stroke='#%02x%02x%02x' "
@@ -1166,7 +1166,7 @@ void SvgFileWriter::Triangle(STriangle *tr) {
             tr->meta.color.red, tr->meta.color.green, tr->meta.color.blue);
 }
 
-void SvgFileWriter::Bezier(SBezier *sb) {
+void SvgFileWriter::Bezier(const SBezier *sb) {
     Vector c, n = Vector::From(0, 0, 1);
     double r;
     if(sb->deg == 1) {
@@ -1235,10 +1235,10 @@ void HpglFileWriter::FinishPath(RgbaColor strokeRgb, double lineWidth,
 {
 }
 
-void HpglFileWriter::Triangle(STriangle *tr) {
+void HpglFileWriter::Triangle(const STriangle *tr) {
 }
 
-void HpglFileWriter::Bezier(SBezier *sb) {
+void HpglFileWriter::Bezier(const SBezier *sb) {
     if(sb->deg == 1) {
         fprintf(f, "PU%d,%d;\r\n",
             (int)MmToHpglUnits(sb->ctrl[0].x),
@@ -1273,10 +1273,10 @@ void GCodeFileWriter::FinishPath(RgbaColor strokeRgb, double lineWidth,
                                  bool filled, RgbaColor fillRgb, hStyle hs)
 {
 }
-void GCodeFileWriter::Triangle(STriangle *tr) {
+void GCodeFileWriter::Triangle(const STriangle *tr) {
 }
 
-void GCodeFileWriter::Bezier(SBezier *sb) {
+void GCodeFileWriter::Bezier(const SBezier *sb) {
     if(sb->deg == 1) {
         sel.AddEdge(sb->ctrl[0], sb->ctrl[1]);
     } else {
@@ -1292,18 +1292,18 @@ void GCodeFileWriter::FinishAndCloseFile() {
     for(i = 0; i < SS.gCode.passes; i++) {
         double depth = (SS.gCode.depth / SS.gCode.passes)*(i+1);
 
-        SContour *sc;
-        for(sc = sp.l.First(); sc; sc = sp.l.NextAfter(sc)) {
-            if(sc->l.n < 2) continue;
+        for(const SContour &sc : sp.l) {
+            if(sc.l.n < 2) continue;
 
-            SPoint *pt = sc->l.First();
+            const SPoint *pt = sc.l.begin();
             fprintf(f, "G00 X%s Y%s\r\n",
                     SS.MmToString(pt->p.x).c_str(), SS.MmToString(pt->p.y).c_str());
             fprintf(f, "G01 Z%s F%s\r\n",
                     SS.MmToString(depth).c_str(), SS.MmToString(SS.gCode.plungeFeed).c_str());
 
-            pt = sc->l.NextAfter(pt);
-            for(; pt; pt = sc->l.NextAfter(pt)) {
+            // Not using range-for loop here because we have a different treatment for the
+            // first point above
+            for(++pt; pt != sc.l.end(); ++pt) {
                 fprintf(f, "G01 X%s Y%s F%s\r\n",
                         SS.MmToString(pt->p.x).c_str(), SS.MmToString(pt->p.y).c_str(),
                         SS.MmToString(SS.gCode.feed).c_str());
@@ -1333,7 +1333,7 @@ void Step2dFileWriter::StartFile() {
 void Step2dFileWriter::Background(RgbaColor color) {
 }
 
-void Step2dFileWriter::Triangle(STriangle *tr) {
+void Step2dFileWriter::Triangle(const STriangle *tr) {
 }
 
 void Step2dFileWriter::StartPath(RgbaColor strokeRgb, double lineWidth,
@@ -1345,7 +1345,7 @@ void Step2dFileWriter::FinishPath(RgbaColor strokeRgb, double lineWidth,
 {
 }
 
-void Step2dFileWriter::Bezier(SBezier *sb) {
+void Step2dFileWriter::Bezier(const SBezier *sb) {
     int c = sfw.ExportCurve(sb);
     sfw.curves.Add(&c);
 }

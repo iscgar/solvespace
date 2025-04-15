@@ -81,7 +81,7 @@ void StepFileWriter::WriteProductHeader() {
 		"\n"
 		);
 }
-int StepFileWriter::ExportCurve(SBezier *sb) {
+int StepFileWriter::ExportCurve(const SBezier *sb) {
     int i, ret = id;
 
     fprintf(f, "#%d=(\n", ret);
@@ -116,27 +116,28 @@ int StepFileWriter::ExportCurve(SBezier *sb) {
     return ret;
 }
 
-int StepFileWriter::ExportCurveLoop(SBezierLoop *loop, bool inner) {
+int StepFileWriter::ExportCurveLoop(const SBezierLoop *loop, bool inner) {
     ssassert(loop->l.n >= 1, "Expected at least one loop");
 
     List<int> listOfTrims = {};
-
-    SBezier *sb = loop->l.Last();
 
     // Generate "exactly closed" contours, with the same vertex id for the
     // finish of a previous edge and the start of the next one. So we need
     // the finish of the last Bezier in the loop before we start our process.
     fprintf(f, "#%d=CARTESIAN_POINT('',(%.10f,%.10f,%.10f));\n",
-        id, CO(sb->Finish()));
+        id, CO(loop->l.Last()->Finish()));
     fprintf(f, "#%d=VERTEX_POINT('',#%d);\n", id+1, id);
     int lastFinish = id + 1, prevFinish = lastFinish;
     id += 2;
 
-    for(sb = loop->l.First(); sb; sb = loop->l.NextAfter(sb)) {
+    // Not using range-for loop here because we're using the index to determine
+    // whether or not we're at the last curve
+    for(int i = 0; i < loop->l.n; ++i) {
+        const SBezier *sb = &loop->l[i];
         int curveId = ExportCurve(sb);
 
         int thisFinish;
-        if(loop->l.NextAfter(sb) != NULL) {
+        if(i < loop->l.n - 1) {
             fprintf(f, "#%d=CARTESIAN_POINT('',(%.10f,%.10f,%.10f));\n",
                 id, CO(sb->Finish()));
             fprintf(f, "#%d=VERTEX_POINT('',#%d);\n", id+1, id);
@@ -158,11 +159,12 @@ int StepFileWriter::ExportCurveLoop(SBezierLoop *loop, bool inner) {
         prevFinish = thisFinish;
     }
 
+    // Not using range-for loop here because we're using the index to determine
+    // whether or not we're at the last trim
     fprintf(f, "#%d=EDGE_LOOP('',(", id);
-    int *oe;
-    for(oe = listOfTrims.First(); oe; oe = listOfTrims.NextAfter(oe)) {
-        fprintf(f, "#%d", *oe);
-        if(listOfTrims.NextAfter(oe) != NULL) fprintf(f, ",");
+    for(int i = 0; i < listOfTrims.n; ++i) {
+        if(i > 0) fprintf(f, ",");
+        fprintf(f, "#%d", listOfTrims[i]);
     }
     fprintf(f, "));\n");
 
@@ -245,31 +247,22 @@ void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl) {
     // So in our list of SBezierLoopSet, each set contains at least one loop
     // (the outer boundary), plus any inner loops associated with that outer
     // loop.
-    SBezierLoopSet *sbls;
-    for(sbls = sblss.l.First(); sbls; sbls = sblss.l.NextAfter(sbls)) {
-        SBezierLoop *loop = sbls->l.First();
-
-        List<int> listOfLoops = {};
-        // Create the face outer boundary from the outer loop.
-        int fob = ExportCurveLoop(loop, /*inner=*/false);
-        listOfLoops.Add(&fob);
-
-        // And create the face inner boundaries from any inner loops that
-        // lie within this contour.
-        loop = sbls->l.NextAfter(loop);
-        for(; loop; loop = sbls->l.NextAfter(loop)) {
-            int fib = ExportCurveLoop(loop, /*inner=*/true);
-            listOfLoops.Add(&fib);
-        }
-
-        // And now create the face that corresponds to this outer loop
-        // and all of its holes.
+    for(const SBezierLoopSet &sbls : sblss.l) {
         int advFaceId = id;
         fprintf(f, "#%d=ADVANCED_FACE('',(", advFaceId);
-        int *fb;
-        for(fb = listOfLoops.First(); fb; fb = listOfLoops.NextAfter(fb)) {
-            fprintf(f, "#%d", *fb);
-            if(listOfLoops.NextAfter(fb) != NULL) fprintf(f, ",");
+
+        // Create the face boundary from the outer loop and any inner loops that
+        // lie within this contour.
+        // And then create the face that corresponds to this outer loop
+        // and all of its holes.
+        // Not using range-for loop here because we're using the index to determine
+        // whether or not we're at the first loop (the outer loop)
+        for(int i = 0; i < sbls.l.n; ++i) {
+            const SBezierLoop *loop = &sbls.l[i];
+            int fb = ExportCurveLoop(loop, /*inner=*/i > 0);
+
+            if(i > 0) fprintf(f, ",");
+            fprintf(f, "#%d", fb);
         }
 
         fprintf(f, "),#%d,.T.);\n", srfid);
@@ -313,7 +306,6 @@ void StepFileWriter::ExportSurface(SSurface *ss, SBezierList *sbl) {
         fprintf(f, "\n");        
         
         id++;
-        listOfLoops.Clear();
     }
     sblss.Clear();
     spxyz.Clear();
@@ -372,11 +364,12 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
         sbl.Clear();
     }
 
+    // Not using range-for loop here because we're using the index to determine
+    // whether or not we're at the last face
     fprintf(f, "#%d=CLOSED_SHELL('',(", id);
-    int *af;
-    for(af = advancedFaces.First(); af; af = advancedFaces.NextAfter(af)) {
-        fprintf(f, "#%d", *af);
-        if(advancedFaces.NextAfter(af) != NULL) fprintf(f, ",");
+    for(int i = 0; i < advancedFaces.n; ++i) {
+        if(i > 0) fprintf(f, ",");
+        fprintf(f, "#%d", advancedFaces[i]);
     }
     fprintf(f, "));\n");
     fprintf(f, "#%d=MANIFOLD_SOLID_BREP('brep',#%d);\n", id+1, id);
@@ -392,11 +385,12 @@ void StepFileWriter::ExportSurfacesTo(const Platform::Path &filename) {
 }
 
 void StepFileWriter::WriteWireframe() {
+    // Not using range-for loop here because we're using the index to determine
+    // whether or not we're at the last curve
     fprintf(f, "#%d=GEOMETRIC_CURVE_SET('curves',(", id);
-    int *c;
-    for(c = curves.First(); c; c = curves.NextAfter(c)) {
-        fprintf(f, "#%d", *c);
-        if(curves.NextAfter(c) != NULL) fprintf(f, ",");
+    for(int i = 0; i < curves.n; ++i) {
+        if(i > 0) fprintf(f, ",");
+        fprintf(f, "#%d", curves[i]);
     }
     fprintf(f, "));\n");
     fprintf(f, "#%d=GEOMETRICALLY_BOUNDED_WIREFRAME_SHAPE_REPRESENTATION"

@@ -7,19 +7,19 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
-bool GraphicsWindow::Selection::Equals(Selection *b) {
+bool GraphicsWindow::Selection::Equals(Selection *b) const {
     if(entity     != b->entity)     return false;
     if(constraint != b->constraint) return false;
     return true;
 }
 
-bool GraphicsWindow::Selection::IsEmpty() {
+bool GraphicsWindow::Selection::IsEmpty() const {
     if(entity.v)        return false;
     if(constraint.v)    return false;
     return true;
 }
 
-bool GraphicsWindow::Selection::HasEndpoints() {
+bool GraphicsWindow::Selection::HasEndpoints() const {
     if(!entity.v) return false;
     Entity *e = SK.GetEntity(entity);
     return e->HasEndpoints();
@@ -30,7 +30,7 @@ void GraphicsWindow::Selection::Clear() {
     emphasized = false;
 }
 
-void GraphicsWindow::Selection::Draw(bool isHovered, Canvas *canvas) {
+void GraphicsWindow::Selection::Draw(bool isHovered, Canvas *canvas) const {
     const Camera &camera = canvas->GetCamera();
 
     std::vector<Vector> refs;
@@ -85,15 +85,14 @@ void GraphicsWindow::ClearSelection() {
 
 void GraphicsWindow::ClearNonexistentSelectionItems() {
     bool change = false;
-    Selection *s;
     selection.ClearTags();
-    for(s = selection.First(); s; s = selection.NextAfter(s)) {
-        if(s->constraint.v && !(SK.constraint.FindByIdNoOops(s->constraint))) {
-            s->tag = 1;
+    for(Selection &s : selection) {
+        if(s.constraint.v && !(SK.constraint.FindByIdNoOops(s.constraint))) {
+            s.tag = 1;
             change = true;
         }
-        if(s->entity.v && !(SK.entity.FindByIdNoOops(s->entity))) {
-            s->tag = 1;
+        if(s.entity.v && !(SK.entity.FindByIdNoOops(s.entity))) {
+            s.tag = 1;
             change = true;
         }
     }
@@ -110,9 +109,8 @@ bool GraphicsWindow::IsSelected(hEntity he) {
     return IsSelected(&s);
 }
 bool GraphicsWindow::IsSelected(Selection *st) {
-    Selection *s;
-    for(s = selection.First(); s; s = selection.NextAfter(s)) {
-        if(s->Equals(st)) {
+    for(const Selection &s : selection) {
+        if(s.Equals(st)) {
             return true;
         }
     }
@@ -133,13 +131,11 @@ void GraphicsWindow::MakeUnselected(hEntity he, bool coincidentPointTrick) {
 void GraphicsWindow::MakeUnselected(Selection *stog, bool coincidentPointTrick){
     if(stog->IsEmpty()) return;
 
-    Selection *s;
-
     // If an item was selected, then we just un-select it.
     selection.ClearTags();
-    for(s = selection.First(); s; s = selection.NextAfter(s)) {
-        if(s->Equals(stog)) {
-            s->tag = 1;
+    for(Selection &s : selection) {
+        if(s.Equals(stog)) {
+            s.tag = 1;
         }
     }
     // If two points are coincident, then it's impossible to hover one of
@@ -149,14 +145,14 @@ void GraphicsWindow::MakeUnselected(Selection *stog, bool coincidentPointTrick){
         Entity *e = SK.GetEntity(stog->entity);
         if(e->IsPoint()) {
             Vector ep = e->PointGetNum();
-            for(s = selection.First(); s; s = selection.NextAfter(s)) {
-                if(!s->entity.v) continue;
-                if(s->entity == stog->entity)
+            for(Selection &s : selection) {
+                if(!s.entity.v) continue;
+                if(s.entity == stog->entity)
                     continue;
-                Entity *se = SK.GetEntity(s->entity);
+                Entity *se = SK.GetEntity(s.entity);
                 if(!se->IsPoint()) continue;
                 if(ep.Equals(se->PointGetNum())) {
-                    s->tag = 1;
+                    s.tag = 1;
                 }
             }
         }
@@ -187,15 +183,14 @@ void GraphicsWindow::MakeSelected(Selection *stog) {
         // In the interest of speed for the triangle drawing code,
         // only MAX_SELECTABLE_FACES faces may be selected at a time.
         unsigned int c = 0;
-        Selection *s;
         selection.ClearTags();
-        for(s = selection.First(); s; s = selection.NextAfter(s)) {
-            hEntity he = s->entity;
+        for(Selection &s : selection) {
+            hEntity he = s.entity;
             if(he.v != 0 && SK.GetEntity(he)->IsFace()) {
                 c++;
                 // See also GraphicsWindow::GroupSelection "if(e->IsFace())"
                 // and Group::DrawMesh "case DrawMeshAs::SELECTED:"
-                if(c >= MAX_SELECTABLE_FACES) s->tag = 1;
+                if(c >= MAX_SELECTABLE_FACES) s.tag = 1;
             }
         }
         selection.RemoveTagged();
@@ -793,8 +788,8 @@ void GraphicsWindow::Draw(Canvas *canvas) {
     SK.GetGroup(activeGroup)->DrawMesh(Group::DrawMeshAs::HOVERED, canvas);
 
     // And finally draw the selection, same mechanism.
-    for(Selection *s = selection.First(); s; s = selection.NextAfter(s)) {
-        s->Draw(/*isHovered=*/false, canvas);
+    for(const Selection &s : selection) {
+        s.Draw(/*isHovered=*/false, canvas);
     }
     SK.GetGroup(activeGroup)->DrawMesh(Group::DrawMeshAs::SELECTED, canvas);
 

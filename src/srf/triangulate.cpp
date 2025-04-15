@@ -21,13 +21,10 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
 
         // Find a top-level contour, and start with that. Then build bridges
         // in order to merge all its islands into a single contour.
-        SContour *top;
-        for(top = l.First(); top; top = l.NextAfter(top)) {
-            if(top->timesEnclosed == 0) {
-                break;
-            }
-        }
-        if(!top) {
+        SContour *top = std::find_if(l.begin(), l.end(), [](const SContour &sc) {
+            return sc.timesEnclosed == 0;
+        });
+        if(top == l.end()) {
             dbp("polygon has no top-level contours?");
             return;
         }
@@ -47,20 +44,19 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
         // outer contours that lie entirely within this contour, and any
         // holes for those contours. But that's okay, because we can merge
         // those too.
-        SContour *sc;
-        for(sc = l.First(); sc; sc = l.NextAfter(sc)) {
-            if(sc->timesEnclosed != 1) continue;
-            if(sc->l.n < 2) continue;
+        for(SContour &sc : l) {
+            if(sc.timesEnclosed != 1) continue;
+            if(sc.l.n < 2) continue;
 
             // Test the midpoint of an edge. Our polygon may not be self-
             // intersecting, but two contours may share a vertex; so a
             // vertex could be on the edge of another polygon, in which
             // case ContainsPointProjdToNormal returns indeterminate.
-            Vector tp = sc->AnyEdgeMidpoint();
+            Vector tp = sc.AnyEdgeMidpoint();
             if(top->ContainsPointProjdToNormal(normal, tp)) {
-                sc->tag = 2;
-                sc->MakeEdgesInto(&el);
-                sc->FindPointWithMinX();
+                sc.tag = 2;
+                sc.MakeEdgesInto(&el);
+                sc.FindPointWithMinX();
             }
         }
 
@@ -69,12 +65,12 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
             double xmin = 1e10;
             SContour *scmin = NULL;
 
-            for(sc = l.First(); sc; sc = l.NextAfter(sc)) {
-                if(sc->tag != 2) continue;
+            for(SContour &sc : l) {
+                if(sc.tag != 2) continue;
 
-                if(sc->xminPt.x < xmin) {
-                    xmin = sc->xminPt.x;
-                    scmin = sc;
+                if(sc.xminPt.x < xmin) {
+                    xmin = sc.xminPt.x;
+                    scmin = &sc;
                 }
             }
             if(!scmin) break;
@@ -96,9 +92,9 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
 
         // Careful, need to free the points within the contours, and not just
         // the contours themselves. This was a tricky memory leak.
-        for(sc = l.First(); sc; sc = l.NextAfter(sc)) {
-            if(sc->tag) {
-                sc->l.Clear();
+        for(SContour &sc : l) {
+            if(sc.tag) {
+                sc.l.Clear();
             }
         }
         l.RemoveTagged();
@@ -108,13 +104,14 @@ void SPolygon::UvTriangulateInto(SMesh *m, SSurface *srf) {
 bool SContour::BridgeToContour(SContour *sc,
                                SEdgeList *avoidEdges, List<Vector> *avoidPts)
 {
-    int i, j;
     bool withbridge = true;
 
     // Start looking for a bridge on our new hole near its leftmost (min x)
     // point.
+    // Not using range-for loop here because we're looking for the index and we
+    // also don't consider the last point
     int sco = 0;
-    for(i = 0; i < (sc->l.n - 1); i++) {
+    for(int i = 0; i < (sc->l.n - 1); i++) {
         if((sc->l[i].p).EqualsExactly(sc->xminPt)) {
             sco = i;
         }
@@ -122,9 +119,11 @@ bool SContour::BridgeToContour(SContour *sc,
 
     // And start looking on our merged contour at whichever point is nearest
     // to the leftmost point of the new segment.
+    // Not using range-for loop here because we're looking for the index and we
+    // also don't consider the last point
     int thiso = 0;
     double dmin = 1e10;
-    for(i = 0; i < l.n-1; i++) {
+    for(int i = 0; i < l.n-1; i++) {
         Vector p = l[i].p;
         double d = (p.Minus(sc->xminPt)).MagSquared();
         if(d < dmin) {
@@ -135,20 +134,21 @@ bool SContour::BridgeToContour(SContour *sc,
 
     int thisp, scp;
 
-    Vector a, b, *f;
+    Vector a, b;
 
     // First check if the contours share a point; in that case we should
     // merge them there, without a bridge.
-    for(i = 0; i < l.n; i++) {
+    // Not using range-for loop here because we're using the index in the loop
+    for(int i = 0; i < l.n; i++) {
         thisp = WRAP(i+thiso, l.n-1);
         a = l[thisp].p;
 
-        for(f = avoidPts->First(); f; f = avoidPts->NextAfter(f)) {
-            if(f->Equals(a)) break;
-        }
-        if(f) continue;
+        const Vector *f = std::find_if(avoidPts->begin(), avoidPts->end(), [&a](const Vector &v) {
+            return v.Equals(a);
+        });
+        if(f != avoidPts->end()) continue;
 
-        for(j = 0; j < (sc->l.n - 1); j++) {
+        for(int j = 0; j < (sc->l.n - 1); j++) {
             scp = WRAP(j+sco, (sc->l.n - 1));
             b = sc->l[scp].p;
 
@@ -160,23 +160,24 @@ bool SContour::BridgeToContour(SContour *sc,
     }
 
     // If that fails, look for a bridge that does not intersect any edges.
-    for(i = 0; i < l.n; i++) {
+    // Not using range-for loop here because we're using the index in the loop
+    for(int i = 0; i < l.n; i++) {
         thisp = WRAP(i+thiso, l.n);
         a = l[thisp].p;
 
-        for(f = avoidPts->First(); f; f = avoidPts->NextAfter(f)) {
-            if(f->Equals(a)) break;
-        }
-        if(f) continue;
+        const Vector *f = std::find_if(avoidPts->begin(), avoidPts->end(), [&a](const Vector &v) {
+            return v.Equals(a);
+        });
+        if(f != avoidPts->end()) continue;
 
-        for(j = 0; j < (sc->l.n - 1); j++) {
+        for(int j = 0; j < (sc->l.n - 1); j++) {
             scp = WRAP(j+sco, (sc->l.n - 1));
             b = sc->l[scp].p;
 
-            for(f = avoidPts->First(); f; f = avoidPts->NextAfter(f)) {
-                if(f->Equals(b)) break;
-            }
-            if(f) continue;
+            const Vector *f = std::find_if(avoidPts->begin(), avoidPts->end(), [&b](const Vector &v) {
+                return v.Equals(b);
+            });
+            if(f != avoidPts->end()) continue;
 
             if(avoidEdges->AnyEdgeCrossings(a, b) > 0) {
                 // doesn't work, bridge crosses an existing edge
@@ -190,14 +191,15 @@ bool SContour::BridgeToContour(SContour *sc,
     return false;
 
 haveEdge:
+    // Not using range-for loop here because we're using the index in the loop
     SContour merged = {};
-    for(i = 0; i < l.n; i++) {
+    for(int i = 0; i < l.n; i++) {
         if(withbridge || (i != thisp)) {
             merged.AddPoint(l[i].p);
         }
         if(i == thisp) {
             // less than or equal; need to duplicate the join point
-            for(j = 0; j <= (sc->l.n - 1); j++) {
+            for(int j = 0; j <= (sc->l.n - 1); j++) {
                 int jp = WRAP(j + scp, (sc->l.n - 1));
                 merged.AddPoint((sc->l[jp]).p);
             }
@@ -695,9 +697,8 @@ void SPolygon::UvGridTriangulateInto(SMesh *mesh, SSurface *srf) {
         SPolygon hp = {};
         holes.AssemblePolygon(&hp, NULL, /*keepDir=*/true);
 
-        SContour *sc;
-        for(sc = hp.l.First(); sc; sc = hp.l.NextAfter(sc)) {
-            l.Add(sc);
+        for(const SContour &sc : hp.l) {
+            l.Add(&sc);
         }
         hp.l.Clear();
     }

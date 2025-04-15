@@ -369,11 +369,10 @@ bool SolveSpaceUI::SaveToFile(const Platform::Path &filename) {
             }
         }
 
-        STrimBy *stb;
-        for(stb = srf.trim.First(); stb; stb = srf.trim.NextAfter(stb)) {
+        for(const STrimBy &stb : srf.trim) {
             fprintf(fh, "TrimBy %08x %d %.20f %.20f %.20f  %.20f %.20f %.20f\n",
-                stb->curve.v, stb->backwards ? 1 : 0,
-                CO(stb->start), CO(stb->finish));
+                stb.curve.v, stb.backwards ? 1 : 0,
+                CO(stb.start), CO(stb.finish));
         }
 
         fprintf(fh, "AddSurface\n");
@@ -390,10 +389,9 @@ bool SolveSpaceUI::SaveToFile(const Platform::Path &filename) {
                     i, CO(sc.exact.ctrl[i]), sc.exact.weight[i]);
             }
         }
-        SCurvePt *scpt;
-        for(scpt = sc.pts.First(); scpt; scpt = sc.pts.NextAfter(scpt)) {
+        for(const SCurvePt &scpt : sc.pts) {
             fprintf(fh, "CurvePt %d %.20f %.20f %.20f\n",
-                scpt->vertex ? 1 : 0, CO(scpt->p));
+                scpt.vertex ? 1 : 0, CO(scpt.p));
         }
 
         fprintf(fh, "AddCurve\n");

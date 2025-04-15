@@ -222,9 +222,8 @@ void SBezierList::Clear() {
 }
 
 void SBezierList::ScaleSelfBy(double s) {
-    SBezier *sb;
-    for(sb = l.First(); sb; sb = l.NextAfter(sb)) {
-        sb->ScaleSelfBy(s);
+    for(SBezier &sb : l) {
+        sb.ScaleSelfBy(s);
     }
 }
 
@@ -263,9 +262,9 @@ void SBezierList::CullIdenticalBeziers(bool both) {
 // be fine.
 //-----------------------------------------------------------------------------
 void SBezierList::AllIntersectionsWith(SBezierList *sblb, SPointList *spl) const {
-    for(const SBezier *sba = l.First(); sba; sba = l.NextAfter(sba)) {
-        for(const SBezier *sbb = sblb->l.First(); sbb; sbb = sblb->l.NextAfter(sbb)) {
-            sbb->AllIntersectionsWith(sba, spl);
+    for(const SBezier &sba : l) {
+        for(const SBezier &sbb : sblb->l) {
+            sbb.AllIntersectionsWith(&sba, spl);
         }
     }
 }
@@ -276,17 +275,15 @@ void SBezier::AllIntersectionsWith(const SBezier *sbb, SPointList *spl) const {
     seb = {};
     this->MakePwlInto(&sea);
     sbb ->MakePwlInto(&seb);
-    SEdge *se;
-    for(se = sea.l.First(); se; se = sea.l.NextAfter(se)) {
+    for(const SEdge &se : sea.l) {
         // This isn't quite correct, since AnyEdgeCrossings doesn't count
         // the case where two pairs of line segments intersect at their
         // vertices. So this isn't robust, although that case isn't very
         // likely.
-        seb.AnyEdgeCrossings(se->a, se->b, NULL, &splRaw);
+        seb.AnyEdgeCrossings(se.a, se.b, NULL, &splRaw);
     }
-    SPoint *sp;
-    for(sp = splRaw.l.First(); sp; sp = splRaw.l.NextAfter(sp)) {
-        Vector p = sp->p;
+    for(const SPoint &sp : splRaw.l) {
+        Vector p = sp.p;
         if(PointOnThisAndCurve(sbb, &p)) {
             if(!spl->ContainsPoint(p)) spl->Add(p);
         }
@@ -319,11 +316,11 @@ bool SBezierList::GetPlaneContainingBeziers(Vector *p, Vector *u, Vector *v,
 
     // Get the point farthest from our arbitrary point.
     farMax = VERY_NEGATIVE;
-    for(const SBezier *sb = l.First(); sb; sb = l.NextAfter(sb)) {
-        for(i = 0; i <= sb->deg; i++) {
-            double m = (pt.Minus(sb->ctrl[i])).Magnitude();
+    for(const SBezier &sb : l) {
+        for(i = 0; i <= sb.deg; i++) {
+            double m = (pt.Minus(sb.ctrl[i])).Magnitude();
             if(m > farMax) {
-                ptFar = sb->ctrl[i];
+                ptFar = sb.ctrl[i];
                 farMax = m;
             }
         }
@@ -339,11 +336,11 @@ bool SBezierList::GetPlaneContainingBeziers(Vector *p, Vector *u, Vector *v,
     // Get the point farthest from the line between pt and ptFar
     dp = ptFar.Minus(pt);
     offLineMax = VERY_NEGATIVE;
-    for(const SBezier *sb = l.First(); sb; sb = l.NextAfter(sb)) {
-        for(i = 0; i <= sb->deg; i++) {
-            double m = (sb->ctrl[i]).DistanceToLine(pt, dp);
+    for(const SBezier &sb : l) {
+        for(i = 0; i <= sb.deg; i++) {
+            double m = (sb.ctrl[i]).DistanceToLine(pt, dp);
             if(m > offLineMax) {
-                ptOffLine = sb->ctrl[i];
+                ptOffLine = sb.ctrl[i];
                 offLineMax = m;
             }
         }
@@ -367,10 +364,10 @@ bool SBezierList::GetPlaneContainingBeziers(Vector *p, Vector *u, Vector *v,
     n = u->Cross(*v);
     n = n.WithMagnitude(1);
     double d = p->Dot(n);
-    for(const SBezier *sb = l.First(); sb; sb = l.NextAfter(sb)) {
-        for(i = 0; i <= sb->deg; i++) {
-            if(fabs(n.Dot(sb->ctrl[i]) - d) > LENGTH_EPS) {
-                if(notCoplanarAt) *notCoplanarAt = sb->ctrl[i];
+    for(const SBezier &sb : l) {
+        for(i = 0; i <= sb.deg; i++) {
+            if(fabs(n.Dot(sb.ctrl[i]) - d) > LENGTH_EPS) {
+                if(notCoplanarAt) *notCoplanarAt = sb.ctrl[i];
                 return false;
             }
         }
@@ -446,28 +443,30 @@ SBezierLoop SBezierLoop::FromCurves(SBezierList *sbl,
 
 void SBezierLoop::Reverse() {
     l.Reverse();
-    SBezier *sb;
-    for(sb = l.First(); sb; sb = l.NextAfter(sb)) {
+    for(SBezier &sb : l) {
         // If we didn't reverse each curve, then the next curve in list would
         // share your start, not your finish.
-        sb->Reverse();
+        sb.Reverse();
     }
 }
 
 void SBezierLoop::GetBoundingProjd(Vector u, Vector orig,
                                    double *umin, double *umax) const
 {
-    for(const SBezier *sb = l.First(); sb; sb = l.NextAfter(sb)) {
-        sb->GetBoundingProjd(u, orig, umin, umax);
+    for(const SBezier &sb : l) {
+        sb.GetBoundingProjd(u, orig, umin, umax);
     }
 }
 
 void SBezierLoop::MakePwlInto(SContour *sc, double chordTol) const {
-    for(const SBezier *sb = l.First(); sb; sb = l.NextAfter(sb)) {
-        sb->MakePwlInto(sc, chordTol);
+    // Not using range-for loop here because we're using the index to determine
+    // whether or not we're at the last element
+    for(int i = 0; i < l.n; ++i) {
+        const SBezier &sb = l[i];
+        sb.MakePwlInto(sc, chordTol);
         // Avoid double points at join between Beziers; except that
         // first and last points should be identical.
-        if(l.NextAfter(sb) != NULL) {
+        if(i < l.n - 1) {
             sc->l.RemoveLast(1);
         }
     }
@@ -532,8 +531,8 @@ SBezierLoopSet SBezierLoopSet::From(SBezierList *sbl, SPolygon *poly,
 void SBezierLoopSet::GetBoundingProjd(Vector u, Vector orig,
                                       double *umin, double *umax) const
 {
-    for(const SBezierLoop *sbl = l.First(); sbl; sbl = l.NextAfter(sbl)) {
-        sbl->GetBoundingProjd(u, orig, umin, umax);
+    for(const SBezierLoop &sbl : l) {
+        sbl.GetBoundingProjd(u, orig, umin, umax);
     }
 }
 
@@ -553,9 +552,9 @@ double SBezierLoopSet::SignedArea() {
 // a polygon, one contour per loop.
 //-----------------------------------------------------------------------------
 void SBezierLoopSet::MakePwlInto(SPolygon *sp) const {
-    for(const SBezierLoop *sbl = l.First(); sbl; sbl = l.NextAfter(sbl)) {
+    for(const SBezierLoop &sbl : l) {
         sp->AddEmptyContour();
-        sbl->MakePwlInto(sp->l.Last());
+        sbl.MakePwlInto(sp->l.Last());
     }
 }
 
@@ -588,10 +587,9 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
             // Don't even try to assemble them into loops if they're not
             // all coplanar.
             if(openContours) {
-                SBezier *sb;
-                for(sb = sbl->l.First(); sb; sb = sbl->l.NextAfter(sb)) {
+                for(const SBezier &sb : sbl->l) {
                     SBezierLoop sbl={};
-                    sbl.l.Add(sb);
+                    sbl.l.Add(&sb);
                     openContours->l.Add(&sbl);
                 }
             }
@@ -613,13 +611,11 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
 
     // Convert the xyz piecewise linear to uv piecewise linear.
     SPolygon spuv = {};
-    SContour *sc;
-    for(sc = spxyz->l.First(); sc; sc = spxyz->l.NextAfter(sc)) {
+    for(const SContour &sc : spxyz->l) {
         spuv.AddEmptyContour();
-        SPoint *pt;
-        for(pt = sc->l.First(); pt; pt = sc->l.NextAfter(pt)) {
+        for(const SPoint &pt : sc.l) {
             double u, v;
-            srfuv->ClosestPointTo(pt->p, &u, &v);
+            srfuv->ClosestPointTo(pt.p, &u, &v);
             spuv.l.Last()->AddPoint(Vector::From(u, v, 0));
         }
     }
@@ -720,7 +716,7 @@ void SBezierLoopSetSet::FindOuterFacesFrom(SBezierList *sbl, SPolygon *spxyz,
     spuv.Clear();
 }
 
-void SBezierLoopSetSet::AddOpenPath(SBezier *sb) {
+void SBezierLoopSetSet::AddOpenPath(const SBezier *sb) {
     SBezierLoop sbl = {};
     sbl.l.Add(sb);
 
@@ -731,9 +727,8 @@ void SBezierLoopSetSet::AddOpenPath(SBezier *sb) {
 }
 
 void SBezierLoopSetSet::Clear() {
-    SBezierLoopSet *sbls;
-    for(sbls = l.First(); sbls; sbls = l.NextAfter(sbls)) {
-        sbls->Clear();
+    for(SBezierLoopSet &sbls : l) {
+        sbls.Clear();
     }
     l.Clear();
 }
@@ -752,10 +747,9 @@ SCurve SCurve::FromTransformationOf(SCurve *a, Vector t,
     ret.surfA = a->surfA;
     ret.surfB = a->surfB;
 
-    SCurvePt *p;
     ret.pts.ReserveMore(a->pts.n);
-    for(p = a->pts.First(); p; p = a->pts.NextAfter(p)) {
-        SCurvePt pp = *p;
+    for(const SCurvePt &p : a->pts) {
+        SCurvePt pp = p;
         if(needScale) {
             pp.p = (pp.p).ScaledBy(scale);
         }

@@ -44,9 +44,8 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
         }
     }// end omp critical
     if(existing) {
-        SCurvePt *v;
-        for(v = existing->pts.First(); v; v = existing->pts.NextAfter(v)) {
-            sc.pts.Add(v);
+        for(const SCurvePt &v : existing->pts) {
+            sc.pts.Add(&v);
         }
         if(backwards) sc.pts.Reverse();
         split = sc;
@@ -59,18 +58,17 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
     }
 
     // Test if the curve lies entirely outside one of the
-    SCurvePt *scpt;
     bool withinA = false, withinB = false;
-    for(scpt = split.pts.First(); scpt; scpt = split.pts.NextAfter(scpt)) {
+    for(const SCurvePt &scpt : split.pts) {
         double tol = 0.01;
         Point2d puv;
-        ClosestPointTo(scpt->p, &puv);
+        ClosestPointTo(scpt.p, &puv);
         if(puv.x > -tol && puv.x < 1 + tol &&
            puv.y > -tol && puv.y < 1 + tol)
         {
             withinA = true;
         }
-        srfB->ClosestPointTo(scpt->p, &puv);
+        srfB->ClosestPointTo(scpt.p, &puv);
         if(puv.x > -tol && puv.x < 1 + tol &&
            puv.y > -tol && puv.y < 1 + tol)
         {
@@ -89,14 +87,14 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
 #if 0
     if(sb->deg == 2) {
         dbp(" ");
-        SCurvePt *prev = NULL, *v;
+        const SCurvePt *prev = NULL;
         dbp("split.pts.n = %d", split.pts.n);
-        for(v = split.pts.First(); v; v = split.pts.NextAfter(v)) {
+        for(const SCurvePt &v : split.pts) {
             if(prev) {
-                Vector e = (prev->p).Minus(v->p).WithMagnitude(0);
-                SS.nakedEdges.AddEdge((prev->p).Plus(e), (v->p).Minus(e));
+                Vector e = (prev->p).Minus(v.p).WithMagnitude(0);
+                SS.nakedEdges.AddEdge((prev->p).Plus(e), (v.p).Minus(e));
             }
-            prev = v;
+            prev = &v;
         }
     }
 #endif // 0
@@ -225,11 +223,10 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             sext->AllPointsIntersecting(p0, p0.Plus(dp), &inters,
                 /*asSegment=*/false, /*trimmed=*/false, /*inclTangent=*/true);
 
-            SInter *si;
-            for(si = inters.First(); si; si = inters.NextAfter(si)) {
+            for(const SInter &si : inters) {
                 Vector al = along.ScaledBy(0.5);
                 SBezier bezier;
-                bezier = SBezier::From((si->p).Minus(al), (si->p).Plus(al));
+                bezier = SBezier::From((si.p).Minus(al), (si.p).Plus(al));
                 AddExactIntersectionCurve(&bezier, b, agnstA, agnstB, into);
             }
 
@@ -293,9 +290,8 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                 /*asSegment=*/true,/*trimmed=*/false, /*inclTangent=*/false);
         }
 
-        SInter *si;
-        for(si = inters.First(); si; si = inters.NextAfter(si)) {
-            Vector p = (si->p).Minus(axis.ScaledBy((si->p).Dot(axis)));
+        for(const SInter &si : inters) {
+            Vector p = (si.p).Minus(axis.ScaledBy((si.p).Dot(axis)));
             double ub, vb;
             b->ClosestPointTo(p, &ub, &vb, /*mustConverge=*/true);
             SSurface plane;
@@ -364,25 +360,23 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
             SEdgeList el = {};
             srfA->MakeEdgesInto(shA, &el, MakeAs::XYZ, NULL);
 
-            SEdge *se;
-            for(se = el.l.First(); se; se = el.l.NextAfter(se)) {
+            for(const SEdge &se : el.l) {
                 List<SInter> lsi = {};
 
-                srfB->AllPointsIntersecting(se->a, se->b, &lsi,
+                srfB->AllPointsIntersecting(se.a, se.b, &lsi,
                     /*asSegment=*/true, /*trimmed=*/true, /*inclTangent=*/false);
                 if(lsi.IsEmpty())
                     continue;
 
                 // Find the other surface that this curve trims.
-                hSCurve hsc = { (uint32_t)se->auxA };
+                hSCurve hsc = { (uint32_t)se.auxA };
                 SCurve *sc = shA->curve.FindById(hsc);
                 hSSurface hother = (sc->surfA == srfA->h) ?
                                                     sc->surfB : sc->surfA;
                 SSurface *other = shA->surface.FindById(hother);
 
-                SInter *si;
-                for(si = lsi.First(); si; si = lsi.NextAfter(si)) {
-                    Vector p = si->p;
+                for(const SInter &si : lsi) {
+                    Vector p = si.p;
                     double u, v;
                     srfB->ClosestPointTo(p, &u, &v);
                     if(sc->isExact) {
@@ -398,7 +392,7 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                         // which direction to march.
                         srfA->ClosestPointTo(p, &u, &v);
                         Vector n = srfA->NormalAt(u, v);
-                        sp.auxv = n.Cross((se->b).Minus(se->a));
+                        sp.auxv = n.Cross((se.b).Minus(se.a));
                         sp.auxv = (sp.auxv).WithMagnitude(1);
 
                         spl.l.Add(&sp);
@@ -477,12 +471,11 @@ void SSurface::IntersectAgainst(SSurface *b, SShell *agnstA, SShell *agnstB,
                     }
                 }
 
-                SPoint *sp;
-                for(sp = spl.l.First(); sp; sp = spl.l.NextAfter(sp)) {
-                    if((sp->p).OnLineSegment(start, npc, 2*SS.ChordTolMm())) {
-                        sp->tag = 1;
+                for(SPoint &sp : spl.l) {
+                    if((sp.p).OnLineSegment(start, npc, 2*SS.ChordTolMm())) {
+                        sp.tag = 1;
                         a = maxsteps;
-                        npc = sp->p;
+                        npc = sp.p;
                     }
                 }
 
@@ -574,19 +567,18 @@ void SShell::MakeCoincidentEdgesInto(SSurface *proto, bool sameNormal,
         }
     }
 
-    SEdge *se;
-    for(se = el->l.First(); se; se = el->l.NextAfter(se)) {
+    for(SEdge &se : el->l) {
         double ua, va, ub, vb;
-        proto->ClosestPointTo(se->a, &ua, &va);
-        proto->ClosestPointTo(se->b, &ub, &vb);
+        proto->ClosestPointTo(se.a, &ua, &va);
+        proto->ClosestPointTo(se.b, &ub, &vb);
 
         if(sameNormal) {
-            se->a = Vector::From(ua, va, 0);
-            se->b = Vector::From(ub, vb, 0);
+            se.a = Vector::From(ua, va, 0);
+            se.b = Vector::From(ub, vb, 0);
         } else {
             // Flip normal, so flip all edge directions
-            se->b = Vector::From(ua, va, 0);
-            se->a = Vector::From(ub, vb, 0);
+            se.b = Vector::From(ua, va, 0);
+            se.a = Vector::From(ub, vb, 0);
         }
     }
 }

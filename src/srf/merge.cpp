@@ -85,9 +85,8 @@ void SShell::MergeCoincidentSurfaces() {
 
             double umax = VERY_NEGATIVE, umin = VERY_POSITIVE,
                    vmax = VERY_NEGATIVE, vmin = VERY_POSITIVE;
-            SEdge *se;
-            for(se = sel.l.First(); se; se = sel.l.NextAfter(se)) {
-                double ut = (se->a).Dot(u), vt = (se->a).Dot(v);
+            for(const SEdge &se : sel.l) {
+                double ut = (se.a).Dot(u), vt = (se.a).Dot(v);
                 umax = max(umax, ut);
                 vmax = max(vmax, vt);
                 umin = min(umin, ut);
