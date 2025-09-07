@@ -485,8 +485,8 @@ std::string SolveSpaceUI::DegreeToString(double v) {
         return ssprintf("%.0f", v);
     }
 }
-double SolveSpaceUI::ExprToMm(Expr *e) {
-    return (e->Eval()) * MmPerUnit();
+double SolveSpaceUI::ExprToMm(const Expr *e, const ParamList &params) {
+    return (e->Eval(params)) * MmPerUnit();
 }
 double SolveSpaceUI::StringToMm(const std::string &str) {
     return std::stod(str) * MmPerUnit();

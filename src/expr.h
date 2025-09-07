@@ -11,7 +11,6 @@ using SubstitutionMap = std::unordered_map<hParam, Param *, HandleHasher<hParam>
 
 class Expr {
 public:
-
     enum class Op : uint32_t {
         // A parameter, by the hParam handle
         PARAM          =  0,
@@ -41,17 +40,15 @@ public:
     Op      op;
     Expr    *a;
     union {
-        double  v;
-        hParam  parh;
-        Param  *parp;
-        Expr    *b;
+        double     v;
+        hParam     parh;
+        Param      *parp;
+        Expr       *b;
+        const char *s;
     };
 
     Expr() = default;
-    Expr(double val) : op(Op::CONSTANT) { v = val; }
-
-    static inline Expr *AllocExpr()
-        { return (Expr *)AllocTemporary(sizeof(Expr)); }
+    explicit Expr(double val) : op(Op::CONSTANT) { v = val; }
 
     static Expr *From(hParam p);
     static Expr *From(double v);
@@ -71,18 +68,16 @@ public:
     inline Expr *ACos  () { return AnyOp(Op::ACOS,   NULL); }
 
     Expr *PartialWrt(hParam p) const;
-    double Eval() const;
-    void ParamsUsedList(ParamSet *list) const;
-    bool DependsOn(hParam p) const;
+    double Eval(const ParamList &params, const ResolutionMap &resolutions = {}) const;
+    void ParamsUsedList(ParamSet *list, const ResolutionMap &resolutions = {}) const;
     static bool Tol(double a, double b);
     bool IsZeroConst() const;
     Expr *FoldConstants(bool allocCopy = true, size_t depth = std::numeric_limits<size_t>::max());
     void Substitute(const SubstitutionMap &subMap);
+    bool Resolve(const ResolutionMap &resolutions);
 
     static const hParam NO_PARAMS, MULTIPLE_PARAMS;
-    hParam ReferencedParams(ParamList *pl) const;
-
-    void ParamsToPointers();
+    hParam ReferencedParams(ParamList *pl, const ResolutionMap &resolutions) const;
 
     std::string Print() const;
 
@@ -91,17 +86,17 @@ public:
     // total number of nodes in the tree
     int Nodes() const;
 
-    // Make a simple copy
-    Expr *DeepCopy() const;
     // Make a copy, with the parameters (usually referenced by hParam)
     // resolved to pointers to the actual value. This speeds things up
     // considerably.
-    Expr *DeepCopyWithParamsAsPointers(IdList<Param,hParam> *firstTry,
-                                       IdList<Param,hParam> *thenTry,
+    Expr *DeepCopyWithParamsAsPointers(ParamList *firstTry, ParamList *thenTry,
+                                       const ResolutionMap &resolutions,
                                        bool foldConstants = false) const;
 
-    static Expr *Parse(const std::string &input, std::string *error);
-    static Expr *From(const std::string &input, bool popUpError);
+    static Expr *Parse(const std::string &input, bool allowVariables, size_t *variableRefs,
+                       std::string *error);
+    static Expr *From(const std::string &input, bool allowVariables, bool popUpError,
+                      size_t *variableRefs = nullptr);
 };
 
 class ExprVector {
@@ -121,7 +116,8 @@ public:
     ExprVector WithMagnitude(Expr *s) const;
     Expr *Magnitude() const;
 
-    Vector Eval() const;
+    Vector Eval(const ParamList &params, const ResolutionMap &resolutions = {}) const;
+    bool Resolve(const ResolutionMap &resolutions);
 };
 
 class ExprQuaternion {
@@ -140,5 +136,7 @@ public:
     ExprQuaternion Times(ExprQuaternion b) const;
 
     Expr *Magnitude() const;
+
+    bool Resolve(const ResolutionMap &resolutions);
 };
 #endif

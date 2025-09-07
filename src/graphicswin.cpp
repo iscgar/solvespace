@@ -1462,8 +1462,8 @@ bool GraphicsWindow::SuggestLineConstraint(hRequest request, Constraint::Type *t
     ptA->PointGetExprsInWorkplane(ActiveWorkplane(), &au, &av);
     ptB->PointGetExprsInWorkplane(ActiveWorkplane(), &bu, &bv);
 
-    double du = au->Minus(bu)->Eval();
-    double dv = av->Minus(bv)->Eval();
+    double du = au->Minus(bu)->Eval(SK.param);
+    double dv = av->Minus(bv)->Eval(SK.param);
 
     const double TOLERANCE_RATIO = 0.02;
     if(fabs(dv) > LENGTH_EPS && fabs(du / dv) < TOLERANCE_RATIO) {

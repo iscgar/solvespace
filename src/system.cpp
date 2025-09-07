@@ -51,7 +51,7 @@ bool System::WriteJacobian(int tag) {
     for(size_t i = 0; i < mat.eq.size(); i++) {
         Equation *e = mat.eq[i];
         // Deep-copy and simplify (fold) the current equation.
-        Expr *f = e->e->DeepCopyWithParamsAsPointers(&param, &(SK.param), /*foldConstants=*/true);
+        Expr *f = e->e->DeepCopyWithParamsAsPointers(&param, &SK.param, {}, /*foldConstants=*/true);
 
         ParamSet paramsUsed;
         f->ParamsUsedList(&paramsUsed);
@@ -82,7 +82,7 @@ void System::EvalJacobian() {
 
     for(int k = 0; k < size; k++) {
         for(SparseMatrix <Expr *>::InnerIterator it(mat.A.sym, k); it; ++it) {
-            double value = it.value()->Eval();
+            double value = it.value()->Eval({});
             if(EXACT(value == 0.0)) continue;
             mat.A.num.insert(it.row(), it.col()) = value;
         }
@@ -312,7 +312,7 @@ bool System::NewtonSolve() {
     // Evaluate the functions at our operating point.
     mat.B.num = Eigen::VectorXd(mat.m);
     for(i = 0; i < mat.m; i++) {
-        mat.B.num[i] = (mat.B.sym[i])->Eval();
+        mat.B.num[i] = (mat.B.sym[i])->Eval({});
     }
     do {
         // And evaluate the Jacobian at our initial operating point.
@@ -333,7 +333,7 @@ bool System::NewtonSolve() {
 
         // Re-evalute the functions, since the params have just changed.
         for(i = 0; i < mat.m; i++) {
-            mat.B.num[i] = (mat.B.sym[i])->Eval();
+            mat.B.num[i] = (mat.B.sym[i])->Eval({});
             if(IsReasonable(mat.B.num[i])) {
                 // Very bad, and clearly not convergent
                 return false;
@@ -365,7 +365,7 @@ void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
         {
             // When all dimensions are reference, we adjust them to display
             // the correct value, and then don't generate any equations.
-            c->ModifyToSatisfy();
+            c->ModifyToSatisfy(g->varResolutions);
             continue;
         }
         if(g->relaxConstraints && c->type != Constraint::Type::POINTS_COINCIDENT) {
@@ -375,7 +375,7 @@ void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
             continue;
         }
 
-        c->GenerateEquations(&eq);
+        c->GenerateEquations(&eq, g->varResolutions);
     }
     // And the equations from entities
     for(auto &ent : SK.entity) {
@@ -472,7 +472,7 @@ SolveResult System::Solve(Group *g, int *dof, List<hConstraint> *bad,
         if(e.tag != 0)
             continue;
 
-        hParam hp = e.e->ReferencedParams(&param);
+        hParam hp = e.e->ReferencedParams(&param, g->varResolutions);
         if(hp == Expr::NO_PARAMS) continue;
         if(hp == Expr::MULTIPLE_PARAMS) continue;
 

@@ -173,6 +173,7 @@ enum class SolveResult : uint32_t {
 };
 
 using ParamSet = std::unordered_set<hParam, HandleHasher<hParam>>;
+using ResolutionMap = std::unordered_map<std::string, hParam>;
 
 #include "sketch.h"
 #include "ui.h"
@@ -681,7 +682,7 @@ public:
     std::string MmToString(double v, bool editable=false);
     std::string MmToStringSI(double v, int dim = 0);
     std::string DegreeToString(double v);
-    double ExprToMm(Expr *e);
+    double ExprToMm(const Expr *e, const ParamList &params);
     double StringToMm(const std::string &s);
     const char *UnitName();
     double MmPerUnit();

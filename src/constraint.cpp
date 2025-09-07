@@ -258,6 +258,8 @@ void Constraint::MenuConstrain(Command id) {
     c.group = SS.GW.activeGroup;
     c.workplane = SS.GW.ActiveWorkplane();
 
+    Group *g = SK.GetGroup(c.group);
+
     SS.GW.GroupSelection();
     auto const &gs = SS.GW.gs;
 
@@ -326,7 +328,7 @@ void Constraint::MenuConstrain(Command id) {
             }
 
             c.valA = 0;
-            c.ModifyToSatisfy();
+            c.ModifyToSatisfy(g->varResolutions);
             AddConstraint(&c);
             newcons.push_back(c);
             break;
@@ -486,7 +488,7 @@ void Constraint::MenuConstrain(Command id) {
             }
 
             c.valA = 0;
-            c.ModifyToSatisfy();
+            c.ModifyToSatisfy(g->varResolutions);
             AddConstraint(&c);
             newcons.push_back(c);
             break;
@@ -521,7 +523,7 @@ void Constraint::MenuConstrain(Command id) {
             }
 
             c.valA = 0;
-            c.ModifyToSatisfy();
+            c.ModifyToSatisfy(g->varResolutions);
             AddConstraint(&c);
             newcons.push_back(c);
             break;
@@ -735,7 +737,7 @@ void Constraint::MenuConstrain(Command id) {
                 if(c->type == Type::ANGLE) {
                     SS.UndoRemember();
                     c->other = !(c->other);
-                    c->ModifyToSatisfy();
+                    c->ModifyToSatisfy(g->varResolutions);
                     break;
                 }
                 if(c->type == Type::EQUAL_ANGLE) {
@@ -818,7 +820,7 @@ void Constraint::MenuConstrain(Command id) {
                 c.reference = true;
             }
 
-            c.ModifyToSatisfy();
+            c.ModifyToSatisfy(g->varResolutions);
             AddConstraint(&c);
             newcons.push_back(c);
             break;

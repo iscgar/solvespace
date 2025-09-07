@@ -479,9 +479,9 @@ bool TextWindow::EditControlDoneForConfiguration(const std::string &s) {
             break;
         }
         case Edit::EXPORT_SCALE: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
             if(e) {
-                double ev = e->Eval();
+                double ev = e->Eval({});
                 if(fabs(ev) < 0.001 || IsReasonable(ev)) {
                     Error(_("Export scale must not be zero!"));
                 } else {
@@ -491,9 +491,9 @@ bool TextWindow::EditControlDoneForConfiguration(const std::string &s) {
             break;
         }
         case Edit::EXPORT_OFFSET: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
             if(e) {
-                double ev = SS.ExprToMm(e);
+                double ev = SS.ExprToMm(e, {});
                 if(IsReasonable(ev) || ev < 0) {
                     Error(_("Cutter radius offset must not be negative!"));
                 } else {
@@ -503,11 +503,11 @@ bool TextWindow::EditControlDoneForConfiguration(const std::string &s) {
             break;
         }
         case Edit::CANVAS_SIZE: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
             if(!e) {
                 break;
             }
-            float d = (float)SS.ExprToMm(e);
+            float d = (float)SS.ExprToMm(e, {});
             switch(edit.i) {
                 case  0: SS.exportMargin.left   = d;    break;
                 case  1: SS.exportMargin.right  = d;    break;
@@ -522,29 +522,29 @@ bool TextWindow::EditControlDoneForConfiguration(const std::string &s) {
             break;
         }
         case Edit::G_CODE_DEPTH: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
-            if(e) SS.gCode.depth = (float)SS.ExprToMm(e);
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
+            if(e) SS.gCode.depth = (float)SS.ExprToMm(e, {});
             break;
         }
         case Edit::G_CODE_SAFE_HEIGHT: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
-            if(e) SS.gCode.safeHeight = (float)SS.ExprToMm(e);
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
+            if(e) SS.gCode.safeHeight = (float)SS.ExprToMm(e, {});
             break;
         }
         case Edit::G_CODE_PASSES: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
-            if(e) SS.gCode.passes = (int)(e->Eval());
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
+            if(e) SS.gCode.passes = (int)(e->Eval({}));
             SS.gCode.passes = max(1, min(1000, SS.gCode.passes));
             break;
         }
         case Edit::G_CODE_FEED: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
-            if(e) SS.gCode.feed = (float)SS.ExprToMm(e);
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
+            if(e) SS.gCode.feed = (float)SS.ExprToMm(e, {});
             break;
         }
         case Edit::G_CODE_PLUNGE_FEED: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
-            if(e) SS.gCode.plungeFeed = (float)SS.ExprToMm(e);
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
+            if(e) SS.gCode.plungeFeed = (float)SS.ExprToMm(e, {});
             break;
         }
         case Edit::AUTOSAVE_INTERVAL: {

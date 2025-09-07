@@ -832,10 +832,10 @@ void TextWindow::EditControlDone(std::string s) {
 
     switch(edit.meaning) {
         case Edit::TIMES_REPEATED:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
                 SS.UndoRemember();
 
-                double ev = e->Eval();
+                double ev = e->Eval({});
                 if((int)ev < 1) {
                     Error(_("Can't repeat fewer than 1 time."));
                     break;
@@ -876,8 +876,8 @@ void TextWindow::EditControlDone(std::string s) {
             break;
 
         case Edit::GROUP_SCALE:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
-                double ev = e->Eval();
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
+                double ev = e->Eval({});
                 if(fabs(ev) < 1e-6) {
                     Error(_("Scale cannot be zero."));
                 } else {
@@ -889,8 +889,8 @@ void TextWindow::EditControlDone(std::string s) {
             break;
 
         case Edit::HELIX_PITCH:  // stored in valB
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
-                double ev = e->Eval();
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
+                double ev = e->Eval({});
                 Group *g = SK.GetGroup(edit.group);
                 g->valB = ev * SS.MmPerUnit();
                 SS.MarkGroupDirty(g->h);
@@ -915,8 +915,8 @@ void TextWindow::EditControlDone(std::string s) {
             break;
         }
         case Edit::GROUP_OPACITY:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
-                double alpha = e->Eval();
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
+                double alpha = e->Eval({});
                 if(alpha < 0 || alpha > 1) {
                     Error(_("Opacity must be between zero and one."));
                 } else {
@@ -937,11 +937,11 @@ void TextWindow::EditControlDone(std::string s) {
             break;
 
         case Edit::STEP_DIM_FINISH:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
                 if(stepDim.isDistance) {
-                    stepDim.finish = SS.ExprToMm(e);
+                    stepDim.finish = SS.ExprToMm(e, {});
                 } else {
-                    stepDim.finish = e->Eval();
+                    stepDim.finish = e->Eval({});
                 }
             }
             break;
@@ -951,12 +951,12 @@ void TextWindow::EditControlDone(std::string s) {
             break;
 
         case Edit::TANGENT_ARC_RADIUS:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
-                if(e->Eval() < LENGTH_EPS) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
+                if(e->Eval({}) < LENGTH_EPS) {
                     Error(_("Radius cannot be zero or negative."));
                     break;
                 }
-                SS.tangentArcRadius = SS.ExprToMm(e);
+                SS.tangentArcRadius = SS.ExprToMm(e, {});
             }
             break;
 

@@ -605,8 +605,8 @@ void SolveSpaceUI::UpgradeLegacyData() {
                     Entity *c = entity.FindById(text->point[3]);
                     ExprVector bex, cex;
                     text->RectGetPointsExprs(&bex, &cex);
-                    b->PointForceParamTo(bex.Eval());
-                    c->PointForceParamTo(cex.Eval());
+                    b->PointForceParamTo(bex.Eval(SK.param));
+                    c->PointForceParamTo(cex.Eval(SK.param));
                 }
                 entity.Clear();
                 param.Clear();
@@ -653,7 +653,7 @@ void SolveSpaceUI::UpgradeLegacyData() {
                 ExprVector exb = eb->PointGetExprsInWorkplane(c.workplane);
                 ExprVector exba = exb.Minus(exa);
                 Param *p = SK.GetParam(c.h.param(0));
-                p->val = exba.Dot(exp.Minus(exa))->Eval() / exba.Dot(exba)->Eval();
+                p->val = exba.Dot(exp.Minus(exa))->Eval(SK.param) / exba.Dot(exba)->Eval(SK.param);
                 break;
             }
 
@@ -673,7 +673,7 @@ void SolveSpaceUI::UpgradeLegacyData() {
                 ExprVector b = line->VectorGetExprs();
 
                 Param *param = SK.GetParam(c.h.param(0));
-                param->val = a.Dot(b)->Eval() / b.Dot(b)->Eval();
+                param->val = a.Dot(b)->Eval(SK.param) / b.Dot(b)->Eval(SK.param);
                 break;
             }
 
@@ -687,7 +687,7 @@ void SolveSpaceUI::UpgradeLegacyData() {
                 ExprVector b = bn->NormalExprsN();
 
                 Param *param = SK.GetParam(c.h.param(0));
-                param->val = a.Dot(b)->Eval() / b.Dot(b)->Eval();
+                param->val = a.Dot(b)->Eval(SK.param) / b.Dot(b)->Eval(SK.param);
                 break;
             }
 
@@ -700,7 +700,7 @@ void SolveSpaceUI::UpgradeLegacyData() {
                 ExprVector b = eb->VectorGetExprsInWorkplane(c.workplane);
 
                 Param *param = SK.GetParam(c.h.param(0));
-                param->val = a.Dot(b)->Eval() / b.Dot(b)->Eval();
+                param->val = a.Dot(b)->Eval(SK.param) / b.Dot(b)->Eval(SK.param);
                 break;
             }
 

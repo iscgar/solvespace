@@ -118,9 +118,9 @@ void TextWindow::ScreenChangeExplodeDistance(int link, uint32_t v) {
 bool TextWindow::EditControlDoneForView(const std::string &s) {
     switch(edit.meaning) {
         case Edit::VIEW_SCALE: {
-            Expr *e = Expr::From(s, /*popUpError=*/true);
+            Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true);
             if(e) {
-                double v =  e->Eval() / SS.MmPerUnit();
+                double v = e->Eval({}) / SS.MmPerUnit();
                 if(v > LENGTH_EPS) {
                     SS.GW.scale = v;
                 } else {
