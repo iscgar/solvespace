@@ -502,12 +502,20 @@ public:
     }
 
     T *FindById(H h) {
-        T *t = FindByIdNoOops(h);
+        return const_cast<T *>(const_cast<const IdList *>(this)->FindById(h));
+    }
+
+    T *FindByIdNoOops(H h) {
+        return const_cast<T *>(const_cast<const IdList *>(this)->FindByIdNoOops(h));
+    }
+
+    const T *FindById(H h) const {
+        const T *t = FindByIdNoOops(h);
         ssassert(t != nullptr, "Cannot find handle");
         return t;
     }
 
-    T *FindByIdNoOops(H h) {
+    const T *FindByIdNoOops(H h) const {
         if(IsEmpty()) {
             return nullptr;
         }

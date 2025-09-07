@@ -1380,7 +1380,12 @@ void GraphicsWindow::EditConstraint(hConstraint constraint) {
                 value /= 2;
 
             // Try showing value with default number of digits after decimal first.
-            if(c->type == Constraint::Type::LENGTH_RATIO || c->type == Constraint::Type::ARC_ARC_LEN_RATIO || c->type == Constraint::Type::ARC_LINE_LEN_RATIO) {
+            if(c->comment != "") {
+                editValue = c->comment;
+                break;
+            } else if(c->type == Constraint::Type::LENGTH_RATIO ||
+               c->type == Constraint::Type::ARC_ARC_LEN_RATIO ||
+               c->type == Constraint::Type::ARC_LINE_LEN_RATIO) {
                 editValue = ssprintf("%.3f", value);
             } else if(c->type == Constraint::Type::ANGLE) {
                 editValue = SS.DegreeToString(value);
@@ -1433,8 +1438,19 @@ void GraphicsWindow::EditControlDone(const std::string &s) {
         return;
     }
 
-    if(Expr *e = Expr::From(s, true)) {
+    std::unordered_set<std::string> variableRefs;
+    if(Expr *e = Expr::From(s, /*allowVariables=*/true, true, &variableRefs)) {
         SS.UndoRemember();
+
+        if(!variableRefs.empty()) {
+            c->comment = s;
+        } else {
+            c->comment = "";
+        }
+
+        auto distanceToUnit = [e, &variableRefs] {
+            return !variableRefs.empty() ? SS.MmPerUnit() : SS.ExprToMm(e);
+        };
 
         switch(c->type) {
             case Constraint::Type::PROJ_PT_DISTANCE:
@@ -1449,9 +1465,9 @@ void GraphicsWindow::EditControlDone(const std::string &s) {
                 // negative distance.
                 bool wasNeg = (c->valA < 0);
                 if(wasNeg) {
-                    c->valA = -SS.ExprToMm(e);
+                    c->valA = -distanceToUnit();
                 } else {
-                    c->valA = SS.ExprToMm(e);
+                    c->valA = distanceToUnit();
                 }
                 break;
             }
@@ -1461,11 +1477,15 @@ void GraphicsWindow::EditControlDone(const std::string &s) {
             case Constraint::Type::ARC_LINE_LEN_RATIO:
                 // These don't get the units conversion for distance, and
                 // they're always positive
-                c->valA = fabs(e->Eval());
+                if(!variableRefs.empty()) {
+                    c->valA = 1.0;
+                } else {
+                    c->valA = fabs(e->Eval());
+                }
                 break;
 
             case Constraint::Type::DIAMETER:
-                c->valA = fabs(SS.ExprToMm(e));
+                c->valA = fabs(distanceToUnit());
 
                 // If displayed and edited as radius, convert back
                 // to diameter
@@ -1475,7 +1495,7 @@ void GraphicsWindow::EditControlDone(const std::string &s) {
 
             default:
                 // These are always positive, and they get the units conversion.
-                c->valA = fabs(SS.ExprToMm(e));
+                c->valA = fabs(distanceToUnit());
                 break;
         }
         SS.MarkGroupDirty(c->group);

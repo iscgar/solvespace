@@ -314,7 +314,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
     for(auto &con : SK.constraint) {
         Constraint *c = &con;
         if(c->reference) {
-            c->ModifyToSatisfy();
+            c->ModifyToSatisfy(SK.GetGroup(c->group)->varResolutions);
         }
     }
 
