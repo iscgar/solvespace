@@ -195,7 +195,7 @@ ExprVector ConstraintBase::PointInThreeSpace(hEntity workplane,
     return (ub.ScaledBy(u)).Plus(vb.ScaledBy(v)).Plus(ob);
 }
 
-void ConstraintBase::ModifyToSatisfy() {
+void ConstraintBase::ModifyToSatisfy(const ResolutionMap &resolutions) {
     if(type == Type::ANGLE) {
         Vector a = SK.GetEntity(entityA)->VectorGetNum();
         Vector b = SK.GetEntity(entityB)->VectorGetNum();
@@ -221,12 +221,12 @@ void ConstraintBase::ModifyToSatisfy() {
         // that means no extra work.
         IdList<Equation,hEquation> l = {};
         // Generate the equations even if this is a reference dimension
-        GenerateEquations(&l, /*forReference=*/true);
+        GenerateEquations(&l, resolutions, /*forReference=*/true);
         ssassert(l.n == 1, "Expected constraint to generate a single equation");
 
         // These equations are written in the form f(...) - d = 0, where
         // d is the value of the valA.
-        valA += (l[0].e)->Eval();
+        valA += (l[0].e)->Eval(resolutions);
 
         l.Clear();
     }
@@ -271,10 +271,23 @@ void ConstraintBase::Generate(ParamList *l) {
 }
 
 void ConstraintBase::GenerateEquations(IdList<Equation,hEquation> *l,
+                                       const ResolutionMap &resolutions,
                                        bool forReference) const {
-    if(reference && !forReference) return;
+    if(reference && !forReference) {
+        return;
+    }
 
     Expr *exA = Expr::From(valA);
+    if(type != Type::COMMENT && !comment.empty()) {
+        std::string error;
+        Expr *exLen = Expr::Parse(comment, /*allowVariables=*/true, nullptr, &error);
+        ssassert(exA != nullptr && error.empty(),
+                 "Failed to parse an existing constraint expression");
+        if(type == Type::DIAMETER && other) {
+            exLen = exLen->Times(Expr::From(2.0));
+        }
+        exA = exLen->Times(exA);
+    }
     switch(type) {
         case Type::PT_PT_DISTANCE:
             AddEq(l, Distance(workplane, ptA, ptB)->Minus(exA), 0);
@@ -901,7 +914,7 @@ void ConstraintBase::GenerateEquations(IdList<Equation,hEquation> *l,
                 // specified angle
                 Expr *rads = exA->Times(Expr::From(PI/180)),
                      *rc   = rads->Cos();
-                double arc = fabs(rc->Eval());
+                double arc = fabs(rc->Eval(resolutions));
                 // avoid false detection of inconsistent systems by gaining
                 // up as the difference in dot products gets small at small
                 // angles; doubles still have plenty of precision, only

@@ -16,6 +16,7 @@
 
 #include "dsc.h"
 #include "param.h"
+#include "expr.h"
 #include "polygon.h"
 #include "platform/platform.h"
 #include "platform/gui.h"
@@ -25,10 +26,6 @@
 namespace SolveSpace {
 
 class hConstraint;
-
-class Expr;
-class ExprVector;
-class ExprQuaternion;
 
 enum class SolveResult : uint32_t;
 
@@ -286,6 +283,7 @@ public:
 
     std::string     name;
 
+    ResolutionMap varResolutions;
 
     void Activate();
     std::string DescriptionString();
@@ -733,9 +731,10 @@ public:
     void Generate(ParamList *param);
 
     void GenerateEquations(IdList<Equation,hEquation> *entity,
+                           const ResolutionMap &resolutions,
                            bool forReference = false) const;
     // Some helpers when generating symbolic constraint equations
-    void ModifyToSatisfy();
+    void ModifyToSatisfy(const ResolutionMap &resolutions);
     void AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index) const;
     void AddEq(IdList<Equation,hEquation> *l, const ExprVector &v, int baseIndex = 0) const;
     static Expr *DirectionCosine(hEntity wrkpl, ExprVector ae, ExprVector be);

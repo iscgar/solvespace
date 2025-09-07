@@ -834,7 +834,7 @@ void TextWindow::EditControlDone(std::string s) {
 
     switch(edit.meaning) {
         case Edit::TIMES_REPEATED:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
                 SS.UndoRemember();
 
                 double ev = e->Eval();
@@ -878,7 +878,7 @@ void TextWindow::EditControlDone(std::string s) {
             break;
 
         case Edit::GROUP_SCALE:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
                 double ev = e->Eval();
                 if(fabs(ev) < 1e-6) {
                     Error(_("Scale cannot be zero."));
@@ -891,7 +891,7 @@ void TextWindow::EditControlDone(std::string s) {
             break;
 
         case Edit::HELIX_PITCH:  // stored in valB
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
                 double ev = e->Eval();
                 Group *g = SK.GetGroup(edit.group);
                 g->valB = ev * SS.MmPerUnit();
@@ -917,7 +917,7 @@ void TextWindow::EditControlDone(std::string s) {
             break;
         }
         case Edit::GROUP_OPACITY:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
                 double alpha = e->Eval();
                 if(alpha < 0 || alpha > 1) {
                     Error(_("Opacity must be between zero and one."));
@@ -939,7 +939,7 @@ void TextWindow::EditControlDone(std::string s) {
             break;
 
         case Edit::STEP_DIM_FINISH:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
                 if(stepDim.isDistance) {
                     stepDim.finish = SS.ExprToMm(e);
                 } else {
@@ -953,7 +953,7 @@ void TextWindow::EditControlDone(std::string s) {
             break;
 
         case Edit::TANGENT_ARC_RADIUS:
-            if(Expr *e = Expr::From(s, /*popUpError=*/true)) {
+            if(Expr *e = Expr::From(s, /*allowVariables=*/false, /*popUpError=*/true)) {
                 if(e->Eval() < LENGTH_EPS) {
                     Error(_("Radius cannot be zero or negative."));
                     break;

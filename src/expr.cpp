@@ -96,12 +96,16 @@ Expr *ExprVector::Magnitude() const {
     return r->Sqrt();
 }
 
-Vector ExprVector::Eval() const {
+Vector ExprVector::Eval(const ResolutionMap &resolutions) const {
     Vector r;
-    r.x = x->Eval();
-    r.y = y->Eval();
-    r.z = z->Eval();
+    r.x = x->Eval(resolutions);
+    r.y = y->Eval(resolutions);
+    r.z = z->Eval(resolutions);
     return r;
+}
+
+bool ExprVector::Resolve(const ResolutionMap &resolutions) {
+    return x->Resolve(resolutions) && y->Resolve(resolutions) && z->Resolve(resolutions);
 }
 
 ExprQuaternion ExprQuaternion::From(hParam w, hParam vx, hParam vy, hParam vz) {
@@ -216,6 +220,10 @@ Expr *ExprQuaternion::Magnitude() const {
             (vz->Square())))))->Sqrt();
 }
 
+bool ExprQuaternion::Resolve(const ResolutionMap &resolutions) {
+    return vx->Resolve(resolutions) && vy->Resolve(resolutions) &&
+        vz->Resolve(resolutions) && w->Resolve(resolutions);
+}
 
 Expr *Expr::From(hParam p) {
     Expr *r = AllocExpr();
@@ -303,24 +311,24 @@ int Expr::Nodes() const {
     }
 }
 
-Expr *Expr::DeepCopy() const {
-    Expr *n = AllocExpr();
-    *n = *this;
-    int c = n->Children();
-    if(c > 0) n->a = a->DeepCopy();
-    if(c > 1) n->b = b->DeepCopy();
-    return n;
-}
-
 Expr *Expr::DeepCopyWithParamsAsPointers(ParamList *firstTry, ParamList *thenTry,
+                                         const ResolutionMap &resolutions,
                                          bool foldConstants) const {
+    hParam eparh = op == Op::PARAM ? parh : NO_PARAMS;
+    Op eop = this->op;
+    if(eop == Op::VARIABLE) {
+        auto it = resolutions.find(s);
+        ssassert(it != resolutions.end(), "Failed to resolve named parameter");
+        eparh = it->second;
+        eop  = Op::PARAM;
+    }
     Expr *n = AllocExpr();
-    if(op == Op::PARAM) {
+    if(eop == Op::PARAM) {
         // A param that is referenced by its hParam gets rewritten to go
         // straight in to the parameter table with a pointer, or simply
         // into a constant if it's already known.
-        Param *p = firstTry->FindByIdNoOops(parh);
-        if(!p) p = thenTry->FindById(parh);
+        Param *p = firstTry->FindByIdNoOops(eparh);
+        if(!p) p = thenTry->FindById(eparh);
         if(p->known) {
             n->op = Op::CONSTANT;
             n->v = p->val;
@@ -334,10 +342,10 @@ Expr *Expr::DeepCopyWithParamsAsPointers(ParamList *firstTry, ParamList *thenTry
     *n = *this;
     int c = n->Children();
     if(c > 0) {
-        n->a = a->DeepCopyWithParamsAsPointers(firstTry, thenTry, foldConstants);
+        n->a = a->DeepCopyWithParamsAsPointers(firstTry, thenTry, resolutions, foldConstants);
         bool hasConstants = n->a->op == Op::CONSTANT;
         if(c > 1) {
-            n->b = b->DeepCopyWithParamsAsPointers(firstTry, thenTry, foldConstants);
+            n->b = b->DeepCopyWithParamsAsPointers(firstTry, thenTry, resolutions, foldConstants);
             hasConstants |= n->b->op == Op::CONSTANT;
         }
         if(hasConstants && foldConstants) {
@@ -347,26 +355,30 @@ Expr *Expr::DeepCopyWithParamsAsPointers(ParamList *firstTry, ParamList *thenTry
     return n;
 }
 
-double Expr::Eval() const {
+double Expr::Eval(const ResolutionMap &resolutions) const {
     switch(op) {
         case Op::PARAM:         return SK.GetParam(parh)->val;
         case Op::PARAM_PTR:     return parp->val;
 
         case Op::CONSTANT:      return v;
-        case Op::VARIABLE:      ssassert(false, "Not supported yet");
+        case Op::VARIABLE:      {
+            auto it = resolutions.find(s);
+            ssassert(it != resolutions.end(), "Failed to resolve named parameter during Eval()");
+            return SK.GetParam(it->second)->val;
+        }
 
-        case Op::PLUS:          return a->Eval() + b->Eval();
-        case Op::MINUS:         return a->Eval() - b->Eval();
-        case Op::TIMES:         return a->Eval() * b->Eval();
-        case Op::DIV:           return a->Eval() / b->Eval();
+        case Op::PLUS:          return a->Eval(resolutions) + b->Eval(resolutions);
+        case Op::MINUS:         return a->Eval(resolutions) - b->Eval(resolutions);
+        case Op::TIMES:         return a->Eval(resolutions) * b->Eval(resolutions);
+        case Op::DIV:           return a->Eval(resolutions) / b->Eval(resolutions);
 
-        case Op::NEGATE:        return -(a->Eval());
-        case Op::SQRT:          return sqrt(a->Eval());
-        case Op::SQUARE:        { double r = a->Eval(); return r*r; }
-        case Op::SIN:           return sin(a->Eval());
-        case Op::COS:           return cos(a->Eval());
-        case Op::ACOS:          return acos(a->Eval());
-        case Op::ASIN:          return asin(a->Eval());
+        case Op::NEGATE:        return -(a->Eval(resolutions));
+        case Op::SQRT:          return sqrt(a->Eval(resolutions));
+        case Op::SQUARE:        { double r = a->Eval(resolutions); return r*r; }
+        case Op::SIN:           return sin(a->Eval(resolutions));
+        case Op::COS:           return cos(a->Eval(resolutions));
+        case Op::ACOS:          return acos(a->Eval(resolutions));
+        case Op::ASIN:          return asin(a->Eval(resolutions));
     }
     ssassert(false, "Unexpected operation");
 }
@@ -379,7 +391,7 @@ Expr *Expr::PartialWrt(hParam p) const {
         case Op::PARAM:     return From(p == parh ? 1 : 0);
 
         case Op::CONSTANT:  return From(0.0);
-        case Op::VARIABLE:  ssassert(false, "Not supported yet");
+        case Op::VARIABLE:  ssassert(false, "Variables should be resolved before calling PartialWrt");
 
         case Op::PLUS:      return (a->PartialWrt(p))->Plus(b->PartialWrt(p));
         case Op::MINUS:     return (a->PartialWrt(p))->Minus(b->PartialWrt(p));
@@ -414,7 +426,13 @@ Expr *Expr::PartialWrt(hParam p) const {
     ssassert(false, "Unexpected operation");
 }
 
-void Expr::ParamsUsedList(ParamSet *list) const {
+void Expr::ParamsUsedList(ParamSet *list, const ResolutionMap &resolutions) const {
+    if(op == Op::VARIABLE) {
+        auto it = resolutions.find(s);
+        ssassert(it != resolutions.end(), "Unresolved variable reference");
+        list->insert(it->second);
+        return;
+    }
     if(op == Op::PARAM || op == Op::PARAM_PTR) {
         // leaf: just add ourselves if we aren't already there
         hParam param = (op == Op::PARAM) ? parh : parp->h;
@@ -427,16 +445,6 @@ void Expr::ParamsUsedList(ParamSet *list) const {
         a->ParamsUsedList(list);
         if(c >= 2) b->ParamsUsedList(list);
     }
-}
-
-bool Expr::DependsOn(hParam p) const {
-    if(op == Op::PARAM)     return (parh    == p);
-    if(op == Op::PARAM_PTR) return (parp->h == p);
-
-    int c = Children();
-    if(c == 1)          return a->DependsOn(p);
-    if(c == 2)          return a->DependsOn(p) || b->DependsOn(p);
-    return false;
 }
 
 bool Expr::Tol(double a, double b) {
@@ -542,6 +550,29 @@ void Expr::Substitute(const SubstitutionMap &subMap) {
     }
 }
 
+bool Expr::Resolve(const ResolutionMap &resolutions) {
+    if(op == Op::VARIABLE) {
+        auto it = resolutions.find(s);
+        if(it == resolutions.end()) {
+            return false;
+        }
+        parh = it->second;
+        op   = Op::PARAM;
+    } else {
+        const int c = Children();
+        if(c >= 1) {
+            if(!a->Resolve(resolutions)) {
+                return false;
+            }
+            if(c >= 2 && !b->Resolve(resolutions)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 //-----------------------------------------------------------------------------
 // If the expression references only one parameter that appears in pl, then
 // return that parameter. If no param is referenced, then return NO_PARAMS.
@@ -549,7 +580,14 @@ void Expr::Substitute(const SubstitutionMap &subMap) {
 //-----------------------------------------------------------------------------
 const hParam Expr::NO_PARAMS       = { 0 };
 const hParam Expr::MULTIPLE_PARAMS = { std::numeric_limits<decltype(hParam::v)>::max() };
-hParam Expr::ReferencedParams(ParamList *pl) const {
+hParam Expr::ReferencedParams(ParamList *pl, const ResolutionMap &resolutions) const {
+    if(op == Op::VARIABLE) {
+        auto it = resolutions.find(s);
+        if(it == resolutions.end()) {
+            return MULTIPLE_PARAMS;
+        }
+        return it->second;
+    }
     if(op == Op::PARAM) {
         if(pl->FindByIdNoOops(parh)) {
             return parh;
@@ -563,11 +601,11 @@ hParam Expr::ReferencedParams(ParamList *pl) const {
     if(c == 0) {
         return NO_PARAMS;
     } else if(c == 1) {
-        return a->ReferencedParams(pl);
+        return a->ReferencedParams(pl, resolutions);
     } else if(c == 2) {
         hParam pa, pb;
-        pa = a->ReferencedParams(pl);
-        pb = b->ReferencedParams(pl);
+        pa = a->ReferencedParams(pl, resolutions);
+        pb = b->ReferencedParams(pl, resolutions);
         if(pa == NO_PARAMS) {
             return pb;
         } else if(pb == NO_PARAMS) {
@@ -592,7 +630,7 @@ std::string Expr::Print() const {
         case Op::PARAM_PTR: return ssprintf("param(p%08x)", parp->h.v);
 
         case Op::CONSTANT:  return ssprintf("%.3f", v);
-        case Op::VARIABLE:  return "(var)";
+        case Op::VARIABLE:  return s;
 
         case Op::PLUS:      c = '+'; goto p;
         case Op::MINUS:     c = '-'; goto p;
@@ -640,6 +678,7 @@ public:
         TokenType  type;
         Expr      *expr;
 
+        static Token From(double constant);
         static Token From(TokenType type = TokenType::ERROR, Expr *expr = NULL);
         static Token From(TokenType type, Expr::Op op);
         bool IsError() const { return type == TokenType::ERROR; }
@@ -659,12 +698,21 @@ public:
 
     int Precedence(Token token);
     Token LexNumber(std::string *error);
-    Token Lex(std::string *error);
+    Token Lex(bool allowVariables, std::string *error);
     bool Reduce(std::string *error);
-    bool Parse(std::string *error, size_t reduceUntil = 0);
+    bool Parse(bool allowVariables, std::unordered_set<std::string> *variableRefs,
+               std::string *error, size_t reduceUntil = 0);
 
-    static Expr *Parse(const std::string &input, std::string *error);
+    static Expr *Parse(const std::string &input, bool allowVariables,
+                       std::unordered_set<std::string> *variableRefs,
+                       std::string *error);
 };
+
+ExprParser::Token ExprParser::Token::From(double constant) {
+    Token t = Token::From(TokenType::OPERAND, Expr::Op::CONSTANT);
+    t.expr->v = constant;
+    return t;
+}
 
 ExprParser::Token ExprParser::Token::From(TokenType type, Expr *expr) {
     Token t;
@@ -697,7 +745,8 @@ std::string ExprParser::ReadWord() {
     std::string s;
 
     while(char c = PeekChar()) {
-        if(!isalnum(c)) break;
+        if(!isalnum(c) && c != '_')
+            break;
         s.push_back(ReadChar());
     }
 
@@ -736,33 +785,57 @@ ExprParser::Token ExprParser::LexNumber(std::string *error) {
     return t;
 }
 
-ExprParser::Token ExprParser::Lex(std::string *error) {
+static const std::unordered_map<std::string, ExprParser::Token (*)()> KNOWN_IDENTIFIERS{
+    {"sqrt", [] { return ExprParser::Token::From(ExprParser::TokenType::UNARY_OP, Expr::Op::SQRT); }},
+    {"square", [] { return ExprParser::Token::From(ExprParser::TokenType::UNARY_OP, Expr::Op::SQUARE); }},
+    {"sin", [] { return ExprParser::Token::From(ExprParser::TokenType::UNARY_OP, Expr::Op::SIN); }},
+    {"cos", [] { return ExprParser::Token::From(ExprParser::TokenType::UNARY_OP, Expr::Op::COS); }},
+    {"asin", [] { return ExprParser::Token::From(ExprParser::TokenType::UNARY_OP, Expr::Op::ASIN); }},
+    {"acos", [] { return ExprParser::Token::From(ExprParser::TokenType::UNARY_OP, Expr::Op::ACOS); }},
+    {"pi", [] { return ExprParser::Token::From(PI); }},
+};
+
+static const std::unordered_set<std::string> RESERVED_IDENTIFIERS{
+    // Useful functions that we might want to implement at some point
+    "neg",
+    "abs",
+    "sgn",
+    "mod",
+    "ceil",
+    "floor",
+    "log",
+    "log2",
+    "log10",
+    "ln",
+    "lb",
+    "lg",
+    "atan",
+    "atan2",
+    // Useful constants that we might want to introduce later
+    "e", "tau", "phi",
+};
+
+ExprParser::Token ExprParser::Lex(bool allowVariables, std::string *error) {
     SkipSpace();
 
     Token t = Token::From();
     char c = PeekChar();
-    if(isupper(c)) {
-        std::string n = ReadWord();
-        t = Token::From(TokenType::OPERAND, Expr::Op::VARIABLE);
-    } else if(isalpha(c)) {
+    if(isalpha(c)) {
         std::string s = ReadWord();
-        if(s == "sqrt") {
-            t = Token::From(TokenType::UNARY_OP, Expr::Op::SQRT);
-        } else if(s == "square") {
-            t = Token::From(TokenType::UNARY_OP, Expr::Op::SQUARE);
-        } else if(s == "sin") {
-            t = Token::From(TokenType::UNARY_OP, Expr::Op::SIN);
-        } else if(s == "cos") {
-            t = Token::From(TokenType::UNARY_OP, Expr::Op::COS);
-        } else if(s == "asin") {
-            t = Token::From(TokenType::UNARY_OP, Expr::Op::ASIN);
-        } else if(s == "acos") {
-            t = Token::From(TokenType::UNARY_OP, Expr::Op::ACOS);
-        } else if(s == "pi") {
-            t = Token::From(TokenType::OPERAND, Expr::Op::CONSTANT);
-            t.expr->v = PI;
+        auto it       = KNOWN_IDENTIFIERS.find(s);
+        if(it == KNOWN_IDENTIFIERS.end()) {
+            if(RESERVED_IDENTIFIERS.find(s) != RESERVED_IDENTIFIERS.end()) {
+                *error = "'" + s + "' is reserved and cannot be used to name a variable";
+            } else if(!allowVariables) {
+                *error = "Referencing variable '" + s + "' is not allowed in this expression";
+            } else {
+                t = Token::From(TokenType::OPERAND, Expr::Op::VARIABLE);
+                char *cstr = (char *)Platform::AllocTemporary(s.size() + 1);
+                memcpy(cstr, s.c_str(), s.size() + 1);
+                t.expr->s = cstr;
+            }
         } else {
-            *error = "'" + s + "' is not a valid variable, function or constant";
+            t = (*it->second)();
         }
     } else if(isdigit(c) || c == '.') {
         return LexNumber(error);
@@ -873,9 +946,10 @@ bool ExprParser::Reduce(std::string *error) {
     return true;
 }
 
-bool ExprParser::Parse(std::string *error, size_t reduceUntil) {
+bool ExprParser::Parse(bool allowVariables, std::unordered_set<std::string> *variableRefs,
+                       std::string *error, size_t reduceUntil) {
     while(true) {
-        Token t = Lex(error);
+        Token t = Lex(allowVariables, error);
         switch(t.type) {
             case TokenType::ERROR:
                 return false;
@@ -893,7 +967,7 @@ bool ExprParser::Parse(std::string *error, size_t reduceUntil) {
 
             case TokenType::PAREN_LEFT: {
                 // sub-expression
-                if(!Parse(error, /*reduceUntil=*/stack.size())) return false;
+                if(!Parse(allowVariables, variableRefs, error, /*reduceUntil=*/stack.size())) return false;
 
                 if(stack.empty() || stack.back().type != TokenType::PAREN_RIGHT) {
                     *error = "Expected ')'";
@@ -924,6 +998,9 @@ bool ExprParser::Parse(std::string *error, size_t reduceUntil) {
 
             case TokenType::UNARY_OP:
             case TokenType::OPERAND:
+                if(t.expr->op == Expr::Op::VARIABLE) {
+                    variableRefs->insert(t.expr->s);
+                }
                 stack.push_back(t);
                 break;
         }
@@ -932,24 +1009,32 @@ bool ExprParser::Parse(std::string *error, size_t reduceUntil) {
     return true;
 }
 
-Expr *ExprParser::Parse(const std::string &input, std::string *error) {
+Expr *ExprParser::Parse(const std::string &input, bool allowVariables,
+                        std::unordered_set<std::string> *variableRefs, std::string *error) {
     ExprParser parser;
     parser.it  = input.cbegin();
     parser.end = input.cend();
-    if(!parser.Parse(error)) return NULL;
+    std::unordered_set<std::string> varRefs;
+    if(!parser.Parse(allowVariables, &varRefs, error))
+        return NULL;
 
     Token r = parser.PopOperand(error);
     if(r.IsError()) return NULL;
+    if(variableRefs) {
+        *variableRefs = std::move(varRefs);
+    }
     return r.expr;
 }
 
-Expr *Expr::Parse(const std::string &input, std::string *error) {
-    return ExprParser::Parse(input, error);
+Expr *Expr::Parse(const std::string &input, bool allowVariables,
+                  std::unordered_set<std::string> *variableRefs, std::string *error) {
+    return ExprParser::Parse(input, allowVariables, variableRefs, error);
 }
 
-Expr *Expr::From(const std::string &input, bool popUpError) {
+Expr *Expr::From(const std::string &input, bool allowVariables, bool popUpError,
+                 std::unordered_set<std::string> *variableRefs) {
     std::string error;
-    Expr *e = ExprParser::Parse(input, &error);
+    Expr *e = ExprParser::Parse(input, allowVariables, variableRefs, &error);
     if(!e) {
         dbp("Parse/lex error: %s", error.c_str());
         if(popUpError) {

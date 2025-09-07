@@ -53,7 +53,7 @@ bool System::WriteJacobian(int tag) {
     for(size_t i = 0; i < mat.eq.size(); i++) {
         Equation *e = mat.eq[i];
         // Deep-copy and simplify (fold) the current equation.
-        Expr *f = e->e->DeepCopyWithParamsAsPointers(&param, &(SK.param), /*foldConstants=*/true);
+        Expr *f = e->e->DeepCopyWithParamsAsPointers(&param, &SK.param, {}, /*foldConstants=*/true);
 
         ParamSet paramsUsed;
         f->ParamsUsedList(&paramsUsed);
@@ -367,7 +367,7 @@ void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
         {
             // When all dimensions are reference, we adjust them to display
             // the correct value, and then don't generate any equations.
-            c->ModifyToSatisfy();
+            c->ModifyToSatisfy(g->varResolutions);
             continue;
         }
         if(g->relaxConstraints && c->type != Constraint::Type::POINTS_COINCIDENT) {
@@ -377,7 +377,7 @@ void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
             continue;
         }
 
-        c->GenerateEquations(&eq);
+        c->GenerateEquations(&eq, g->varResolutions);
     }
     // And the equations from entities
     for(auto &ent : SK.entity) {
@@ -474,7 +474,7 @@ SolveResult System::Solve(Group *g, int *dof, List<hConstraint> *bad,
         if(e.tag != 0)
             continue;
 
-        hParam hp = e.e->ReferencedParams(&param);
+        hParam hp = e.e->ReferencedParams(&param, g->varResolutions);
         if(hp == Expr::NO_PARAMS) continue;
         if(hp == Expr::MULTIPLE_PARAMS) continue;
 

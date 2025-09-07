@@ -903,7 +903,7 @@ Slvs_SolveResult Slvs_SolveSketch(uint32_t shg, Slvs_hConstraint **bad = nullptr
             SYS.param.Add(SK.GetParam(c->valP));
 
             if(Slvs_CanInitiallySatisfy(*c)) {
-                c->ModifyToSatisfy();
+                c->ModifyToSatisfy({});
             }
         }
     }
@@ -1052,7 +1052,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
             params.Clear();
 
             if(Slvs_CanInitiallySatisfy(c)) {
-                c.ModifyToSatisfy();
+                c.ModifyToSatisfy({});
             }
         }
 
