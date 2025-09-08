@@ -32,8 +32,10 @@ void Group::Clear() {
     impMesh.Clear();
     impShell.Clear();
     impEntity.Clear();
-    // remap is the only one that doesn't get recreated when we regen
+    varResolutions.clear();
+    // these don't get recreated when we regen
     remap.clear();
+    namedParams.clear();
 }
 
 void Group::AddParam(ParamList *param, hParam hp, double v) {
@@ -437,8 +439,82 @@ void Group::Activate() {
     SS.ScheduleShowTW();
 }
 
+hParam Group::AddNamedParam(ParamList *param) {
+    const hParam hp = namedParams.empty() ? h.param(0x8000) : hParam{namedParams.rbegin()->first.v + 1};
+    namedParams.emplace(hp, ssprintf("p%03d%03d", h.v, hp.v & 0x7fff));
+    AddParam(param, hp, 1);
+    return hp;
+}
+
+Group::NamedParams::value_type Group::GetNamedParam(hParam hp) const {
+    const auto it = namedParams.find(hp);
+    if(it == namedParams.end()) {
+        return {NO_PARAM, ""};
+    }
+    return *it;
+}
+
+Group::NamedParams::value_type Group::GetNamedParam(const std::string &name) const {
+    const auto it = std::find_if(
+        namedParams.begin(), namedParams.end(),
+        [&name](const NamedParams::value_type &v) { return v.second == name; });
+    if(it == namedParams.end()) {
+        return {NO_PARAM, ""};
+    }
+    return *it;
+}
+
+bool Group::RenameNamedParam(hParam hp, std::string newName, std::string *error) {
+    const auto existingParam = GetNamedParam(hp);
+    if(existingParam.first == NO_PARAM) {
+        *error = _("The named parameter could not be found");
+        return false;
+    }
+
+    if(existingParam.second == newName) {
+        return true;
+    }
+
+    if(newName.empty()) {
+        *error = _("Parameter name cannot be empty");
+        return false;
+    }
+
+    Expr *e = Expr::From(newName, /*allowVariables=*/true, /*popUpError=*/false);
+    if (e == nullptr || e->op != Expr::Op::VARIABLE) {
+        *error = _("Invalid parameter name");
+        return false;
+    }
+
+    newName = e->Print();
+    if(GetNamedParam(newName).first != NO_PARAM) {
+        *error = _("A parameter with that name already exists in this group");
+        return false;
+    }
+
+    namedParams.erase(hp);
+    namedParams.emplace(hp, std::move(newName));
+
+    return true;
+}
+
+void Group::DeleteNamedParam(hParam hp) {
+    namedParams.erase(hp);
+}
+
+void Group::DeleteNamedParam(const std::string &name) {
+    const auto existingParam = GetNamedParam(name);
+    if(existingParam.first != NO_PARAM) {
+        namedParams.erase(existingParam.first);
+    }
+}
+
 void Group::Generate(EntityList *entity, ParamList *param)
 {
+    for (const auto &kv : namedParams) {
+        AddParam(param, kv.first, 1);
+    }
+
     Vector gn = (SS.GW.projRight).Cross(SS.GW.projUp);
     Vector gp = SS.GW.projRight.Plus(SS.GW.projUp);
     Vector gc = (SS.GW.offset).ScaledBy(-1);

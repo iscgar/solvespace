@@ -282,12 +282,23 @@ public:
     EntityList  impEntity;
 
     std::string     name;
+    
+    using NamedParams = std::map<hParam, std::string>;
+    NamedParams namedParams;
 
+    // Only used during named parameter resolution
     ResolutionMap varResolutions;
 
     void Activate();
     std::string DescriptionString();
     void Clear();
+
+    hParam AddNamedParam(ParamList *param);
+    NamedParams::value_type GetNamedParam(hParam hp) const;
+    NamedParams::value_type GetNamedParam(const std::string &name) const;
+    bool RenameNamedParam(hParam hp, std::string newName, std::string *error);
+    void DeleteNamedParam(hParam hp);
+    void DeleteNamedParam(const std::string &name);
 
     static void AddParam(ParamList *param, hParam hp, double v);
     void Generate(EntityList *entity, ParamList *param);
@@ -718,11 +729,11 @@ public:
 
     bool Equals(const ConstraintBase &c) const {
         return type == c.type && group == c.group && workplane == c.workplane &&
-            valA == c.valA && valP == c.valP && ptA == c.ptA && ptB == c.ptB &&
+            /*valA == c.valA &&*/ valP == c.valP && ptA == c.ptA && ptB == c.ptB &&
             entityA == c.entityA && entityB == c.entityB &&
             entityC == c.entityC && entityD == c.entityD &&
             other == c.other && other2 == c.other2 && reference == c.reference &&
-            comment == c.comment;
+            (comment == c.comment || type != Type::COMMENT);
     }
 
     bool HasLabel() const;

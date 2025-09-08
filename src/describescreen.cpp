@@ -71,6 +71,9 @@ void TextWindow::ScreenConstraintShowAsRadius(int link, uint32_t v) {
     SS.UndoRemember();
     c->other = !c->other;
 
+    if(c->type != Constraint::Type::COMMENT && !c->comment.empty()) {
+        SS.MarkGroupDirty(c->group);
+    }
     SS.ScheduleShowTW();
 }
 
