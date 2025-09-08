@@ -969,6 +969,10 @@ Slvs_SolveResult Slvs_SolveSketch(uint32_t shg, Slvs_hConstraint **bad = nullptr
             sr.result = SLVS_RESULT_TOO_MANY_UNKNOWNS;
             return sr;
         }
+        case SolveResult::UNRESOLVED_VARIABLES: {
+            ssassert(false,
+                "Named parameters are not supported in the library, so this should never be reached");
+        }
     }
     return sr;
 }
@@ -1095,6 +1099,10 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
         case SolveResult::TOO_MANY_UNKNOWNS:
             ssys->result = SLVS_RESULT_TOO_MANY_UNKNOWNS;
             break;
+
+        case SolveResult::UNRESOLVED_VARIABLES:
+            ssassert(false,
+                "Named parameters are not supported in the library, so this should never be reached");
     }
 
     // Write the new parameter values back to our caller.
