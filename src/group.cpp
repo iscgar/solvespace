@@ -435,8 +435,63 @@ void Group::Activate() {
     SS.ScheduleShowTW();
 }
 
+hParam Group::AddNamedParam(ParamList *param) {
+    if (namedParams.find(name) != namedParams.end()) {
+        return NO_PARAM;
+    }
+    const NamedParamIndex pi = lastNamedParamIndex++;
+    hParam hp = h.param(0x8000 | pi);
+    namedParams.emplace(ssprintf("p%03d%03d", h.v, pi), hp);
+    AddParam(param, hp, 1);
+    return hp;
+}
+
+std::string Group::GetNamedParamName(hParam hp) const {
+    const auto it = std::find_if(namedParams.begin(), namedParams.end(), [hp](const std::pair<const std::string&, hParam> &v) {
+        return v.second == hp;
+    });
+    return it == namedParams.end() ? "" : it->first;
+}
+
+hParam Group::GetNamedParamHandle(const std::string &name) const {
+    auto it = namedParams.find(name);
+    if(it == namedParams.end()) {
+        return NO_PARAM;
+    }
+    return it->second;
+}
+
+bool Group::RenameNamedParam(const std::string &oldName, std::string newName) {
+    if(oldName == newName) {
+        return true;
+    }
+    if(newName.empty()) {
+        return false;
+    }
+    if(namedParams.find(newName) != namedParams.end()) {
+        return false;
+    }
+    auto it = namedParams.find(oldName);
+    if(it == namedParams.end()) {
+        return false;
+    }
+    const hParam hp = it->second;
+    namedParams.erase(it);
+    namedParams.emplace(std::move(newName), hp);
+
+    return true;
+}
+
+void Group::DeleteNamedParam(const std::string &name) {
+    namedParams.erase(name);
+}
+
 void Group::Generate(EntityList *entity, ParamList *param)
 {
+    for (const auto &kv : namedParams) {
+        AddParam(param, kv.second, 0);
+    }
+
     Vector gn = (SS.GW.projRight).Cross(SS.GW.projUp);
     Vector gp = SS.GW.projRight.Plus(SS.GW.projUp);
     Vector gc = (SS.GW.offset).ScaledBy(-1);

@@ -1371,6 +1371,11 @@ void GraphicsWindow::EditConstraint(hConstraint constraint) {
             break;
 
         default: {
+            if(!c->comment.empty()) {
+                editValue = c->comment;
+                break;
+            }
+
             double value = fabs(c->valA);
 
             // If displayed as radius, also edit as radius.
@@ -1378,10 +1383,7 @@ void GraphicsWindow::EditConstraint(hConstraint constraint) {
                 value /= 2;
 
             // Try showing value with default number of digits after decimal first.
-            if(c->comment != "") {
-                editValue = c->comment;
-                break;
-            } else if(c->type == Constraint::Type::LENGTH_RATIO ||
+            if(c->type == Constraint::Type::LENGTH_RATIO ||
                c->type == Constraint::Type::ARC_ARC_LEN_RATIO ||
                c->type == Constraint::Type::ARC_LINE_LEN_RATIO) {
                 editValue = ssprintf("%.3f", value);
@@ -1497,6 +1499,9 @@ void GraphicsWindow::EditControlDone(const std::string &s) {
                 break;
         }
         SS.MarkGroupDirty(c->group);
+        if(variableRefCount > 0) {
+            SS.ScheduleShowTW();
+        }
     }
 }
 

@@ -242,6 +242,18 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
         if(PruneGroups(hg))
             goto pruned;
 
+        Group *g = SK.GetGroup(hg);
+        if(i >= first && i <= last) {
+            if(hg == Group::HGROUP_REFERENCES) {
+                g->varResolutions = g->namedParams;
+            } else {
+                g->varResolutions = SK.GetGroup(SK.groupOrder[i - 1])->varResolutions;
+                for (const auto &kv : g->namedParams) {
+                    g->varResolutions[kv.first] = kv.second;
+                }
+            }
+        }
+
         int groupRequestIndex = 0;
         for(auto &req : SK.request) {
             Request *r = &req;
@@ -256,7 +268,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
 
             c->Generate(&(SK.param));
         }
-        SK.GetGroup(hg)->Generate(&(SK.entity), &(SK.param));
+        g->Generate(&(SK.entity), &(SK.param));
 
         // The requests and constraints depend on stuff in this or the
         // previous group, so check them after generating.
@@ -278,7 +290,6 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
 
         if(hg == Group::HGROUP_REFERENCES) {
             ForceReferences();
-            Group *g = SK.GetGroup(hg);
             g->solved.how = SolveResult::OKAY;
             g->clean = true;
         } else {
@@ -286,7 +297,6 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
             if(i >= first && i <= last) {
                 // The group falls inside the range, so really solve it,
                 // and then regenerate the mesh based on the solved stuff.
-                Group *g = SK.GetGroup(hg);
                 if(genForBBox) {
                     SolveGroupAndReport(hg, andFindFree);
                     g->GenerateLoops();

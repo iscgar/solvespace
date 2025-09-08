@@ -169,7 +169,8 @@ enum class SolveResult : uint32_t {
     DIDNT_CONVERGE           = 10,
     REDUNDANT_OKAY           = 11,
     REDUNDANT_DIDNT_CONVERGE = 12,
-    TOO_MANY_UNKNOWNS        = 20
+    TOO_MANY_UNKNOWNS        = 20,
+    UNRESOLVED_VARIABLES     = 30,
 };
 
 using ParamSet = std::unordered_set<hParam, HandleHasher<hParam>>;
@@ -277,7 +278,7 @@ public:
     bool WriteJacobian(int tag);
     void EvalJacobian();
 
-    void WriteEquationsExceptFor(hConstraint hc, Group *g);
+    bool WriteEquationsExceptFor(hConstraint hc, Group *g, List<hConstraint> *bad);
     void FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad,
                                         bool forceDofCheck);
     SubstitutionMap SolveBySubstitution();

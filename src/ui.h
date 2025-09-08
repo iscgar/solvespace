@@ -350,12 +350,16 @@ public:
         // For tangent arc
         TANGENT_ARC_RADIUS    = 800,
         // For helix pitch
-        HELIX_PITCH           = 802
+        HELIX_PITCH           = 802,
+        // For named parameters
+        PARAMETER_VALUE       = 810,
+        PARAMETER_NAME        = 812,
     };
     struct {
         bool        showAgain;
         Edit        meaning;
         int         i;
+        hParam      parameter;
         hGroup      group;
         hRequest    request;
         hStyle      style;
@@ -426,6 +430,11 @@ public:
     static void ScreenSelectRequest(int link, uint32_t v);
     static void ScreenSelectEntity(int link, uint32_t v);
     static void ScreenSelectConstraint(int link, uint32_t v);
+
+    static void ScreenAddNamedParam(int link, uint32_t v);
+    static void ScreenEditParamName(int link, uint32_t v);
+    static void ScreenEditParamValue(int link, uint32_t v);
+    static void ScreenDeleteParam(int link, uint32_t v);
 
     static void ScreenChangeGroupOption(int link, uint32_t v);
     static void ScreenColor(int link, uint32_t v);

@@ -353,7 +353,7 @@ bool System::NewtonSolve() {
     return converged;
 }
 
-void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
+bool System::WriteEquationsExceptFor(hConstraint hc, Group *g, List<hConstraint> *bad) {
     // Generate all the equations from constraints in this group
     for(auto &con : SK.constraint) {
         ConstraintBase *c = &con;
@@ -386,6 +386,30 @@ void System::WriteEquationsExceptFor(hConstraint hc, Group *g) {
     }
     // And from the groups themselves
     g->GenerateEquations(&eq);
+
+    std::unordered_set<hConstraint, HandleHasher<hConstraint>> badSet;
+
+    for(auto &checkEq : eq) {
+        if(!checkEq.e->Resolve(g->varResolutions)) {
+            if(!checkEq.h.isFromConstraint()) {
+                continue;
+            }
+
+            hConstraint hc = checkEq.h.constraint();
+            ConstraintBase *c = SK.constraint.FindByIdNoOops(hc);
+
+            badSet.insert(c->h);
+        }
+    }
+
+    if(!badSet.empty()) {
+        for(hConstraint hc : badSet) {
+            bad->Add(&hc);
+        }
+        return false;
+    }
+
+    return true;
 }
 
 void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad, bool forceDofCheck) {
@@ -413,7 +437,7 @@ void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad, bo
 
             param.ClearTags();
             eq.Clear();
-            WriteEquationsExceptFor(c->h, g);
+            WriteEquationsExceptFor(c->h, g, bad);
             eq.ClearTags();
 
             // It's a major speedup to solve the easy ones by substitution here,
@@ -437,7 +461,9 @@ void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad, bo
 SolveResult System::Solve(Group *g, int *dof, List<hConstraint> *bad,
                           bool andFindBad, bool andFindFree, bool forceDofCheck)
 {
-    WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g);
+    if (!WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g, bad)) {
+        return SolveResult::UNRESOLVED_VARIABLES;
+    }
 
     bool rankOk;
 
@@ -528,7 +554,7 @@ SolveResult System::Solve(Group *g, int *dof, List<hConstraint> *bad,
     return rankOk ? SolveResult::OKAY : SolveResult::REDUNDANT_OKAY;
 
 didnt_converge:
-    SK.constraint.ClearTags();
+    std::unordered_set<hConstraint, HandleHasher<hConstraint>> badSet;
     // Not using range-for here because index is used in additional ways
     for(size_t i = 0; i < mat.eq.size(); i++) {
         if(fabs(mat.B.num[i]) > CONVERGE_TOLERANCE || IsReasonable(mat.B.num[i])) {
@@ -538,13 +564,11 @@ didnt_converge:
             hConstraint hc = mat.eq[i]->h.constraint();
             ConstraintBase *c = SK.constraint.FindByIdNoOops(hc);
             if(!c) continue;
-            // Don't double-show constraints that generated multiple
-            // unsatisfied equations
-            if(!c->tag) {
-                bad->Add(&(c->h));
-                c->tag = 1;
-            }
+            badSet.insert(c->h);
         }
+    }
+    for(hConstraint hc : badSet) {
+        bad->Add(&hc);
     }
 
     return rankOk ? SolveResult::DIDNT_CONVERGE : SolveResult::REDUNDANT_DIDNT_CONVERGE;
@@ -553,7 +577,9 @@ didnt_converge:
 SolveResult System::SolveRank(Group *g, int *rank, int *dof, List<hConstraint> *bad,
                               bool andFindBad, bool andFindFree)
 {
-    WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g);
+    if(!WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g, bad)) {
+        return SolveResult::UNRESOLVED_VARIABLES;
+    }
 
     // All params and equations are assigned to group zero.
     param.ClearTags();

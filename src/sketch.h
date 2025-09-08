@@ -263,11 +263,22 @@ public:
 
     std::string     name;
 
+    using NamedParamIndex = uint16_t;
+
+    NamedParamIndex lastNamedParamIndex;
+    ResolutionMap namedParams;
+
     ResolutionMap varResolutions;
 
     void Activate();
     std::string DescriptionString();
     void Clear();
+
+    hParam AddNamedParam(ParamList *param);
+    std::string GetNamedParamName(hParam hp) const;
+    hParam GetNamedParamHandle(const std::string &name) const;
+    bool RenameNamedParam(const std::string &oldName, std::string newName);
+    void DeleteNamedParam(const std::string &name);
 
     static void AddParam(ParamList *param, hParam hp, double v);
     void Generate(EntityList *entity, ParamList *param);
@@ -713,11 +724,11 @@ public:
 
     bool Equals(const ConstraintBase &c) const {
         return type == c.type && group == c.group && workplane == c.workplane &&
-            valA == c.valA && valP == c.valP && ptA == c.ptA && ptB == c.ptB &&
+            /*valA == c.valA &&*/ valP == c.valP && ptA == c.ptA && ptB == c.ptB &&
             entityA == c.entityA && entityB == c.entityB &&
             entityC == c.entityC && entityD == c.entityD &&
             other == c.other && other2 == c.other2 && reference == c.reference &&
-            comment == c.comment;
+            (comment == c.comment || type != Type::COMMENT);
     }
 
     bool HasLabel() const;
