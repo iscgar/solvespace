@@ -355,7 +355,7 @@ bool System::NewtonSolve() {
     return converged;
 }
 
-bool System::WriteEquationsExceptFor(hConstraint hc, Group *g, List<hConstraint> *bad) {
+bool System::WriteEquationsExceptFor(hConstraint hc, Group *g, std::set<hConstraint> *bad) {
     // Generate all the equations from constraints in this group
     for(auto &con : SK.constraint) {
         ConstraintBase *c = &con;
@@ -389,8 +389,7 @@ bool System::WriteEquationsExceptFor(hConstraint hc, Group *g, List<hConstraint>
     // And from the groups themselves
     g->GenerateEquations(&eq);
 
-    std::unordered_set<hConstraint, HandleHasher<hConstraint>> badSet;
-
+    bool failedResolutions = false;
     for(auto &checkEq : eq) {
         if(!checkEq.e->Resolve(g->varResolutions)) {
             if(!checkEq.h.isFromConstraint()) {
@@ -398,21 +397,17 @@ bool System::WriteEquationsExceptFor(hConstraint hc, Group *g, List<hConstraint>
             }
 
             hConstraint hc = checkEq.h.constraint();
-            badSet.insert(hc);
+            if(bad) {
+                bad->insert(hc);
+            }
+            failedResolutions = true;
         }
     }
 
-    if(!badSet.empty()) {
-        for(hConstraint hc : badSet) {
-            bad->Add(&hc);
-        }
-        return false;
-    }
-
-    return true;
+    return !failedResolutions;
 }
 
-void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad, bool forceDofCheck) {
+void System::FindWhichToRemoveToFixJacobian(Group *g, std::set<hConstraint> *bad, bool forceDofCheck) {
     auto time = GetMilliseconds();
     g->solved.timeout = false;
     int a;
@@ -452,13 +447,13 @@ void System::FindWhichToRemoveToFixJacobian(Group *g, List<hConstraint> *bad, bo
             int rank = CalculateRank();
             if(rank == mat.m) {
                 // We fixed it by removing this constraint
-                bad->Add(&(c->h));
+                bad->insert(c->h);
             }
         }
     }
 }
 
-SolveResult System::Solve(Group *g, int *dof, List<hConstraint> *bad,
+SolveResult System::Solve(Group *g, int *dof, std::set<hConstraint> *bad,
                           bool andFindBad, bool andFindFree, bool forceDofCheck)
 {
     if (!WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g, bad)) {
@@ -554,27 +549,25 @@ SolveResult System::Solve(Group *g, int *dof, List<hConstraint> *bad,
     return rankOk ? SolveResult::OKAY : SolveResult::REDUNDANT_OKAY;
 
 didnt_converge:
-    std::unordered_set<hConstraint, HandleHasher<hConstraint>> badSet;
-    // Not using range-for here because index is used in additional ways
-    for(size_t i = 0; i < mat.eq.size(); i++) {
-        if(fabs(mat.B.num[i]) > CONVERGE_TOLERANCE || IsReasonable(mat.B.num[i])) {
-            // This constraint is unsatisfied.
-            if(!mat.eq[i]->h.isFromConstraint()) continue;
+   if(bad) {
+        // Not using range-for here because index is used in additional ways
+        for(size_t i = 0; i < mat.eq.size(); i++) {
+            if(fabs(mat.B.num[i]) > CONVERGE_TOLERANCE || IsReasonable(mat.B.num[i])) {
+                // This constraint is unsatisfied.
+                if(!mat.eq[i]->h.isFromConstraint()) continue;
 
-            hConstraint hc = mat.eq[i]->h.constraint();
-            ConstraintBase *c = SK.constraint.FindByIdNoOops(hc);
-            if(!c) continue;
-            badSet.insert(c->h);
+                hConstraint hc = mat.eq[i]->h.constraint();
+                ConstraintBase *c = SK.constraint.FindByIdNoOops(hc);
+                if(!c) continue;
+                bad->insert(c->h);
+            }
         }
-    }
-    for(hConstraint hc : badSet) {
-        bad->Add(&hc);
-    }
+   }
 
     return rankOk ? SolveResult::DIDNT_CONVERGE : SolveResult::REDUNDANT_DIDNT_CONVERGE;
 }
 
-SolveResult System::SolveRank(Group *g, int *rank, int *dof, List<hConstraint> *bad,
+SolveResult System::SolveRank(Group *g, int *rank, int *dof, std::set<hConstraint> *bad,
                               bool andFindBad, bool andFindFree)
 {
     if(!WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g, bad)) {
