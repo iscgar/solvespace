@@ -4,9 +4,9 @@
 //
 // Copyright 2008-2013 Jonathan Westhues.
 //-----------------------------------------------------------------------------
-#include <algorithm>
 #include "solvespace.h"
 #include <slvs.h>
+#include <set>
 #include <string>
 
 namespace SolveSpace {
@@ -929,21 +929,23 @@ Slvs_SolveResult Slvs_SolveSketch(uint32_t shg, Slvs_hConstraint **bad = nullptr
     //     std::cout << "SketchConstraintBase( " << con.ToString() << " )\n";
     // }
 
-    List<hConstraint> badList;
+    std::set<hConstraint> badList;
     bool andFindBad = bad != nullptr;
 
     int dof = 0;
     SolveResult status = SYS.Solve(&g, &dof, &badList, andFindBad, false, false);
     Slvs_SolveResult sr = {};
     sr.dof = dof;
-    sr.nbad = badList.n;
+    sr.nbad = badList.size();
     if(bad) {
         if(sr.nbad <= 0) {
             *bad = nullptr;
         } else {
             *bad = static_cast<Slvs_hConstraint *>(malloc(sizeof(Slvs_hConstraint) * sr.nbad));
-            for(int i = 0; i < sr.nbad; ++i) {
-                (*bad)[i] = badList[i].v;
+            size_t i = 0;
+            for(hConstraint hc : badList) {
+                (*bad)[i] = hc.v;
+                ++i;
             }
         }
     }
@@ -1073,7 +1075,7 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
     Group g = {};
     g.h.v = shg;
 
-    List<hConstraint> bad = {};
+    std::set<hConstraint> bad = {};
 
     // Now we're finally ready to solve!
     bool andFindBad = ssys->calculateFaileds ? true : false;
@@ -1114,13 +1116,13 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
 
     if(ssys->failed) {
         // Copy over any the list of problematic constraints.
-        for(i = 0; i < ssys->faileds && i < bad.n; i++) {
-            ssys->failed[i] = bad[i].v;
+        i = 0;
+        for(auto it = bad.begin(); i < ssys->faileds && it != bad.end(); ++i, ++it) {
+            ssys->failed[i] = it->v;
         }
-        ssys->faileds = bad.n;
+        ssys->faileds = bad.size();
     }
 
-    bad.Clear();
     SYS.Clear();
     SK.param.Clear();
     SK.entity.Clear();

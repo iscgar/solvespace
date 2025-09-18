@@ -9,6 +9,7 @@
 #define SOLVESPACE_SKETCH_H
 
 #include <cstdint>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -208,11 +209,11 @@ public:
     RgbaColor   color;
 
     struct {
-        SolveResult         how;
-        int                 dof;
-        int                 findToFixTimeout;
-        bool                timeout;
-        List<hConstraint>   remove;
+        SolveResult           how;
+        int                   dof;
+        int                   findToFixTimeout;
+        bool                  timeout;
+        std::set<hConstraint> remove;
     } solved;
 
     enum class Subtype : uint32_t {
