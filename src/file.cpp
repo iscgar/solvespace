@@ -121,6 +121,7 @@ const SolveSpaceUI::SaveTable SolveSpaceUI::SAVED[] = {
     { 'g',  "Group.remap",              'M',    &(SS.sv.g.remap)              },
     { 'g',  "Group.impFile",            'i',    NULL                          },
     { 'g',  "Group.impFileRel",         'P',    &(SS.sv.g.linkFile)           },
+    { 'g',  "Group.namedParameters",    'N',    &(SS.sv.g.namedParams)        },
 
     { 'p',  "Param.h.v.",               'x',    &(SS.sv.p.h.v)                },
     { 'p',  "Param.val",                'f',    &(SS.sv.p.val)                },
@@ -212,9 +213,10 @@ const SolveSpaceUI::SaveTable SolveSpaceUI::SAVED[] = {
 };
 
 struct SAVEDptr {
-    EntityMap      &M() { return *((EntityMap *)this); }
-    std::string    &S() { return *((std::string *)this); }
-    Platform::Path &P() { return *((Platform::Path *)this); }
+    EntityMap          &M() { return *((EntityMap *)this); }
+    std::string        &S() { return *((std::string *)this); }
+    Platform::Path     &P() { return *((Platform::Path *)this); }
+    Group::NamedParams &N() { return *((Group::NamedParams *)this); }
     bool      &b() { return *((bool *)this); }
     RgbaColor &c() { return *((RgbaColor *)this); }
     int       &d() { return *((int *)this); }
@@ -236,6 +238,7 @@ void SolveSpaceUI::SaveUsingTable(const Platform::Path &filename, int type) {
         if(fmt == 'f' && EXACT(p->f() == 0.0))    continue;
         if(fmt == 'x' && p->x() == 0)             continue;
         if(fmt == 'i')                            continue;
+        if(fmt == 'N' && p->N().empty())          continue;
 
         fprintf(fh, "%s=", SAVED[i].desc);
         switch(fmt) {
@@ -266,6 +269,15 @@ void SolveSpaceUI::SaveUsingTable(const Platform::Path &filename, int type) {
                 for(const auto &it : sorted) {
                     fprintf(fh, "    %d %08x %d\n",
                             it.second.v, it.first.input.v, it.first.copyNumber);
+                }
+                fprintf(fh, "}");
+                break;
+            }
+
+            case 'N': {
+                fprintf(fh, "{\n");
+                for(const auto &it : p->N()) {
+                    fprintf(fh, "    %08x %s\n", it.first.v, it.second.c_str());
                 }
                 fprintf(fh, "}");
                 break;
@@ -456,6 +468,34 @@ void SolveSpaceUI::LoadUsingTable(const Platform::Path &filename, char *key, cha
                         } else {
                             break;
                         }
+                    }
+                    break;
+                }
+
+                case 'N': {
+                    Group::NamedParams &np = p->N();
+                    np.clear();
+                    for(;;) {
+                        int offset = 0;
+                        char line2[1024];
+                        if (fgets(line2, (int)sizeof(line2), fh) == NULL)
+                            break;
+                        hParam hp;
+                        if(sscanf(line2, "%x %n", &(hp.v), &offset) != 1) {
+                            break;
+                        }
+                        Expr *e = Expr::From(line2 + offset, /*allowVariables=*/true, /*popUpError=*/false);
+                        if(e == nullptr || e->op != Expr::Op::VARIABLE) {
+                            break;
+                        }
+                        std::string pName = e->Print();
+                        for(const auto &kv : np) {
+                            // This shouldn't happen, but check just in case
+                            if(kv.first == hp || kv.second == pName) {
+                                break;
+                            }
+                        }
+                        np.emplace(hp, std::move(pName));
                     }
                     break;
                 }
