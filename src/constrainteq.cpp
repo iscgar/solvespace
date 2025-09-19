@@ -270,6 +270,14 @@ void ConstraintBase::Generate(ParamList *l) {
     }
 }
 
+std::unordered_set<std::string> ConstraintBase::GetNamedParams() const {
+    std::unordered_set<std::string> variableRefs;
+    if(type != Type::COMMENT && !comment.empty()) {
+        Expr::From(comment, /*allowVariables=*/true, /*popUpError=*/false, &variableRefs);
+    }
+    return variableRefs;
+}
+
 void ConstraintBase::GenerateEquations(IdList<Equation,hEquation> *l,
                                        const ResolutionMap &resolutions,
                                        bool forReference) const {
