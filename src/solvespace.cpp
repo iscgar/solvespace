@@ -322,7 +322,7 @@ void SolveSpaceUI::Refresh() {
 		// Clear the flag so that if the call to GenerateAll is blocked by a Message or Error, 
 		// subsequent refreshes do not try to Generate again.
         scheduledGenerateAll = false;
-        GenerateAll(Generate::DIRTY, /*andFindFree=*/false, /*genForBBox=*/false);   
+        GenerateAll(Generate::DIRTY, /*andFindFree=*/false);
     }
     if(scheduledShowTW) {
         scheduledShowTW = false;
@@ -1163,6 +1163,23 @@ void Sketch::Clear() {
     style.Clear();
     entity.Clear();
     param.Clear();
+}
+
+void Sketch::RegenerateGroupOrder() {
+    using GroupOrderPair = std::pair<int, hGroup>;
+    std::vector<GroupOrderPair> order;
+    order.reserve(group.n);
+    for(auto &g : group) {
+        order.push_back({g.order, g.h});
+    }
+    std::sort(order.begin(), order.end(), [](const GroupOrderPair &a, GroupOrderPair &b) {
+        return a.first < b.first;
+    });
+    groupOrder.Clear();
+    groupOrder.ReserveMore(group.n);
+    for(auto &p : order) {
+        groupOrder.Add(&p.second);
+    }
 }
 
 BBox Sketch::CalculateEntityBBox(bool includingInvisible) {
