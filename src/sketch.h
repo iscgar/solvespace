@@ -741,6 +741,8 @@ public:
 
     void Generate(ParamList *param);
 
+    std::unordered_set<std::string> GetNamedParams() const;
+
     void GenerateEquations(IdList<Equation,hEquation> *entity,
                            const ResolutionMap &resolutions,
                            bool forReference = false) const;

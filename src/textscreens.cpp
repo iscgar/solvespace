@@ -731,11 +731,28 @@ void TextWindow::ShowGroupSolveInfo() {
         Constraint *c = SK.constraint.FindByIdNoOops(hc);
         if(!c) continue;
 
-        Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E",
+        std::string additionalInfo;
+        if(g->solved.how == SolveResult::UNRESOLVED_VARIABLES) {
+            const auto refs = c->GetNamedParams();
+            std::string sep = "";
+            for(const auto &pname : refs) {
+                if(g->varResolutions.find(pname) == g->varResolutions.end()) {
+                    additionalInfo += sep + pname;
+                    sep = ",";
+                }
+            }
+
+            if(!additionalInfo.empty()) {
+                additionalInfo = "unresolved: " + additionalInfo;
+            }
+        }
+
+        Printf(false, "%Bp   %Fl%Ll%D%f%h%s%E %s",
             (i & 1) ? 'd' : 'a',
             c->h.v, (&TextWindow::ScreenSelectConstraint),
             (&TextWindow::ScreenHoverConstraint),
-            c->DescriptionString().c_str());
+            c->DescriptionString().c_str(),
+            additionalInfo.c_str());
     }
 
     if(g->solved.timeout) {
