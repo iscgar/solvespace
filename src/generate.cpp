@@ -31,13 +31,13 @@ void SolveSpaceUI::MarkGroupDirty(hGroup hg, bool onlyThis) {
     ScheduleGenerateAll();
 }
 
-bool SolveSpaceUI::GroupsInOrder(hGroup hbefore, hGroup hafter) {
+bool Sketch::GroupsInOrder(hGroup hbefore, hGroup hafter) {
     if(hbefore.v != 0 && hafter.v != 0) {
-        const Group *before = SK.group.FindByIdNoOops(hbefore);
+        const Group *before = group.FindByIdNoOops(hbefore);
         if(before == nullptr) {
             return false;
         }
-        const Group *after = SK.group.FindByIdNoOops(hafter);
+        const Group *after = group.FindByIdNoOops(hafter);
         if(after == nullptr) {
             return false;
         }
@@ -48,18 +48,14 @@ bool SolveSpaceUI::GroupsInOrder(hGroup hbefore, hGroup hafter) {
     return true;
 }
 
-bool SolveSpaceUI::GroupExists(hGroup hg) {
-    // A nonexistent group is not acceptable
-    return SK.group.FindByIdNoOops(hg) ? true : false;
-}
-bool SolveSpaceUI::EntityExists(hEntity he) {
+bool Sketch::EntityExists(hEntity he) {
     // A nonexstient entity is acceptable, though, usually just means it
     // doesn't apply.
     if(he == Entity::NO_ENTITY) return true;
-    return SK.entity.FindByIdNoOops(he) ? true : false;
+    return entity.FindByIdNoOops(he) ? true : false;
 }
 
-bool SolveSpaceUI::PruneGroup(Group *g) {
+bool Sketch::PruneGroup(Group *g) {
     if(GroupsInOrder(g->opA, g->h) &&
        EntityExists(g->predef.origin) &&
        EntityExists(g->predef.entityB) &&
@@ -67,9 +63,8 @@ bool SolveSpaceUI::PruneGroup(Group *g) {
     {
         return false;
     }
-    (deleted.groups)++;
-    SK.group.RemoveById(g->h);
-    SK.RegenerateGroupOrder();
+    group.RemoveById(g->h);
+    RegenerateGroupOrder();
     return true;
 }
 
@@ -91,13 +86,12 @@ void Sketch::RegenerateGroupOrder() {
     }
 }
 
-void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
-    int first = 0, last = 0, i;
+Sketch::DeletionStats Sketch::Regenerate(Generate type, bool andFindFree, ParamSet dragged, double chordTol, double *chordTolCalculated) {
+    DeletionStats deleted = {};
 
-    uint64_t startMillis = GetMilliseconds(),
-             endMillis;
+    int first = 0, last = 0;
 
-    SK.RegenerateGroupOrder();
+    RegenerateGroupOrder();
 
     switch(type) {
         case Generate::DIRTY: {
@@ -107,8 +101,8 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
             // Start from the first dirty group, and solve until the active group,
             // since all groups after the active group are hidden.
             // Not using range-for because we're tracking the indices.
-            for(i = 0; i < SK.groupOrder.n; i++) {
-                Group *g = SK.GetGroup(SK.groupOrder[i]);
+            for(int i = 0; i < groupOrder.n; i++) {
+                Group *g = GetGroup(groupOrder[i]);
                 if((!g->clean) || !g->IsSolvedOkay()) {
                     first = min(first, i);
                 }
@@ -137,46 +131,48 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
             break;
 
         case Generate::UNTIL_ACTIVE: {
-            for(i = 0; i < SK.groupOrder.n; i++) {
-                if(SK.groupOrder[i] == SS.GW.activeGroup)
+            for(int i = 0; i < groupOrder.n; i++) {
+                last = i;
+                if(groupOrder[i] == SS.GW.activeGroup)
                     break;
             }
 
             first = 0;
-            last  = i;
             break;
         }
     }
 
     // Don't lose our numerical guesses when we regenerate.
     ParamList prev = {};
-    SK.param.MoveSelfInto(&prev);
-    SK.param.ReserveMore(prev.n);
-    const int oldEntityCount = SK.entity.n;
-    SK.entity.Clear();
-    SK.entity.ReserveMore(oldEntityCount);
+    param.MoveSelfInto(&prev);
+    param.ReserveMore(prev.n);
+    const int oldEntityCount = entity.n;
+    entity.Clear();
+    entity.ReserveMore(oldEntityCount);
 
     // Prune any requests and constraints that belong to non-existent groups
-    for(auto &r : SK.request) {
-        if(!GroupExists(r.group)) {
+    for(auto &r : request) {
+        if(group.FindByIdNoOops(r.group) == nullptr) {
             r.tag = 1;
         }
     }
-    for(auto &c : SK.constraint) {
-        if(!GroupExists(c.group)) {
+    for(auto &c : constraint) {
+        if(group.FindByIdNoOops(c.group) == nullptr) {
             c.tag = 1;
         }
     }
 
     // Not using range-for because we're using the index inside the loop.
-    for(i = 0; i < SK.groupOrder.n; ) {
-        const hGroup hg = SK.groupOrder[i];
-        Group *g = SK.GetGroup(hg);
+    for(int i = 0; i < groupOrder.n; ) {
+        const hGroup hg = groupOrder[i];
+        Group *g = GetGroup(hg);
 
         // The group may depend on entities or other groups, to define its
         // workplane geometry or for its operands. Those must already exist
         // in a previous group, so check them before generating.
         if(PruneGroup(g)) {
+            ++deleted.groups;
+
             // A group was just removed and the group order was regenerated,
             // so adjust the first and last indices accordingly if we needed
             if(i <= last && last < INT_MAX) {
@@ -186,13 +182,13 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
                 --first;
             }
             // Prune this group's requests
-            for(auto &r : SK.request) {
+            for(auto &r : request) {
                 if(r.group == hg) {
                     r.tag = 1;
                 }
             }
             // Prune this group's constraints
-            for(auto &c : SK.constraint) {
+            for(auto &c : constraint) {
                 if(c.group == hg) {
                     c.tag = 1;
                 }
@@ -203,7 +199,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
         if(hg == Group::HGROUP_REFERENCES) {
             g->varResolutions.clear();
         } else {
-            g->varResolutions = SK.GetGroup(SK.groupOrder[i - 1])->varResolutions;
+            g->varResolutions = GetGroup(groupOrder[i - 1])->varResolutions;
         }
 
         for (const auto &kv : g->namedParams) {
@@ -212,14 +208,14 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
 
         // Regenerate requests, tagging any dead ones for pruning
         int groupRequestIndex = 0;
-        for(auto &r : SK.request) {
+        for(auto &r : request) {
             if(r.group != hg) {
                 continue;
             }
 
             // Prune the request if it depends on a pruned workplane
             if(r.workplane != Entity::NO_ENTITY && r.workplane.isFromRequest()) {
-                const Request *wr = SK.request.FindByIdNoOops(r.workplane.request());
+                const Request *wr = request.FindByIdNoOops(r.workplane.request());
                 if(wr == nullptr || wr->tag) {
                     r.tag = 1;
                     continue;
@@ -227,25 +223,19 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
             }
 
             r.groupRequestIndex = groupRequestIndex++;
-            r.Generate(&SK.entity, &SK.param);
+            r.Generate(&entity, &param);
         }
 
         // Regenerate the group
-        g->Generate(&SK.entity, &SK.param);
+        g->Generate(&entity, &param);
 
         // Regenerate constraints, tagging any dead ones for pruning
-        for(auto &c : SK.constraint) {
+        for(auto &c : constraint) {
             if(c.group != hg) {
                 continue;
             }
 
-            if(!EntityExists(c.workplane) ||
-               !EntityExists(c.ptA) ||
-               !EntityExists(c.ptB) ||
-               !EntityExists(c.entityA) ||
-               !EntityExists(c.entityB) ||
-               !EntityExists(c.entityC) ||
-               !EntityExists(c.entityD)) {
+            if(!c.IsValid(entity)) {
                 if(c.type != Constraint::Type::POINTS_COINCIDENT &&
                    c.type != Constraint::Type::HORIZONTAL &&
                    c.type != Constraint::Type::VERTICAL) {
@@ -256,12 +246,12 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
                 continue;
             }
 
-            c.Generate(&SK.param);
+            c.Generate(&param);
         }
 
         // Use the previous values for params that we've seen before, as
         // initial guesses for the solver.
-        for(auto &p : SK.param) {
+        for(auto &p : param) {
             Param *newp = &p;
             if(newp->known) {
                 continue;
@@ -283,15 +273,15 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
             if(i >= first && i <= last) {
                 // The group falls inside the range, so really solve it,
                 // and then regenerate the mesh based on the solved stuff.
-                if(!SS.exportMode) {
-                    SolveGroupAndReport(hg, andFindFree);
+                if(chordTolCalculated != nullptr) {
+                    SolveGroup(hg, andFindFree, dragged);
                     g->GenerateLoops();
                 }
             } else {
                 // The group falls outside the range, so just assume that
                 // it's good wherever we left it. The mesh is unchanged,
                 // and the parameters must be marked as known.
-                for(auto &p : SK.param) {
+                for(auto &p : param) {
                     Param *newp = &p;
 
                     Param *prevp = prev.FindByIdNoOops(newp->h);
@@ -305,108 +295,117 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
         ++i;
     }
 
+    prev.Clear();
+
     // Remove any requests that we tagged for pruning
-    const int requests = SK.request.n;
-    SK.request.RemoveTagged();
-    deleted.requests += requests - SK.request.n;
+    const int requests = request.n;
+    request.RemoveTagged();
+    deleted.requests += requests - request.n;
 
     // Remove any constraints that we tagged for pruning
-    const int constraints = SK.constraint.n;
-    SK.constraint.RemoveTagged();
-    deleted.constraints += constraints - SK.constraint.n;
+    const int constraints = constraint.n;
+    constraint.RemoveTagged();
+    deleted.constraints += constraints - constraint.n;
 
     // If we're generating entities for display, first we need to find
     // the bounding box to turn relative chord tolerance to absolute.
-    if(!SS.exportMode) {
-        BBox box = SK.CalculateEntityBBox(/*includeInvisibles=*/true);
+    if(chordTolCalculated != nullptr) {
+        BBox box = CalculateEntityBBox(/*includeInvisibles=*/true);
         Vector size = box.maxp.Minus(box.minp);
         double maxSize = std::max({ size.x, size.y, size.z });
-        chordTolCalculated = maxSize * chordTol / 100.0;
+        *chordTolCalculated = maxSize * chordTol / 100.0;
     }
 
     // Then generate the shell and mesh
-    for(i = 0; i < SK.groupOrder.n; ++i) {
-        const hGroup hg = SK.groupOrder[i];
+    for(int i = 0; i < groupOrder.n; ++i) {
+        const hGroup hg = groupOrder[i];
         if(hg == Group::HGROUP_REFERENCES) {
             continue;
         }
         if(i >= first && i <= last) {
-            Group *g = SK.GetGroup(hg);
+            Group *g = GetGroup(hg);
             g->GenerateShellAndMesh();
             g->clean = true;
         }
     }
 
     // And update any reference dimensions with their new values
-    for(auto &con : SK.constraint) {
+    for(auto &con : constraint) {
         Constraint *c = &con;
         if(c->reference) {
-            c->ModifyToSatisfy(SK.GetGroup(c->group)->varResolutions);
+            c->ModifyToSatisfy(GetGroup(c->group)->varResolutions);
+        }
+    }
+
+    Platform::FreeAllTemporary();
+
+    return deleted;
+}
+
+void Sketch::ForceReferences() {
+    // Force the values of the parameters that define the three reference
+    // coordinate systems.
+    static const struct {
+        hRequest    hr;
+        Quaternion  q;
+    } Quat[] = {
+        { Request::HREQUEST_REFERENCE_XY, { 1,    0,    0,    0,   } },
+        { Request::HREQUEST_REFERENCE_YZ, { 0.5,  0.5,  0.5,  0.5, } },
+        { Request::HREQUEST_REFERENCE_ZX, { 0.5, -0.5, -0.5, -0.5, } },
+    };
+    for(int i = 0; i < 3; i++) {
+        hRequest hr = Quat[i].hr;
+        Entity *wrkpl = GetEntity(hr.entity(0));
+        // The origin for our coordinate system, always zero
+        Entity *origin = GetEntity(wrkpl->point[0]);
+        origin->PointForceTo(Vector::From(0, 0, 0));
+        origin->construction = true;
+        GetParam(origin->param[0])->known = true;
+        GetParam(origin->param[1])->known = true;
+        GetParam(origin->param[2])->known = true;
+        // The quaternion that defines the rotation, from the table.
+        Entity *normal = GetEntity(wrkpl->normal);
+        normal->NormalForceTo(Quat[i].q);
+        GetParam(normal->param[0])->known = true;
+        GetParam(normal->param[1])->known = true;
+        GetParam(normal->param[2])->known = true;
+        GetParam(normal->param[3])->known = true;
+    }
+}
+
+void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
+    const uint64_t startMillis = GetMilliseconds();
+
+    int first = 0, last = 0, i;
+
+    const auto deleted = SK.Regenerate(type, andFindFree, GetDraggedParams(), chordTol,
+                                       !exportMode ? &chordTolCalculated : nullptr);
+
+    for(hGroup hg : SK.groupOrder) {
+        Group *g = SK.GetGroup(hg);
+        if(!g->IsSolvedOkay()) {
+            TextWindow::ReportHowGroupSolved(g->h);
         }
     }
 
     // Make sure the point that we're tracing exists.
-    if(traced.point.v && !SK.entity.FindByIdNoOops(traced.point)) {
-        traced.point = Entity::NO_ENTITY;
-    }
-    // And if we're tracing a point, add its new value to the path
     if(traced.point.v) {
-        Entity *pt = SK.GetEntity(traced.point);
-        traced.path.AddPoint(pt->PointGetNum());
+        if(!SK.entity.FindByIdNoOops(traced.point)) {
+            traced.point = Entity::NO_ENTITY;
+        } else {
+            // And if we're tracing a point, add its new value to the path
+            Entity *pt = SK.GetEntity(traced.point);
+            traced.path.AddPoint(pt->PointGetNum());
+        }
     }
 
-    prev.Clear();
     GW.Invalidate();
 
     // Remove nonexistent selection items, for same reason we waited till
     // the end to put up a dialog box.
     GW.ClearNonexistentSelectionItems();
 
-    if(deleted.requests > 0 || deleted.constraints > 0 || deleted.groups > 0) {
-        // All sorts of interesting things could have happened; for example,
-        // the active group or active workplane could have been deleted. So
-        // clear all that out.
-        if(deleted.groups > 0) {
-            SS.TW.ClearSuper();
-            GW.EnsureValidActives();
-        }
-        ScheduleShowTW();
-        GW.ClearSuper();
-
-        auto deletedStat = deleted;
-        deleted = {};
-
-        // People get annoyed if I complain whenever they delete any request,
-        // and I otherwise will, since those always come with pt-coincident
-        // constraints.
-        if(deletedStat.requests > 0 || deletedStat.nonTrivialConstraints > 0 ||
-           deletedStat.groups > 0)
-        {
-            // Don't display any errors until we've regenerated fully. The
-            // sketch is not necessarily in a consistent state until we've
-            // pruned any orphaned etc. objects, and the message loop for the
-            // messagebox could allow us to repaint and crash. But now we must
-            // be fine.
-            Message("Additional sketch elements were deleted, because they "
-                    "depend on the element that was just deleted explicitly. "
-                    "These include: \n"
-                    "     %d request%s\n"
-                    "     %d constraint%s\n"
-                    "     %d group%s"
-                    "%s",
-                       deletedStat.requests, deletedStat.requests == 1 ? "" : "s",
-                       deletedStat.constraints, deletedStat.constraints == 1 ? "" : "s",
-                       deletedStat.groups, deletedStat.groups == 1 ? "" : "s",
-                       undo.cnt > 0 ? "\n\nChoose Edit -> Undo to undelete all elements." : "");
-        }
-    }
-
-    Platform::FreeAllTemporary();
-    allConsistent = true;
-    SS.GW.persistentDirty = true;
-    SS.centerOfMass.dirty = true;
-
-    endMillis = GetMilliseconds();
+    const uint64_t endMillis = GetMilliseconds();
 
     if(endMillis - startMillis > 30) {
         const char *typeStr = "";
@@ -421,37 +420,45 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
             typeStr,
             GetMilliseconds() - startMillis);
     }
-}
 
-void SolveSpaceUI::ForceReferences() {
-    // Force the values of the parameters that define the three reference
-    // coordinate systems.
-    static const struct {
-        hRequest    hr;
-        Quaternion  q;
-    } Quat[] = {
-        { Request::HREQUEST_REFERENCE_XY, { 1,    0,    0,    0,   } },
-        { Request::HREQUEST_REFERENCE_YZ, { 0.5,  0.5,  0.5,  0.5, } },
-        { Request::HREQUEST_REFERENCE_ZX, { 0.5, -0.5, -0.5, -0.5, } },
-    };
-    for(int i = 0; i < 3; i++) {
-        hRequest hr = Quat[i].hr;
-        Entity *wrkpl = SK.GetEntity(hr.entity(0));
-        // The origin for our coordinate system, always zero
-        Entity *origin = SK.GetEntity(wrkpl->point[0]);
-        origin->PointForceTo(Vector::From(0, 0, 0));
-        origin->construction = true;
-        SK.GetParam(origin->param[0])->known = true;
-        SK.GetParam(origin->param[1])->known = true;
-        SK.GetParam(origin->param[2])->known = true;
-        // The quaternion that defines the rotation, from the table.
-        Entity *normal = SK.GetEntity(wrkpl->normal);
-        normal->NormalForceTo(Quat[i].q);
-        SK.GetParam(normal->param[0])->known = true;
-        SK.GetParam(normal->param[1])->known = true;
-        SK.GetParam(normal->param[2])->known = true;
-        SK.GetParam(normal->param[3])->known = true;
+    if(deleted.requests > 0 || deleted.constraints > 0 || deleted.groups > 0) {
+        // All sorts of interesting things could have happened; for example,
+        // the active group or active workplane could have been deleted. So
+        // clear all that out.
+        if(deleted.groups > 0) {
+            SS.TW.ClearSuper();
+        }
+        ScheduleShowTW();
+        GW.ClearSuper();
+
+        // People get annoyed if I complain whenever they delete any request,
+        // and I otherwise will, since those always come with pt-coincident
+        // constraints.
+        if(deleted.requests > 0 || deleted.nonTrivialConstraints > 0 ||
+           deleted.groups > 0)
+        {
+            // Don't display any errors until we've regenerated fully. The
+            // sketch is not necessarily in a consistent state until we've
+            // pruned any orphaned etc. objects, and the message loop for the
+            // messagebox could allow us to repaint and crash. But now we must
+            // be fine.
+            Message("Additional sketch elements were deleted, because they "
+                    "depend on the element that was just deleted explicitly. "
+                    "These include: \n"
+                    "     %d request%s\n"
+                    "     %d constraint%s\n"
+                    "     %d group%s"
+                    "%s",
+                       deleted.requests, deleted.requests == 1 ? "" : "s",
+                       deleted.constraints, deleted.constraints == 1 ? "" : "s",
+                       deleted.groups, deleted.groups == 1 ? "" : "s",
+                       undo.cnt > 0 ? "\n\nChoose Edit -> Undo to undelete all elements." : "");
+        }
     }
+
+    allConsistent = true;
+    SS.GW.persistentDirty = true;
+    SS.centerOfMass.dirty = true;
 }
 
 void SolveSpaceUI::UpdateCenterOfMass() {
@@ -460,8 +467,8 @@ void SolveSpaceUI::UpdateCenterOfMass() {
     SS.centerOfMass.dirty = false;
 }
 
-void SolveSpaceUI::MarkDraggedParams() {
-    sys.dragged.clear();
+ParamSet SolveSpaceUI::GetDraggedParams() const {
+    ParamSet dragged;
 
     for(int i = -1; i < SS.GW.pending.points.n; i++) {
         hEntity hp;
@@ -481,14 +488,14 @@ void SolveSpaceUI::MarkDraggedParams() {
                 case Entity::Type::POINT_N_TRANS:
                 case Entity::Type::POINT_IN_3D:
                 case Entity::Type::POINT_N_ROT_AXIS_TRANS:
-                    sys.dragged.insert(pt->param[0]);
-                    sys.dragged.insert(pt->param[1]);
-                    sys.dragged.insert(pt->param[2]);
+                    dragged.insert(pt->param[0]);
+                    dragged.insert(pt->param[1]);
+                    dragged.insert(pt->param[2]);
                     break;
 
                 case Entity::Type::POINT_IN_2D:
-                    sys.dragged.insert(pt->param[0]);
-                    sys.dragged.insert(pt->param[1]);
+                    dragged.insert(pt->param[0]);
+                    dragged.insert(pt->param[1]);
                     break;
 
                 default: // Only the entities above can be dragged.
@@ -502,7 +509,7 @@ void SolveSpaceUI::MarkDraggedParams() {
             Entity *dist = SK.GetEntity(circ->distance);
             switch(dist->type) {
                 case Entity::Type::DISTANCE:
-                    sys.dragged.insert(dist->param[0]);
+                    dragged.insert(dist->param[0]);
                     break;
 
                 default: // Only the entities above can be dragged.
@@ -515,10 +522,10 @@ void SolveSpaceUI::MarkDraggedParams() {
         if(norm) {
             switch(norm->type) {
                 case Entity::Type::NORMAL_IN_3D:
-                    sys.dragged.insert(norm->param[0]);
-                    sys.dragged.insert(norm->param[1]);
-                    sys.dragged.insert(norm->param[2]);
-                    sys.dragged.insert(norm->param[3]);
+                    dragged.insert(norm->param[0]);
+                    dragged.insert(norm->param[1]);
+                    dragged.insert(norm->param[2]);
+                    dragged.insert(norm->param[3]);
                     break;
 
                 default: // Only the entities above can be dragged.
@@ -526,39 +533,30 @@ void SolveSpaceUI::MarkDraggedParams() {
             }
         }
     }
+
+    return dragged;
 }
 
-void SolveSpaceUI::SolveGroupAndReport(hGroup hg, bool andFindFree) {
-    SolveGroup(hg, andFindFree);
-
-    Group *g = SK.GetGroup(hg);
-    bool isOkay = g->solved.how == SolveResult::OKAY ||
-                  (g->allowRedundant && g->solved.how == SolveResult::REDUNDANT_OKAY);
-    if(!isOkay || (isOkay && !g->IsSolvedOkay())) {
-        TextWindow::ReportHowGroupSolved(g->h);
-    }
-}
-
-void SolveSpaceUI::WriteEqSystemForGroup(hGroup hg) {
+void Sketch::WriteEqSystemForGroup(hGroup hg, ParamSet dragged) {
     // Clear out the system to be solved.
     sys.entity.Clear();
     sys.param.Clear();
     sys.eq.Clear();
     // And generate all the params for requests in this group
-    for(auto &req : SK.request) {
+    for(auto &req : request) {
         Request *r = &req;
         if(r->group != hg || r->tag) continue;
 
         r->Generate(&(sys.entity), &(sys.param));
     }
-    for(auto &con : SK.constraint) {
+    for(auto &con : constraint) {
         Constraint *c = &con;
         if(c->group != hg || c->tag) continue;
 
         c->Generate(&(sys.param));
     }
     // And for the group itself
-    Group *g = SK.GetGroup(hg);
+    Group *g = GetGroup(hg);
     g->Generate(&(sys.entity), &(sys.param));
     // Set the initial guesses for all the params
     for(auto &param : sys.param) {
@@ -569,15 +567,15 @@ void SolveSpaceUI::WriteEqSystemForGroup(hGroup hg) {
         } else {
             p->known = false;
         }
-        p->val = SK.GetParam(p->h)->val;
+        p->val = GetParam(p->h)->val;
     }
 
-    MarkDraggedParams();
+    sys.dragged = std::move(dragged);
 }
 
-void SolveSpaceUI::SolveGroup(hGroup hg, bool andFindFree) {
-    WriteEqSystemForGroup(hg);
-    Group *g = SK.GetGroup(hg);
+void Sketch::SolveGroup(hGroup hg, bool andFindFree, ParamSet dragged) {
+    WriteEqSystemForGroup(hg, std::move(dragged));
+    Group *g = GetGroup(hg);
     g->solved.remove.clear();
     g->solved.findToFixTimeout = SS.timeoutRedundantConstr;
     SolveResult how = sys.Solve(g, &(g->solved.dof),
@@ -592,12 +590,12 @@ void SolveSpaceUI::SolveGroup(hGroup hg, bool andFindFree) {
     Platform::FreeAllTemporary();
 }
 
-SolveResult SolveSpaceUI::TestRankForGroup(hGroup hg, int *rank) {
-    Group *g = SK.GetGroup(hg);
+SolveResult Sketch::TestRankForGroup(hGroup hg, ParamSet dragged, int *rank) {
+    Group *g = GetGroup(hg);
     // If we don't calculate dof or redundant is allowed, there is
     // no point to solve rank because this result is not meaningful
     if(g->suppressDofCalculation || g->allowRedundant) return SolveResult::OKAY;
-    WriteEqSystemForGroup(hg);
+    WriteEqSystemForGroup(hg, std::move(dragged));
     SolveResult result = sys.SolveRank(g, rank);
     Platform::FreeAllTemporary();
     return result;

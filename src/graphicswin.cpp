@@ -968,7 +968,7 @@ void GraphicsWindow::EnsureValidActives() {
         Entity *e = SK.entity.FindByIdNoOops(ActiveWorkplane());
         if(e) {
             hGroup hgw = e->group;
-            if(hgw != activeGroup && SS.GroupsInOrder(activeGroup, hgw)) {
+            if(hgw != activeGroup && SK.GroupsInOrder(activeGroup, hgw)) {
                 // The active workplane is in a group that comes after the
                 // active group; so any request or constraint will fail.
                 SetWorkplaneFreeIn3d();
@@ -1038,29 +1038,6 @@ void GraphicsWindow::ForceTextWindowShown() {
         showTextWndMenuItem->SetActive(true);
         SS.TW.window->SetVisible(true);
     }
-}
-
-void GraphicsWindow::DeleteTaggedRequests() {
-    // Rewrite any point-coincident constraints that were affected by this
-    // deletion.
-    for(Request &r : SK.request) {
-        if(!r.tag) continue;
-        FixConstraintsForRequestBeingDeleted(r.h);
-    }
-    // and then delete the tagged requests.
-    SK.request.RemoveTagged();
-
-    // An edit might be in progress for the just-deleted item. So
-    // now it's not.
-    window->HideEditor();
-    SS.TW.HideEditControl();
-    // And clear out the selection, which could contain that item.
-    ClearSuper();
-    // And regenerate to get rid of what it generates, plus anything
-    // that references it (since the regen code checks for that).
-    SS.GenerateAll(SolveSpaceUI::Generate::ALL);
-    EnsureValidActives();
-    SS.ScheduleShowTW();
 }
 
 Vector GraphicsWindow::SnapToGrid(Vector p) {

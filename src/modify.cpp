@@ -13,33 +13,98 @@ namespace SolveSpace {
 // Replace constraints on oldpt with the same constraints on newpt.
 // Useful when splitting, tangent arcing, or removing bezier points.
 //-----------------------------------------------------------------------------
-void GraphicsWindow::ReplacePointInConstraints(hEntity oldpt, hEntity newpt) {
-    for(auto &c : SK.constraint) {
-        if(c.ptA == oldpt)
-            c.ptA = newpt;
-        if(c.ptB == oldpt)
-            c.ptB = newpt;
-    }
-}
+void GraphicsWindow::ReplacePointsInConstraints(const std::map<hEntity, hEntity> &replacements) {
+    std::map<hEntity, std::vector<Constraint *>> deletedCoincidents;
+    std::vector<hEntity> deletedPoints;
 
-//-----------------------------------------------------------------------------
-// Remove constraints on hpt. Useful when removing bezier points.
-//-----------------------------------------------------------------------------
-void GraphicsWindow::RemoveConstraintsForPointBeingDeleted(hEntity hpt) {
-    SK.constraint.ClearTags();
+    deletedPoints.reserve(2);
+
     for(auto &c : SK.constraint) {
-        if(c.ptA == hpt || c.ptB == hpt) {
-            c.tag = 1;
-            (SS.deleted.constraints)++;
-            if(c.type != Constraint::Type::POINTS_COINCIDENT &&
-               c.type != Constraint::Type::HORIZONTAL &&
-               c.type != Constraint::Type::VERTICAL)
-            {
-                (SS.deleted.nonTrivialConstraints)++;
+        deletedPoints.clear();
+
+        auto it = replacements.find(c.ptA);
+        if(it != replacements.end()) {
+            if(it->second == Entity::NO_ENTITY) {
+                deletedPoints.push_back(c.ptA);
             }
+            c.ptA = it->second;
+        }
+        it = replacements.find(c.ptB);
+        if(it != replacements.end()) {
+            if(it->second == Entity::NO_ENTITY) {
+                deletedPoints.push_back(c.ptB);
+            }
+            c.ptB = it->second;
+        }
+
+        if(c.type != Constraint::Type::POINTS_COINCIDENT) {
+            continue;
+        }
+
+        if(deletedPoints.size() == 1) {
+            deletedCoincidents[deletedPoints.front()].push_back(&c);
         }
     }
-    SK.constraint.RemoveTagged();
+
+    // Check if we need to fix up point coincident constraints
+    if(!deletedCoincidents.empty()) {
+        // Build a group to group order map
+        std::map<hGroup, size_t> groupIndices;
+        for(size_t i = 0; i < SK.groupOrder.n; ++i) {
+            const hGroup hg = SK.groupOrder[i];
+            groupIndices[hg] = i;
+        }
+
+        for(auto &kv : deletedCoincidents) {
+            auto &ld = kv.second;
+            
+            ssassert(!ld.empty(), "unexpected empty list for deleted coincidents");
+
+            if(ld.size() > 1) {
+                // Sort constraints by group order, then by constraint handle
+                std::sort(
+                    ld.begin(), ld.end(), [&groupIndices](const Constraint *a, const Constraint *b) {
+                        const size_t aIndex = groupIndices[a->group], bIndex = groupIndices[b->group];
+                        if(aIndex < bIndex) {
+                            return true;
+                        }
+                        if(aIndex < bIndex) {
+                            return false;
+                        }
+                        return a->h < b->h;
+                    });
+
+                // Fix constraints by chaining them together
+                hEntity lastPoint =
+                    ld.front()->ptA == Entity::NO_ENTITY ? ld.front()->ptB : ld.front()->ptA;
+                for(size_t i = 1; i < ld.size(); ++i) {
+                    Constraint *c = ld[i];
+                    if(c->ptA == Entity::NO_ENTITY) {
+                        c->ptA = lastPoint;
+                        lastPoint = c->ptB;
+                    } else {
+                        c->ptB = lastPoint;
+                        lastPoint = c->ptA;
+                    }
+                }
+            }
+
+            const hEntity deletedPoint = kv.first;
+            for(auto &g : SK.group) {
+                if(g.predef.origin == deletedPoint) {
+                    const Constraint *c = ld.front();
+                    const hEntity hRreplacement = c->ptA != Entity::NO_ENTITY ? c->ptA : c->ptB;
+                    const Entity *replacementPoint = SK.GetEntity(hRreplacement);
+                    if(std::find(SK.groupOrder.begin(), SK.groupOrder.end(),
+                                 replacementPoint->group) <= std::find(SK.groupOrder.begin(),
+                                                                       SK.groupOrder.end(), g.h)) {
+                        g.predef.origin = hRreplacement;
+                    }
+                }
+            }
+
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -48,58 +113,16 @@ void GraphicsWindow::RemoveConstraintsForPointBeingDeleted(hEntity hpt) {
 // constraints must be deleted too (since they reference B), and A is no
 // longer constrained to C. This routine adds back that constraint.
 //-----------------------------------------------------------------------------
-void GraphicsWindow::FixConstraintsForRequestBeingDeleted(hRequest hr) {
-    Request *r = SK.GetRequest(hr);
-    if(r->group != SS.GW.activeGroup) return;
+void GraphicsWindow::FixConstraintsForRequestsBeingDeleted(const std::vector<const Request *> &lr) {
+    std::map<hEntity, hEntity> replacements;
 
-    for(Entity &e : SK.entity) {
-        if(!(e.h.isFromRequest())) continue;
-        if(e.h.request() != hr) continue;
-
-        if(e.type != Entity::Type::POINT_IN_2D &&
-           e.type != Entity::Type::POINT_IN_3D)
-        {
-            continue;
-        }
-
-        // This is a point generated by the request being deleted; so fix
-        // the constraints for that.
-        FixConstraintsForPointBeingDeleted(e.h);
-    }
-}
-void GraphicsWindow::FixConstraintsForPointBeingDeleted(hEntity hpt) {
-    List<hEntity> ld = {};
-
-    SK.constraint.ClearTags();
-    for(Constraint &c : SK.constraint) {
-        if(c.type != Constraint::Type::POINTS_COINCIDENT) continue;
-        if(c.group != SS.GW.activeGroup) continue;
-
-        if(c.ptA == hpt) {
-            ld.Add(&(c.ptB));
-            c.tag = 1;
-        }
-        if(c.ptB == hpt) {
-            ld.Add(&(c.ptA));
-            c.tag = 1;
+    for(const Request *r : lr) {
+        for(hEntity p : r->GetPoints()) {
+            replacements[p] = Entity::NO_ENTITY;
         }
     }
-    // Remove constraints without waiting for regeneration; this way
-    // if another point takes the place of the deleted one (e.g. when
-    // removing control points of a bezier) the constraint doesn't
-    // spuriously move. Similarly, subsequent calls of this function
-    // (if multiple coincident points are getting deleted) will work
-    // correctly.
-    SK.constraint.RemoveTagged();
 
-    // If more than one point was constrained coincident with hpt, then
-    // those two points were implicitly coincident with each other. By
-    // deleting hpt (and all constraints that mention it), we will delete
-    // that relationship. So put it back here now.
-    for(int i = 1; i < ld.n; i++) {
-        Constraint::ConstrainCoincident(ld[i-1], ld[i]);
-    }
-    ld.Clear();
+    ReplacePointsInConstraints(replacements);
 }
 
 //-----------------------------------------------------------------------------
@@ -471,8 +494,10 @@ hEntity GraphicsWindow::SplitLine(hEntity he, Vector pinter) {
     SK.GetEntity(ei1->point[0])->PointForceTo(pinter);
     SK.GetEntity(ei1->point[1])->PointForceTo(p1);
 
-    ReplacePointInConstraints(hep0, e0i->point[0]);
-    ReplacePointInConstraints(hep1, ei1->point[1]);
+    std::map<hEntity, hEntity> replacements;
+    replacements[hep0] = e0i->point[0];
+    replacements[hep1] = ei1->point[1];
+    ReplacePointsInConstraints(replacements);
     Constraint::ConstrainCoincident(e0i->point[1], ei1->point[0]);
     return e0i->point[1];
 }
@@ -518,8 +543,10 @@ hEntity GraphicsWindow::SplitCircle(hEntity he, Vector pinter) {
         SK.GetEntity(arc1->point[1])->PointForceTo(pinter);
         SK.GetEntity(arc1->point[2])->PointForceTo(finish);
 
-        ReplacePointInConstraints(hs, arc0->point[1]);
-        ReplacePointInConstraints(hf, arc1->point[2]);
+        std::map<hEntity, hEntity> replacements;
+        replacements[hs] = arc0->point[1];
+        replacements[hf] = arc1->point[2];
+        ReplacePointsInConstraints(replacements);
         Constraint::ConstrainCoincident(arc0->point[2], arc1->point[1]);
         return arc0->point[2];
     }
@@ -585,8 +612,10 @@ hEntity GraphicsWindow::SplitCubic(hEntity he, Vector pinter) {
 
     sbl.Clear();
 
-    ReplacePointInConstraints(hep0, hep0n);
-    ReplacePointInConstraints(hep1, hep1n);
+    std::map<hEntity, hEntity> replacements;
+    replacements[hep0] = hep0n;
+    replacements[hep1] = hep1n;
+    ReplacePointsInConstraints(replacements);
     return hepin;
 }
 
@@ -615,8 +644,8 @@ hEntity GraphicsWindow::SplitEntity(hEntity he, Vector pinter) {
             // If the user wants to keep the old entities around, they can just
             // mark them construction first.
             if(r->group == activeGroup && !r->construction) {
-                r->tag = 1;
-                DeleteTaggedRequests();
+                FixConstraintsForRequestsBeingDeleted({r});
+                SK.request.RemoveById(r->h);
             }
         }
     }
@@ -703,49 +732,42 @@ void GraphicsWindow::SplitLinesOrCurves() {
         sblb.Clear();
     }
 
-    // Then, actually split the entities.
-    if(foundInters) {
-        SS.UndoRemember();
-
-        // Remove any constraints we're going to replace.
-        SK.constraint.RemoveTagged();
-
-        hEntity hia = SplitEntity(ha, pi),
-                hib = {};
-        // SplitEntity adds the coincident constraints to join the split halves
-        // of each original entity; and then we add the constraint to join
-        // the two entities together at the split point.
-        if(splitAtPoint) {
-            // Remove datum point, as it has now been superseded by the split point.
-            SK.request.ClearTags();
-            for(Request &r : SK.request) {
-                if(r.h == hb.request()) {
-                    if(r.type == Request::Type::DATUM_POINT) {
-                        // Delete datum point.
-                        r.tag = 1;
-                        FixConstraintsForRequestBeingDeleted(r.h);
-                    } else {
-                        // Add constraint if not datum point, but endpoint of line/arc etc.
-                        Constraint::ConstrainCoincident(hia, hb);
-                    }
-                    break;
-                }
-            }
-            SK.request.RemoveTagged();
-        } else {
-            // Split second non-point entity and add constraint.
-            hib = SplitEntity(hb, pi);
-            if(hia.v && hib.v) {
-                Constraint::ConstrainCoincident(hia, hib);
-            }
-        }
-    } else {
+    if(!foundInters) {
         Error(_("Can't split; no intersection found."));
         return;
     }
 
+    // Then, actually split the entities.
+    SS.UndoRemember();
+
+    // Remove any constraints we're going to replace.
+    SK.constraint.RemoveTagged();
+
+    hEntity hia = SplitEntity(ha, pi),
+            hib = {};
+    // SplitEntity adds the coincident constraints to join the split halves
+    // of each original entity; and then we add the constraint to join
+    // the two entities together at the split point.
+    if(splitAtPoint) {
+        const Request *r = SK.request.FindByIdNoOops(hb.request());
+        if(r != nullptr && r->type == Request::Type::DATUM_POINT) {
+            // Delete datum point.
+            FixConstraintsForRequestsBeingDeleted({r});
+            SK.request.RemoveById(r->h);
+        } else {
+            // Add constraint if not datum point, but endpoint of line/arc etc.
+            Constraint::ConstrainCoincident(hia, hb);
+        }
+    } else {
+        // Split second non-point entity and add constraint.
+        hib = SplitEntity(hb, pi);
+        if(hia.v && hib.v) {
+            Constraint::ConstrainCoincident(hia, hib);
+        }
+    }
+
     // All done, clean up and regenerate.
-    ClearSelection();
+    ClearSuper();
 }
 
 } // namespace SolveSpace

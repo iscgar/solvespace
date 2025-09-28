@@ -80,6 +80,21 @@ Request::Type EntReqTable::GetRequestForEntity(Entity::Type ent) {
     return req;
 }
 
+std::vector<hEntity> Request::GetPoints() const {
+    if(type == Type::DATUM_POINT) {
+        return {h.entity(0)};
+    } else {
+        int points = 0;
+        EntReqTable::GetRequestInfo(type, extraPoints, nullptr, &points, nullptr, nullptr);
+
+        std::vector<hEntity> ph;
+        for(int i = 0; i < points; ++i) {
+            ph.push_back(h.entity(i + 1));
+        }
+        return ph;
+    }
+}
+
 void Request::Generate(EntityList *entity, ParamList *param)
 {
     int points = 0;

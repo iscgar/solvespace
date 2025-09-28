@@ -360,7 +360,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
                         // translation so that that point didn't move.
                         e->PointForceTo(p);
                     }
-                    SS.MarkGroupDirtyByEntity(e->h);
+                    SS.MarkGroupDirty(e->group);
                 }
             } else {
                 List<hEntity> *lhe = &(pending.points);
@@ -423,7 +423,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
             double r = c2.DistanceTo(mp)/scale;
             SK.GetEntity(circle->distance)->DistanceForceTo(r);
 
-            SS.MarkGroupDirtyByEntity(pending.circle);
+            SS.MarkGroupDirty(circle->group);
             SS.ScheduleShowTW();
             break;
         }
@@ -455,7 +455,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
             orig.mouse = mp;
             normal->NormalForceTo(Quaternion::From(u, v));
 
-            SS.MarkGroupDirtyByEntity(pending.normal);
+            SS.MarkGroupDirty(normal->group);
             break;
         }
 
@@ -657,21 +657,23 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
                     SS.UndoRemember();
                     Entity *e = SK.GetEntity(r->h.entity(0));
 
-                    // First, fix point-coincident constraints involving this point.
-                    // Then, remove all other constraints, since they would otherwise
-                    // jump to an adjacent one and mess up the bezier after generation.
-                    FixConstraintsForPointBeingDeleted(e->point[index]);
-                    RemoveConstraintsForPointBeingDeleted(e->point[index]);
+                    std::map<hEntity, hEntity> replacements;
+                    Entity *p0 = SK.GetEntity(e->point[index]);
 
-                    for(int i = index; i < MAX_POINTS_IN_ENTITY - 1; i++) {
-                        if(e->point[i + 1].v == 0) break;
-                        Entity *p0 = SK.GetEntity(e->point[i]);
-                        Entity *p1 = SK.GetEntity(e->point[i + 1]);
-                        ReplacePointInConstraints(p1->h, p0->h);
+                    replacements[p0->h] = Entity::NO_ENTITY;
+
+                    for(int i = index + 1; i < MAX_POINTS_IN_ENTITY; i++) {
+                        if(e->point[i].v == 0) break;
+                        Entity *p1 = SK.GetEntity(e->point[i]);
+                        replacements[p1->h] = p0->h;
                         p0->PointForceTo(p1->PointGetNum());
+                        p0 = p1;
                     }
+
+                    ReplacePointsInConstraints(replacements);
+
                     r->extraPoints--;
-                    SS.MarkGroupDirtyByEntity(gs.point[0]);
+                    SS.MarkGroupDirty(r->group);
                     ClearSelection();
                 });
             }
@@ -694,20 +696,27 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
 
                     SS.UndoRemember();
                     r->extraPoints++;
-                    SS.MarkGroupDirtyByEntity(gs.entity[0]);
+                    SS.MarkGroupDirty(r->group);
                     SS.GenerateAll(SolveSpaceUI::Generate::REGEN);
 
+                    std::map<hEntity, hEntity> replacements;
+
+                    Vector to = v;
                     Entity *e = SK.GetEntity(r->h.entity(0));
-                    for(int i = MAX_POINTS_IN_ENTITY; i > addAfterPoint + 1; i--) {
+                    for(int i = addAfterPoint + 1; i < pointCount; i++) {
                         Entity *p0 = SK.entity.FindByIdNoOops(e->point[i]);
-                        if(p0 == NULL) continue;
-                        Entity *p1 = SK.GetEntity(e->point[i - 1]);
-                        ReplacePointInConstraints(p1->h, p0->h);
-                        p0->PointForceTo(p1->PointGetNum());
+                        if(p0 == NULL) break;
+                        const Vector pv = p0->PointGetNum();
+                        p0->PointForceTo(to);
+                        to = pv;
+                        replacements[e->point[i]] = e->point[i+1];
                     }
-                    Entity *p = SK.GetEntity(e->point[addAfterPoint + 1]);
-                    p->PointForceTo(v);
-                    SS.MarkGroupDirtyByEntity(gs.entity[0]);
+                    Entity *p = SK.GetEntity(e->point[pointCount]);
+                    p->PointForceTo(to);
+
+                    ReplacePointsInConstraints(replacements);
+
+                    SS.MarkGroupDirty(r->group);
                     ClearSelection();
                 });
             }

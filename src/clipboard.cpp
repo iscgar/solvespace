@@ -49,26 +49,37 @@ hEntity SolveSpaceUI::Clipboard::NewEntityFor(hEntity he) {
 }
 
 void GraphicsWindow::DeleteSelection() {
+    std::vector<const Request *> lr;
+
     SK.request.ClearTags();
     SK.constraint.ClearTags();
-    List<Selection> *ls = &(selection);
-    for(Selection *s = ls->First(); s; s = ls->NextAfter(s)) {
-        hRequest r = { 0 };
-        if(s->entity.v && s->entity.isFromRequest()) {
-            r = s->entity.request();
+    for(const Selection &s : selection) {
+        if(s.entity.v) {
+            if(s.entity.isFromRequest()) {
+                hRequest r = s.entity.request();
+                if(!r.IsFromReferences()) {
+                    Request *req = SK.GetRequest(r);
+                    req->tag = 1;
+                    lr.push_back(req);
+                }
+            }
+            SS.MarkGroupDirtyByEntity(s.entity);
         }
-        if(r.v && !r.IsFromReferences()) {
-            SK.request.Tag(r, 1);
-        }
-        if(s->constraint.v) {
-            SK.constraint.Tag(s->constraint, 1);
+        if(s.constraint.v) {
+            SK.constraint.Tag(s.constraint, 1);
         }
     }
 
+    // Rewrite any point-coincident constraints that were affected by this
+    // deletion.
+    FixConstraintsForRequestsBeingDeleted(lr);
+
     SK.constraint.RemoveTagged();
-    // Note that this regenerates and clears the selection, to avoid
-    // lingering references to the just-deleted items.
-    DeleteTaggedRequests();
+    SK.request.RemoveTagged();
+
+    // Clear the selection and regenerate
+    ClearSuper();
+    SS.GenerateAll(SolveSpaceUI::Generate::DIRTY);
 }
 
 void GraphicsWindow::CopySelection() {

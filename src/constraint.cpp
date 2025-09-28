@@ -113,9 +113,9 @@ hConstraint Constraint::TryConstrain(Constraint::Type type, hEntity ptA, hEntity
                                      hEntity entityA, hEntity entityB,
                                      bool other, bool other2) {
     int rankBefore, rankAfter;
-    SolveResult howBefore = SS.TestRankForGroup(SS.GW.activeGroup, &rankBefore);
+    SolveResult howBefore = SK.TestRankForGroup(SS.GW.activeGroup, SS.GetDraggedParams(), &rankBefore);
     hConstraint hc = Constrain(type, ptA, ptB, entityA, entityB, other, other2);
-    SolveResult howAfter = SS.TestRankForGroup(SS.GW.activeGroup, &rankAfter);
+    SolveResult howAfter = SK.TestRankForGroup(SS.GW.activeGroup, SS.GetDraggedParams(), &rankAfter);
     // There are two cases where the constraint is clearly redundant:
     //   * If the group wasn't overconstrained and now it is;
     //   * If the group was overconstrained, and adding the constraint doesn't change rank at all.
@@ -974,7 +974,7 @@ void Constraint::MenuConstrain(Command id) {
 
         if(SK.constraint.FindByIdNoOops(nc.h)) {
             Constraint *constraint = SK.GetConstraint(nc.h);
-            if(SS.TestRankForGroup(nc.group) == SolveResult::REDUNDANT_OKAY &&
+            if(SK.TestRankForGroup(nc.group, SS.GetDraggedParams()) == SolveResult::REDUNDANT_OKAY &&
                     !SK.GetGroup(SS.GW.activeGroup)->allowRedundant &&
                     constraint->HasLabel()) {
                 constraint->reference = true;

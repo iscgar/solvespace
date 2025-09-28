@@ -398,6 +398,13 @@ public:
 #endif
 class Sketch {
 public:
+    enum class Generate : uint32_t {
+        DIRTY,
+        ALL,
+        REGEN,
+        UNTIL_ACTIVE,
+    };
+
     // These are user-editable, and define the sketch.
     IdList<Group,hGroup>            group;
     List<hGroup>                    groupOrder;
@@ -406,8 +413,11 @@ public:
     IdList<Style,hStyle>            style;
 
     // These are generated from the above.
-    IdList<ENTITY,hEntity>          entity;
+    EntityList                      entity;
     ParamList                       param;
+
+    // The system to be solved.
+    System     sys;
 
     inline CONSTRAINT *GetConstraint(hConstraint h)
         { return constraint.FindById(h); }
@@ -416,6 +426,25 @@ public:
     inline Request *GetRequest(hRequest h) { return request.FindById(h); }
     inline Group   *GetGroup  (hGroup   h) { return group.  FindById(h); }
     // Styles are handled a bit differently.
+
+    // Consistency checking on the sketch: stuff with missing dependencies
+    // will get deleted automatically.
+    bool EntityExists(hEntity he);
+    bool GroupsInOrder(hGroup hbefore, hGroup hafter);
+    bool PruneGroup(Group *g);
+
+    struct DeletionStats {
+        size_t requests;
+        size_t groups;
+        size_t constraints;
+        size_t nonTrivialConstraints;
+    };
+    DeletionStats Regenerate(Generate type, bool andFindFree, ParamSet dragged, double chordTol, double *chordTolCalculated = nullptr);
+
+    void SolveGroup(hGroup hg, bool andFindFree, ParamSet dragged);
+    SolveResult TestRankForGroup(hGroup hg, ParamSet dragged, int *rank = NULL);
+    void WriteEqSystemForGroup(hGroup hg, ParamSet dragged);
+    void ForceReferences();
 
     void Clear();
 
@@ -666,41 +695,14 @@ public:
     void MarkGroupDirty(hGroup hg, bool onlyThis = false);
     void MarkGroupDirtyByEntity(hEntity he);
 
-    // Consistency checking on the sketch: stuff with missing dependencies
-    // will get deleted automatically.
-    struct {
-        int     requests;
-        int     groups;
-        int     constraints;
-        int     nonTrivialConstraints;
-    } deleted;
-    bool GroupExists(hGroup hg);
-    bool EntityExists(hEntity he);
-    bool GroupsInOrder(hGroup hbefore, hGroup hafter);
-    bool PruneGroup(Group *g);
     static void ShowNakedEdges(bool reportOnlyWhenNotOkay);
 
-    enum class Generate : uint32_t {
-        DIRTY,
-        ALL,
-        REGEN,
-        UNTIL_ACTIVE,
-    };
-
+    using Generate = Sketch::Generate;
     void GenerateAll(Generate type = Generate::DIRTY, bool andFindFree = false);
-    void SolveGroup(hGroup hg, bool andFindFree);
-    void SolveGroupAndReport(hGroup hg, bool andFindFree);
-    SolveResult TestRankForGroup(hGroup hg, int *rank = NULL);
-    void WriteEqSystemForGroup(hGroup hg);
-    void MarkDraggedParams();
-    void ForceReferences();
+    ParamSet GetDraggedParams() const;
     void UpdateCenterOfMass();
 
     bool ActiveGroupsOkay();
-
-    // The system to be solved.
-    System     *pSys;
-    System     &sys;
 
     // All the TrueType fonts in memory
     TtfFontList fonts;
@@ -723,16 +725,14 @@ public:
 
     void Clear();
 
-    // We allocate TW and sys on the heap to work around an MSVC problem
+    // We allocate TW on the heap to work around an MSVC problem
     // where it puts zero-initialized global data in the binary (~30M of zeroes)
     // in release builds.
     SolveSpaceUI()
-        : pTW(new TextWindow()), TW(*pTW),
-          pSys(new System()), sys(*pSys) {}
+        : pTW(new TextWindow()), TW(*pTW) {}
 
     ~SolveSpaceUI() {
         delete pTW;
-        delete pSys;
     }
 };
 

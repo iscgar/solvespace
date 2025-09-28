@@ -1129,7 +1129,6 @@ PACKAGE_VERSION, 2025);
 }
 
 void SolveSpaceUI::Clear() {
-    sys.Clear();
     for(int i = 0; i < MAX_UNDO; i++) {
         if(i < undo.cnt) undo.d[i].Clear();
         if(i < redo.cnt) redo.d[i].Clear();
@@ -1163,6 +1162,7 @@ void Sketch::Clear() {
     style.Clear();
     entity.Clear();
     param.Clear();
+    sys.Clear();
 }
 
 BBox Sketch::CalculateEntityBBox(bool includingInvisible) {

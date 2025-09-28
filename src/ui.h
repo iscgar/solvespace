@@ -9,6 +9,7 @@
 #define SOLVESPACE_UI_H
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -728,7 +729,6 @@ public:
     Vector SnapToGrid(Vector p);
     Vector SnapToEntityByScreenPoint(Point2d pp, hEntity he);
     bool ConstrainPointByHovered(hEntity pt, const Point2d *projected = NULL);
-    void DeleteTaggedRequests();
     hRequest AddRequest(Request::Type type, bool rememberForUndo);
     hRequest AddRequest(Request::Type type);
 
@@ -754,10 +754,8 @@ public:
     hEntity SplitLine(hEntity he, Vector pinter);
     hEntity SplitCircle(hEntity he, Vector pinter);
     hEntity SplitCubic(hEntity he, Vector pinter);
-    void ReplacePointInConstraints(hEntity oldpt, hEntity newpt);
-    void RemoveConstraintsForPointBeingDeleted(hEntity hpt);
-    void FixConstraintsForRequestBeingDeleted(hRequest hr);
-    void FixConstraintsForPointBeingDeleted(hEntity hpt);
+    void ReplacePointsInConstraints(const std::map<hEntity, hEntity> &replacements);
+    void FixConstraintsForRequestsBeingDeleted(const std::vector<const Request *> &lr);
     void EditConstraint(hConstraint constraint);
 
     // A selected entity.

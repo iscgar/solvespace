@@ -380,7 +380,7 @@ bool System::WriteEquationsExceptFor(hConstraint hc, Group *g, std::set<hConstra
         c->GenerateEquations(&eq, g->varResolutions);
     }
     // And the equations from entities
-    for(auto &ent : SK.entity) {
+    for(auto &ent : entity) {
         EntityBase *e = &ent;
         if(e->group != g->h) continue;
 
@@ -433,7 +433,6 @@ void System::FindWhichToRemoveToFixJacobian(Group *g, std::set<hConstraint> *bad
             param.ClearTags();
             eq.Clear();
             WriteEquationsExceptFor(c->h, g, bad);
-            eq.ClearTags();
 
             // It's a major speedup to solve the easy ones by substitution here,
             // and that doesn't break anything.

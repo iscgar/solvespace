@@ -27,14 +27,8 @@ void SolveSpaceUI::ClearExisting() {
         g->Clear();
     }
 
-    SK.constraint.Clear();
-    SK.request.Clear();
-    SK.group.Clear();
-    SK.groupOrder.Clear();
-    SK.style.Clear();
+    SK.Clear();
 
-    SK.entity.Clear();
-    SK.param.Clear();
     images.clear();
 }
 

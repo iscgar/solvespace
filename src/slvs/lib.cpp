@@ -879,6 +879,7 @@ Slvs_SolveResult Slvs_SolveSketch(uint32_t shg, Slvs_hConstraint **bad = nullptr
                 SYS.param.Add(p);
             }
         }
+        SYS.entity.Add(e);
     }
 
     // add params from constraints
@@ -995,7 +996,6 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
 {
     SYS.Clear();
     SK.param.Clear();
-    SK.entity.Clear();
     SK.constraint.Clear();
     int i;
     for(i = 0; i < ssys->params; i++) {
@@ -1004,14 +1004,20 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
 
         p.h.v = sp->h;
         p.val = sp->val;
-        SK.param.Add(&p);
-        if(sp->group == shg) {
+        if(sp->group != shg) {
+            p.known = true;
+        } else {
+            p.known = false;
             SYS.param.Add(&p);
         }
+        SK.param.Add(&p);
     }
 
     for(i = 0; i < ssys->entities; i++) {
         Slvs_Entity *se = &(ssys->entity[i]);
+        if(se->group != shg) {
+            continue;
+        }
         EntityBase e = {};
         e.type = Slvs_CTypeToEntityBaseType(se->type);
         e.h.v           = se->h;
@@ -1028,11 +1034,14 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
         e.param[2].v    = se->param[2];
         e.param[3].v    = se->param[3];
 
-        SK.entity.Add(&e);
+        SYS.entity.Add(&e);
     }
     ParamList params = {};
     for(i = 0; i < ssys->constraints; i++) {
         Slvs_Constraint *sc = &(ssys->constraint[i]);
+        if(sc->group != shg) {
+            continue;
+        }
         ConstraintBase c = {};
         c.type = Slvs_CTypeToConstraintBaseType(sc->type);
         c.h.v           = sc->h;
@@ -1125,7 +1134,6 @@ void Slvs_Solve(Slvs_System *ssys, uint32_t shg)
 
     SYS.Clear();
     SK.param.Clear();
-    SK.entity.Clear();
     SK.constraint.Clear();
 
     Platform::FreeAllTemporary();

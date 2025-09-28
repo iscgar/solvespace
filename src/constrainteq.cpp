@@ -278,6 +278,96 @@ std::unordered_set<std::string> ConstraintBase::GetNamedParams() const {
     return variableRefs;
 }
 
+bool ConstraintBase::IsValid(const EntityList &entities) const {
+    switch(type) {
+    case Type::PT_PT_DISTANCE:
+    case Type::POINTS_COINCIDENT:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(ptA) != nullptr && entities.FindByIdNoOops(ptB) != nullptr;
+    case Type::PROJ_PT_DISTANCE:
+    case Type::SYMMETRIC_LINE:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(ptA) != nullptr && entities.FindByIdNoOops(ptB) != nullptr &&
+               entities.FindByIdNoOops(entityA) != nullptr;
+    case Type::DIAMETER:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(entityA) != nullptr;
+    case Type::PT_IN_PLANE:
+    case Type::PT_ON_LINE:
+    case Type::PT_ON_CIRCLE:
+    case Type::PT_ON_FACE:
+    case Type::PT_PLANE_DISTANCE:
+    case Type::PT_LINE_DISTANCE:
+    case Type::PT_FACE_DISTANCE:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(ptA) != nullptr &&
+               entities.FindByIdNoOops(entityA) != nullptr;
+    case Type::EQ_PT_LN_DISTANCES:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(ptA) != nullptr && entities.FindByIdNoOops(ptB) != nullptr &&
+               entities.FindByIdNoOops(entityA) != nullptr &&
+               entities.FindByIdNoOops(entityB) != nullptr;
+    case Type::EQ_LEN_PT_LINE_D:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(ptA) != nullptr &&
+               entities.FindByIdNoOops(entityA) != nullptr &&
+               entities.FindByIdNoOops(entityB) != nullptr;
+    case Type::EQUAL_LENGTH_LINES:
+    case Type::EQUAL_RADIUS:
+    case Type::EQUAL_LINE_ARC_LEN:
+    case Type::LENGTH_RATIO:
+    case Type::ARC_ARC_LEN_RATIO:
+    case Type::ARC_LINE_LEN_RATIO:
+    case Type::LENGTH_DIFFERENCE:
+    case Type::ARC_ARC_DIFFERENCE:
+    case Type::ARC_LINE_DIFFERENCE:
+    case Type::SAME_ORIENTATION:
+    case Type::ANGLE:
+    case Type::PARALLEL:
+    case Type::ARC_LINE_TANGENT:
+    case Type::CUBIC_LINE_TANGENT:
+    case Type::CURVE_CURVE_TANGENT:
+    case Type::PERPENDICULAR:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(entityA) != nullptr &&
+               entities.FindByIdNoOops(entityB) != nullptr;
+    case Type::AT_MIDPOINT:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(entityA) != nullptr &&
+               (entityB == EntityBase::NO_ENTITY ? entities.FindByIdNoOops(ptA) != nullptr
+                                                 : entities.FindByIdNoOops(entityB) != nullptr);
+    case Type::SYMMETRIC:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(entityA) != nullptr &&
+               entities.FindByIdNoOops(ptA) != nullptr && entities.FindByIdNoOops(ptB) != nullptr;
+    case Type::SYMMETRIC_HORIZ:
+    case Type::SYMMETRIC_VERT:
+        return entities.FindByIdNoOops(workplane) != nullptr &&
+               entities.FindByIdNoOops(ptA) != nullptr && entities.FindByIdNoOops(ptB) != nullptr;
+    case Type::HORIZONTAL:
+    case Type::VERTICAL:
+        return entities.FindByIdNoOops(workplane) != nullptr &&
+               (entityA != EntityBase::NO_ENTITY ? entities.FindByIdNoOops(entityA) != nullptr
+                                                 : entities.FindByIdNoOops(ptA) != nullptr &&
+                                                       entities.FindByIdNoOops(ptB) != nullptr);
+    case Type::EQUAL_ANGLE:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(entityA) != nullptr &&
+               entities.FindByIdNoOops(entityB) != nullptr &&
+               entities.FindByIdNoOops(entityC) != nullptr &&
+               entities.FindByIdNoOops(entityD) != nullptr;
+    case Type::WHERE_DRAGGED:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               entities.FindByIdNoOops(ptA) != nullptr;
+    case Type::COMMENT:
+        return (workplane == EntityBase::FREE_IN_3D || entities.FindByIdNoOops(workplane)) &&
+               (ptA == EntityBase::NO_ENTITY || entities.FindByIdNoOops(ptA) != nullptr);
+    }
+
+    ssassert(false, "unexpected constraint type");
+}
+
+
 void ConstraintBase::GenerateEquations(IdList<Equation,hEquation> *l,
                                        const ResolutionMap &resolutions,
                                        bool forReference) const {

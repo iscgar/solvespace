@@ -131,7 +131,13 @@ template<>
 struct IsHandleOracle<hStyle> : std::true_type {};
 
 class Entity;
-using EntityList = IdList<Entity,hEntity>;
+
+#ifdef LIBRARY
+class EntityBase;
+using EntityList = IdList<EntityBase, hEntity>;
+#else
+using EntityList = IdList<Entity, hEntity>;
+#endif
 
 struct EntityId {
     uint32_t v;     // entity ID, starting from 0
@@ -418,6 +424,7 @@ public:
 
     static hParam AddParam(ParamList *param, hParam hp);
     void Generate(EntityList *entity, ParamList *param);
+    std::vector<hEntity> GetPoints() const;
 
     std::string DescriptionString() const;
     int IndexOfPoint(hEntity he) const;
@@ -744,6 +751,7 @@ public:
 
     bool HasLabel() const;
     bool IsProjectible() const;
+    bool IsValid(const EntityList &entities) const;
 
     void Generate(ParamList *param);
 
