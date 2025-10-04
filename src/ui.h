@@ -754,7 +754,8 @@ public:
     hEntity SplitLine(hEntity he, Vector pinter);
     hEntity SplitCircle(hEntity he, Vector pinter);
     hEntity SplitCubic(hEntity he, Vector pinter);
-    void ReplacePointsInConstraints(const std::map<hEntity, hEntity> &replacements);
+    void ReplacePointsInConstraints(const std::map<hEntity, hEntity> &replacements,
+                                    hGroup onlySince = {0});
     void FixConstraintsForRequestsBeingDeleted(const std::vector<const Request *> &lr);
     void EditConstraint(hConstraint constraint);
 

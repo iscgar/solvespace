@@ -13,13 +13,22 @@ namespace SolveSpace {
 // Replace constraints on oldpt with the same constraints on newpt.
 // Useful when splitting, tangent arcing, or removing bezier points.
 //-----------------------------------------------------------------------------
-void GraphicsWindow::ReplacePointsInConstraints(const std::map<hEntity, hEntity> &replacements) {
+void GraphicsWindow::ReplacePointsInConstraints(const std::map<hEntity, hEntity> &replacements,
+                                                hGroup onlySince) {
     std::map<hEntity, std::vector<Constraint *>> deletedCoincidents;
     std::vector<hEntity> deletedPoints;
 
     deletedPoints.reserve(2);
+    const auto sinceIt = !onlySince.v
+                             ? SK.groupOrder.begin()
+                             : std::find(SK.groupOrder.begin(), SK.groupOrder.end(), onlySince);
 
     for(auto &c : SK.constraint) {
+        if(onlySince.v &&
+           std::find(SK.groupOrder.begin(), SK.groupOrder.end(), c.group) < sinceIt) {
+            continue;
+        }
+
         deletedPoints.clear();
 
         auto it = replacements.find(c.ptA);
@@ -494,10 +503,42 @@ hEntity GraphicsWindow::SplitLine(hEntity he, Vector pinter) {
     SK.GetEntity(ei1->point[0])->PointForceTo(pinter);
     SK.GetEntity(ei1->point[1])->PointForceTo(p1);
 
+    // Constrain the new segments as H/V if the original entity was constrained as such
+    for(Constraint &c : SK.constraint) {
+        const Constraint::Type constraintType = c.type;
+        if(constraintType != Constraint::Type::HORIZONTAL &&
+           constraintType != Constraint::Type::VERTICAL) {
+            continue;
+        }
+        if(c.entityA == Entity::NO_ENTITY) {
+            if(c.ptA.request() != he.request() || c.ptB.request() != he.request()) {
+                continue;
+            }
+        } else if(c.entityA != he) {
+            continue;
+        }
+
+        // NOTE: we're mutating SK.constraint, so we can't use anything from `c`, as it will
+        // be invalidated after the first mutation, so we save `c.type` into a local variable.
+
+        // Constrain the first segment
+        if(c.group != activeGroup) {
+            Constraint::Constrain(constraintType, e0i->point[0], e0i->point[1], Entity::NO_ENTITY);
+        } else {
+            c.entityA = Entity::NO_ENTITY;
+            c.ptA     = e0i->point[0];
+            c.ptB     = e0i->point[1];
+        }
+
+        // ... and constrain the second segment similarly as well
+        Constraint::Constrain(constraintType, ei1->point[0], ei1->point[1], Entity::NO_ENTITY);
+        break;
+    }
+
     std::map<hEntity, hEntity> replacements;
     replacements[hep0] = e0i->point[0];
     replacements[hep1] = ei1->point[1];
-    ReplacePointsInConstraints(replacements);
+    ReplacePointsInConstraints(replacements, activeGroup);
     Constraint::ConstrainCoincident(e0i->point[1], ei1->point[0]);
     return e0i->point[1];
 }
@@ -546,7 +587,7 @@ hEntity GraphicsWindow::SplitCircle(hEntity he, Vector pinter) {
         std::map<hEntity, hEntity> replacements;
         replacements[hs] = arc0->point[1];
         replacements[hf] = arc1->point[2];
-        ReplacePointsInConstraints(replacements);
+        ReplacePointsInConstraints(replacements, activeGroup);
         Constraint::ConstrainCoincident(arc0->point[2], arc1->point[1]);
         return arc0->point[2];
     }
@@ -615,7 +656,7 @@ hEntity GraphicsWindow::SplitCubic(hEntity he, Vector pinter) {
     std::map<hEntity, hEntity> replacements;
     replacements[hep0] = hep0n;
     replacements[hep1] = hep1n;
-    ReplacePointsInConstraints(replacements);
+    ReplacePointsInConstraints(replacements, activeGroup);
     return hepin;
 }
 
@@ -660,20 +701,22 @@ void GraphicsWindow::SplitLinesOrCurves() {
     }
 
     GroupSelection();
-    int n = gs.lineSegments + gs.circlesOrArcs + gs.cubics + gs.periodicCubics;
+    const int n = gs.lineSegments + gs.circlesOrArcs + gs.cubics + gs.periodicCubics;
     if(!((n == 2 && gs.points == 0) || (n == 1 && gs.points == 1))) {
         Error(_("Select two entities that intersect each other "
                 "(e.g. two lines/circles/arcs or a line/circle/arc and a point)."));
         return;
     }
 
-    bool splitAtPoint = (gs.points == 1);
-    hEntity ha = gs.entity[0],
-            hb = splitAtPoint ? gs.point[0] : gs.entity[1];
+    const bool splitAtPoint = (gs.points == 1);
+    const hEntity ha = gs.entity[0],
+                  hb = splitAtPoint ? gs.point[0] : gs.entity[1];
 
-    Entity *ea = SK.GetEntity(ha),
-           *eb = SK.GetEntity(hb);
+    const Entity *ea = SK.GetEntity(ha),
+                 *eb = SK.GetEntity(hb);
+
     Vector pi = Vector::From(0, 0, 0);
+    const Constraint *pointConstraint = nullptr;
 
     // First, decide the point where we're going to make the split.
     bool foundInters = false;
@@ -686,9 +729,15 @@ void GraphicsWindow::SplitLinesOrCurves() {
             p1 = ea->EndpointFinish();
         }
 
-        SK.constraint.ClearTags();
-
         for(Constraint &c : SK.constraint) {
+            switch(c.type) {
+            case Constraint::Type::PT_ON_LINE:
+            case Constraint::Type::PT_ON_CIRCLE:
+                break;
+            default:
+                continue;
+            }
+
             if(c.ptA.request() == hb.request() &&
                c.entityA.request() == ha.request()) {
                 pi = SK.GetEntity(c.ptA)->PointGetNum();
@@ -699,7 +748,7 @@ void GraphicsWindow::SplitLinesOrCurves() {
                     continue;
                 }
 
-                c.tag = 1;
+                pointConstraint = &c;
                 foundInters = true;
                 break;
             }
@@ -740,34 +789,58 @@ void GraphicsWindow::SplitLinesOrCurves() {
     // Then, actually split the entities.
     SS.UndoRemember();
 
-    // Remove any constraints we're going to replace.
-    SK.constraint.RemoveTagged();
+    const hEntity hia = SplitEntity(ha, pi);
 
-    hEntity hia = SplitEntity(ha, pi),
-            hib = {};
+    if(hia == Entity::NO_ENTITY) {
+        // No changes were made
+        return;
+    }
+
     // SplitEntity adds the coincident constraints to join the split halves
     // of each original entity; and then we add the constraint to join
     // the two entities together at the split point.
     if(splitAtPoint) {
+        // Remove any constraints we're going to replace.
+        if(pointConstraint != nullptr && pointConstraint->group == activeGroup) {
+            SK.constraint.RemoveById(pointConstraint->h);
+        }
+
         const Request *r = SK.request.FindByIdNoOops(hb.request());
-        if(r != nullptr && r->type == Request::Type::DATUM_POINT) {
+        if(r != nullptr && r->type == Request::Type::DATUM_POINT && r->group == activeGroup) {
+            const auto points = r->GetPoints();
+            ssassert(points.size() == 1, "a datum point request should have a single point entity");
+
+            // Fix up constraints by replacing the datum point with the new split point
+            std::map<hEntity, hEntity> replacements{{points.front(), hia}};
+            ReplacePointsInConstraints(replacements);
+
+            // Fix up groups that depend on the datum point by substituting the new split point
+            for(auto it = std::find(SK.groupOrder.begin(), SK.groupOrder.end(), activeGroup) + 1;
+                it != SK.groupOrder.end(); ++it) {
+                Group *g = SK.GetGroup(*it);
+                if(g->predef.origin == points.front()) {
+                    g->predef.origin = hia;
+                }
+            }
+
             // Delete datum point.
-            FixConstraintsForRequestsBeingDeleted({r});
             SK.request.RemoveById(r->h);
         } else {
-            // Add constraint if not datum point, but endpoint of line/arc etc.
+            // Add constraint if not datum point, but endpoint of line/arc etc., or if datum
+            // point from a previous group (in which case it's not deleted)
             Constraint::ConstrainCoincident(hia, hb);
         }
     } else {
         // Split second non-point entity and add constraint.
-        hib = SplitEntity(hb, pi);
-        if(hia.v && hib.v) {
+        const hEntity hib = SplitEntity(hb, pi);
+        if(hib != Entity::NO_ENTITY) {
             Constraint::ConstrainCoincident(hia, hib);
         }
     }
 
     // All done, clean up and regenerate.
     ClearSuper();
+    SS.GenerateAll(SolveSpaceUI::Generate::DIRTY);
 }
 
 } // namespace SolveSpace
