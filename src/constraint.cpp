@@ -670,7 +670,9 @@ void Constraint::MenuConstrain(Command id) {
             }
             if(gs.lineSegments > 0 && gs.lineSegments == gs.n) {
                 for (auto enti : gs.entity){
-                    c.entityA = enti;
+                    const Entity *line = SK.GetEntity(enti);
+                    c.ptA = line->point[0];
+                    c.ptB = line->point[1];
                     newcons.push_back(c);
                 }
             } else if(gs.points >= 2 && gs.n == gs.points) {

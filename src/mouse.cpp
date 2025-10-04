@@ -521,8 +521,8 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
     if(context.active) return;
 
     if(pending.operation == Pending::DRAGGING_NEW_LINE_POINT && pending.hasSuggestion) {
-        Constraint::TryConstrain(SS.GW.pending.suggestion,
-            Entity::NO_ENTITY, Entity::NO_ENTITY, pending.request.entity(0));
+        Constraint::TryConstrain(SS.GW.pending.suggestion, pending.request.entity(1),
+                                 pending.request.entity(2), Entity::NO_ENTITY);
     }
 
     if(pending.operation == Pending::DRAGGING_NEW_LINE_POINT ||
@@ -1257,8 +1257,8 @@ void GraphicsWindow::MouseLeftDown(double mx, double my, bool shiftDown, bool ct
 
             // Constrain the line segment horizontal or vertical if close enough
             if(hasConstraintSuggestion) {
-                Constraint::TryConstrain(constraintSuggestion,
-                    Entity::NO_ENTITY, Entity::NO_ENTITY, pending.request.entity(0));
+                Constraint::TryConstrain(constraintSuggestion, pending.request.entity(1),
+                                         pending.request.entity(2), Entity::NO_ENTITY);
             }
 
             if(doneDragging) {

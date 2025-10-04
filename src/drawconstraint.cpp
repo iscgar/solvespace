@@ -1233,7 +1233,7 @@ s:
         case Type::AT_MIDPOINT:
         case Type::HORIZONTAL:
         case Type::VERTICAL:
-            if(entityA.v) {
+            if(entityA.v || (ptA.request() == ptB.request() && SK.GetRequest(ptA.request())->type == Request::Type::LINE_SEGMENT)) {
                 Vector r, u, n;
                 if(workplane == Entity::FREE_IN_3D) {
                     r = gr; u = gu; n = gn;
@@ -1243,9 +1243,15 @@ s:
                     n = r.Cross(u);
                 }
                 // For "at midpoint", this branch is always taken.
-                Entity *e = SK.GetEntity(entityA);
-                Vector a = SK.GetEntity(e->point[0])->PointGetDrawNum();
-                Vector b = SK.GetEntity(e->point[1])->PointGetDrawNum();
+                Vector a, b;
+                if(entityA.v) {
+                    Entity *e = SK.GetEntity(entityA);
+                    a = SK.GetEntity(e->point[0])->PointGetDrawNum();
+                    b = SK.GetEntity(e->point[1])->PointGetDrawNum();
+                } else {
+                    a = SK.GetEntity(ptA)->PointGetDrawNum();
+                    b = SK.GetEntity(ptB)->PointGetDrawNum();
+                }
                 Vector m = (a.ScaledBy(0.5)).Plus(b.ScaledBy(0.5));
                 Vector offset = (a.Minus(b)).Cross(n);
                 offset = offset.WithMagnitude(textHeight);
