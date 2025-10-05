@@ -59,7 +59,7 @@ void GraphicsWindow::ReplacePointsInConstraints(const std::map<hEntity, hEntity>
     if(!deletedCoincidents.empty()) {
         // Build a group to group order map
         std::map<hGroup, size_t> groupIndices;
-        for(size_t i = 0; i < SK.groupOrder.n; ++i) {
+        for(size_t i = 0; i < SK.groupOrder.size(); ++i) {
             const hGroup hg = SK.groupOrder[i];
             groupIndices[hg] = i;
         }

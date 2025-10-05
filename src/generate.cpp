@@ -79,65 +79,57 @@ void Sketch::RegenerateGroupOrder() {
     std::sort(order.begin(), order.end(), [](const GroupOrderPair &a, GroupOrderPair &b) {
         return a.first < b.first;
     });
-    groupOrder.Clear();
-    groupOrder.ReserveMore(group.n);
+    groupOrder.clear();
+    groupOrder.reserve(group.n);
     for(auto &p : order) {
-        groupOrder.Add(&p.second);
+        groupOrder.push_back(p.second);
     }
 }
 
 Sketch::DeletionStats Sketch::Regenerate(Generate type, bool andFindFree, ParamSet dragged, double chordTol, double *chordTolCalculated) {
     DeletionStats deleted = {};
 
-    int first = 0, last = 0;
-
     RegenerateGroupOrder();
+    size_t start = 0, end = groupOrder.size();
 
     switch(type) {
+        case Generate::ALL:
+            break;
+
         case Generate::DIRTY: {
-            first = INT_MAX;
-            last  = 0;
+            start = end;
 
             // Start from the first dirty group, and solve until the active group,
             // since all groups after the active group are hidden.
             // Not using range-for because we're tracking the indices.
-            for(int i = 0; i < groupOrder.n; i++) {
-                Group *g = GetGroup(groupOrder[i]);
-                if((!g->clean) || !g->IsSolvedOkay()) {
-                    first = min(first, i);
+            for(size_t i = 0; i < groupOrder.size(); i++) {
+                const hGroup hg = groupOrder[i];
+                if(start >= end) {
+                    const Group *g = GetGroup(hg);
+                    if((!g->clean) || !g->IsSolvedOkay()) {
+                        start = i;
+                    }
                 }
-                if(g->h == SS.GW.activeGroup) {
-                    last = i;
+                if(hg == SS.GW.activeGroup) {
+                    end = i + 1;
+                    break;
                 }
             }
-            if(first == INT_MAX || last == 0) {
-                // All clean; so just regenerate the entities, and don't solve anything.
-                first = -1;
-                last  = -1;
-            } else {
+            if(start < end) {
                 SS.nakedEdges.Clear();
+            } else {
+                // All clean; so just regenerate the entities, and don't solve anything.
             }
             break;
         }
 
-        case Generate::ALL:
-            first = 0;
-            last  = INT_MAX;
-            break;
-
         case Generate::REGEN:
-            first = -1;
-            last  = -1;
+            start = end;
             break;
 
         case Generate::UNTIL_ACTIVE: {
-            for(int i = 0; i < groupOrder.n; i++) {
-                last = i;
-                if(groupOrder[i] == SS.GW.activeGroup)
-                    break;
-            }
-
-            first = 0;
+            end = std::find(groupOrder.begin(), groupOrder.end(), SS.GW.activeGroup) -
+                  groupOrder.begin();
             break;
         }
     }
@@ -163,7 +155,7 @@ Sketch::DeletionStats Sketch::Regenerate(Generate type, bool andFindFree, ParamS
     }
 
     // Not using range-for because we're using the index inside the loop.
-    for(int i = 0; i < groupOrder.n; ) {
+    for(size_t i = 0; i < groupOrder.size(); ) {
         const hGroup hg = groupOrder[i];
         Group *g = GetGroup(hg);
 
@@ -175,11 +167,11 @@ Sketch::DeletionStats Sketch::Regenerate(Generate type, bool andFindFree, ParamS
 
             // A group was just removed and the group order was regenerated,
             // so adjust the first and last indices accordingly if we needed
-            if(i <= last && last < INT_MAX) {
-                --last;
+            if(i < end) {
+                --end;
             }
-            if(i < first && first < INT_MAX) {
-                --first;
+            if(i < start) {
+                --start;
             }
             // Prune this group's requests
             for(auto &r : request) {
@@ -270,7 +262,7 @@ Sketch::DeletionStats Sketch::Regenerate(Generate type, bool andFindFree, ParamS
             g->clean = true;
         } else {
             // this i is an index in groupOrder
-            if(i >= first && i <= last) {
+            if(i >= start && i < end) {
                 // The group falls inside the range, so really solve it,
                 // and then regenerate the mesh based on the solved stuff.
                 if(chordTolCalculated != nullptr) {
@@ -317,16 +309,14 @@ Sketch::DeletionStats Sketch::Regenerate(Generate type, bool andFindFree, ParamS
     }
 
     // Then generate the shell and mesh
-    for(int i = 0; i < groupOrder.n; ++i) {
+    for(size_t i = start; i < end; ++i) {
         const hGroup hg = groupOrder[i];
         if(hg == Group::HGROUP_REFERENCES) {
             continue;
         }
-        if(i >= first && i <= last) {
-            Group *g = GetGroup(hg);
-            g->GenerateShellAndMesh();
-            g->clean = true;
-        }
+        Group *g = GetGroup(hg);
+        g->GenerateShellAndMesh();
+        g->clean = true;
     }
 
     // And update any reference dimensions with their new values
@@ -602,12 +592,13 @@ SolveResult Sketch::TestRankForGroup(hGroup hg, ParamSet dragged, int *rank) {
 }
 
 bool SolveSpaceUI::ActiveGroupsOkay() {
-    for(int i = 0; i < SK.groupOrder.n; i++) {
-        Group *g = SK.GetGroup(SK.groupOrder[i]);
-        if(!g->IsSolvedOkay())
+    for(hGroup hg : SK.groupOrder) {
+        if(!SK.GetGroup(hg)->IsSolvedOkay()) {
             return false;
-        if(g->h == SS.GW.activeGroup)
+        }
+        if(hg == GW.activeGroup) {
             break;
+        }
     }
     return true;
 }

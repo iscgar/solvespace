@@ -402,9 +402,9 @@ void GraphicsWindow::Init() {
     orig.projUp = projUp;
 
     // And with the last group active
-    ssassert(!SK.groupOrder.IsEmpty(),
+    ssassert(!SK.groupOrder.empty(),
              "Group order can't be empty since we will activate the last group.");
-    activeGroup = *SK.groupOrder.Last();
+    activeGroup = SK.groupOrder.back();
     SK.GetGroup(activeGroup)->Activate();
 
     showWorkplanes = false;
@@ -939,13 +939,13 @@ void GraphicsWindow::EnsureValidActives() {
     Group *g = SK.group.FindByIdNoOops(activeGroup);
     if((!g) || (g->h == Group::HGROUP_REFERENCES)) {
         // Not using range-for because this is used to find an index.
-        int i;
-        for(i = 0; i < SK.groupOrder.n; i++) {
+        size_t i;
+        for(i = 0; i < SK.groupOrder.size(); i++) {
             if(SK.groupOrder[i] != Group::HGROUP_REFERENCES) {
                 break;
             }
         }
-        if(i >= SK.groupOrder.n) {
+        if(i >= SK.groupOrder.size()) {
             // This can happen if the user deletes all the groups in the
             // sketch. It's difficult to prevent that, because the last
             // group might have been deleted automatically, because it failed
