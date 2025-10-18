@@ -252,7 +252,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
         }
 
         for (const auto &kv : g->namedParams) {
-            g->varResolutions[kv.second] = kv.first;
+            g->varResolutions[kv.second.name] = kv.first;
         }
 
         int groupRequestIndex = 0;
@@ -554,7 +554,12 @@ void SolveSpaceUI::WriteEqSystemForGroup(hGroup hg) {
     // Set the initial guesses for all the params
     for(auto &param : sys.param) {
         Param *p = &param;
-        p->known = false;
+        const auto namedParam = g->GetNamedParam(p->h);
+        if(namedParam.first == p->h && namedParam.second.locked) {
+            p->known = true;
+        } else {
+            p->known = false;
+        }
         p->val = SK.GetParam(p->h)->val;
     }
 

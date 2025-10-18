@@ -227,6 +227,8 @@ public:
 #define CHECK_TRUE  "\xEE\x80\x81"
 #define RADIO_FALSE "\xEE\x80\x82"
 #define RADIO_TRUE  "\xEE\x80\x83"
+#define LOCK_TRUE   "\xEE\x80\x88"
+#define LOCK_FALSE  "\xEE\x80\x89"
 
     int scrollPos;      // The scrollbar position, in half-row units
     int halfRows;       // The height of our window, in half-row units
@@ -455,6 +457,7 @@ public:
     static void ScreenEditParamName(int link, uint32_t v);
     static void ScreenEditParamValue(int link, uint32_t v);
     static void ScreenDeleteParam(int link, uint32_t v);
+    static void ScreenSetParamLock(int link, uint32_t v);
 
     static void ScreenChangeGroupOption(int link, uint32_t v);
     static void ScreenColor(int link, uint32_t v);

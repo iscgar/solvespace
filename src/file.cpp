@@ -216,7 +216,9 @@ struct SAVEDptr {
     EntityMap          &M() { return *((EntityMap *)this); }
     std::string        &S() { return *((std::string *)this); }
     Platform::Path     &P() { return *((Platform::Path *)this); }
-    Group::NamedParams &N() { return *((Group::NamedParams *)this); }
+    Group::NamedParamsMap &N() {
+        return *((Group::NamedParamsMap *)this);
+    }
     bool      &b() { return *((bool *)this); }
     RgbaColor &c() { return *((RgbaColor *)this); }
     int       &d() { return *((int *)this); }
@@ -277,7 +279,9 @@ void SolveSpaceUI::SaveUsingTable(const Platform::Path &filename, int type) {
             case 'N': {
                 fprintf(fh, "{\n");
                 for(const auto &it : p->N()) {
-                    fprintf(fh, "    %08x %s\n", it.first.v, it.second.c_str());
+                    const auto &param = it.second;
+                    fprintf(fh, "    %08x %d %s\n", it.first.v,
+                            param.locked ? 1 : 0, param.name.c_str());
                 }
                 fprintf(fh, "}");
                 break;
@@ -473,7 +477,7 @@ void SolveSpaceUI::LoadUsingTable(const Platform::Path &filename, char *key, cha
                 }
 
                 case 'N': {
-                    Group::NamedParams &np = p->N();
+                    Group::NamedParamsMap &np = p->N();
                     np.clear();
                     for(;;) {
                         int offset = 0;
@@ -481,7 +485,12 @@ void SolveSpaceUI::LoadUsingTable(const Platform::Path &filename, char *key, cha
                         if (fgets(line2, (int)sizeof(line2), fh) == NULL)
                             break;
                         hParam hp;
-                        if(sscanf(line2, "%x %n", &(hp.v), &offset) != 1) {
+                        int locked;
+                        if(sscanf(line2, "%x %d %n", &hp.v, &locked, &offset) != 2) {
+                            break;
+                        }
+                        // locked should be a boolean
+                        if(locked < 0 || locked > 1) {
                             break;
                         }
                         Expr *e = Expr::From(line2 + offset, /*allowVariables=*/true, /*popUpError=*/false);
@@ -491,11 +500,11 @@ void SolveSpaceUI::LoadUsingTable(const Platform::Path &filename, char *key, cha
                         std::string pName = e->Print();
                         for(const auto &kv : np) {
                             // This shouldn't happen, but check just in case
-                            if(kv.first == hp || kv.second == pName) {
+                            if(kv.first == hp || kv.second.name == pName) {
                                 break;
                             }
                         }
-                        np.emplace(hp, std::move(pName));
+                        np.emplace(hp, Group::NamedParam{std::move(pName), bool(locked)});
                     }
                     break;
                 }

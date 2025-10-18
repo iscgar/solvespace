@@ -441,25 +441,25 @@ void Group::Activate() {
 
 hParam Group::AddNamedParam(ParamList *param) {
     const hParam hp = namedParams.empty() ? h.param(0x8000) : hParam{namedParams.rbegin()->first.v + 1};
-    namedParams.emplace(hp, ssprintf("p%03d%03d", h.v, hp.v & 0x7fff));
+    namedParams.emplace(hp, NamedParam{ssprintf("p%03d%03d", h.v, hp.v & 0x7fff), false});
     AddParam(param, hp, 1);
     return hp;
 }
 
-Group::NamedParams::value_type Group::GetNamedParam(hParam hp) const {
+Group::NamedParamsMap::value_type Group::GetNamedParam(hParam hp) const {
     const auto it = namedParams.find(hp);
     if(it == namedParams.end()) {
-        return {NO_PARAM, ""};
+        return {NO_PARAM, {}};
     }
     return *it;
 }
 
-Group::NamedParams::value_type Group::GetNamedParam(const std::string &name) const {
+Group::NamedParamsMap::value_type Group::GetNamedParam(const std::string &name) const {
     const auto it = std::find_if(
         namedParams.begin(), namedParams.end(),
-        [&name](const NamedParams::value_type &v) { return v.second == name; });
+        [&name](const NamedParamsMap::value_type &v) { return v.second.name == name; });
     if(it == namedParams.end()) {
-        return {NO_PARAM, ""};
+        return {NO_PARAM, {}};
     }
     return *it;
 }
@@ -471,7 +471,7 @@ bool Group::RenameNamedParam(hParam hp, std::string newName, std::string *error)
         return false;
     }
 
-    if(existingParam.second == newName) {
+    if(existingParam.second.name == newName) {
         return true;
     }
 
@@ -493,7 +493,7 @@ bool Group::RenameNamedParam(hParam hp, std::string newName, std::string *error)
     }
 
     namedParams.erase(hp);
-    namedParams.emplace(hp, std::move(newName));
+    namedParams.emplace(hp, NamedParam{std::move(newName), existingParam.second.locked});
 
     return true;
 }
@@ -506,6 +506,13 @@ void Group::DeleteNamedParam(const std::string &name) {
     const auto existingParam = GetNamedParam(name);
     if(existingParam.first != NO_PARAM) {
         namedParams.erase(existingParam.first);
+    }
+}
+
+void Group::ToggleNamedParamLock(hParam hp) {
+    const auto it = namedParams.find(hp);
+    if(it != namedParams.end()) {
+        it->second.locked = !it->second.locked;
     }
 }
 

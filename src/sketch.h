@@ -284,8 +284,12 @@ public:
 
     std::string     name;
     
-    using NamedParams = std::map<hParam, std::string>;
-    NamedParams namedParams;
+    struct NamedParam {
+        std::string name;
+        bool locked;
+    };
+    using NamedParamsMap = std::map<hParam, NamedParam>;
+    NamedParamsMap namedParams;
 
     // Only used during named parameter resolution
     ResolutionMap varResolutions;
@@ -295,11 +299,12 @@ public:
     void Clear();
 
     hParam AddNamedParam(ParamList *param);
-    NamedParams::value_type GetNamedParam(hParam hp) const;
-    NamedParams::value_type GetNamedParam(const std::string &name) const;
+    NamedParamsMap::value_type GetNamedParam(hParam hp) const;
+    NamedParamsMap::value_type GetNamedParam(const std::string &name) const;
     bool RenameNamedParam(hParam hp, std::string newName, std::string *error);
     void DeleteNamedParam(hParam hp);
     void DeleteNamedParam(const std::string &name);
+    void ToggleNamedParamLock(hParam hp);
 
     static void AddParam(ParamList *param, hParam hp, double v);
     void Generate(EntityList *entity, ParamList *param);

@@ -366,7 +366,7 @@ void TextWindow::ScreenAddNamedParam(int link, uint32_t v) {
 void TextWindow::ScreenEditParamName(int link, uint32_t v) {
     Group *g = SK.GetGroup(SS.TW.shown.group);
     hParam hp = { v };
-    std::string str = g->GetNamedParam(hp).second;
+    std::string str = g->GetNamedParam(hp).second.name;
     SS.TW.ShowEditControl(3, str);
     SS.TW.edit.group = g->h;
     SS.TW.edit.meaning = Edit::PARAMETER_NAME;
@@ -387,6 +387,13 @@ void TextWindow::ScreenDeleteParam(int link, uint32_t v) {
     hParam hp = { v };
     g->DeleteNamedParam(hp);
     SK.param.RemoveById(hp);
+    SS.MarkGroupDirty(g->h);
+}
+void TextWindow::ScreenSetParamLock(int link, uint32_t v) {
+    SS.UndoRemember();
+    Group *g = SK.GetGroup(SS.TW.shown.group);
+    hParam hp = { v };
+    g->ToggleNamedParamLock(hp);
     SS.MarkGroupDirty(g->h);
 }
 void TextWindow::ScreenDeleteGroup(int link, uint32_t v) {
@@ -622,12 +629,16 @@ list_items:
     } else {
         for (const auto &kv : g->namedParams) {
             const hParam hp = kv.first;
+            const auto &param  = kv.second;
             const double value = SK.GetParam(hp)->val;
+
             Printf(false,
-            "%Bp   %Fl%Ll%f%D%s%E %# %E [%Fl%Ll%f%Dchange%E] [%Fl%Ll%f%Ddel%E] ",
+                   "%Bp   %Fd%Ll%f%D%s%E  %Fl%Ll%f%D%s%E %# %E [%Fl%Ll%f%Dchange%E] [%Fl%Ll%f%Ddel%E] ",
                    (a & 1) ? 'd' : 'a',
+                   &TextWindow::ScreenSetParamLock, hp,
+                   param.locked ? LOCK_TRUE : LOCK_FALSE,
                    &TextWindow::ScreenEditParamName, hp,
-                   kv.second.c_str(), value,
+                   param.name.c_str(), value,
                    &TextWindow::ScreenEditParamValue, hp,
                    &TextWindow::ScreenDeleteParam, hp);
             a++;
