@@ -234,6 +234,7 @@ public:
     int halfRows;       // The height of our window, in half-row units
 
     uint32_t text[MAX_ROWS][MAX_COLS];
+    std::vector<std::string> tooltips;
     typedef void LinkFunction(int link, uint32_t v);
     enum { NOT_A_LINK = 0 };
     struct {
@@ -244,6 +245,7 @@ public:
         uint32_t        data;
         LinkFunction   *f;
         LinkFunction   *h;
+        int             tooltip;
     }       meta[MAX_ROWS][MAX_COLS];
     int hoveredRow, hoveredCol;
 

@@ -347,10 +347,12 @@ void TextWindow::ClearScreen() {
             meta[i][j].fg = 'd';
             meta[i][j].bg = 'd';
             meta[i][j].link = NOT_A_LINK;
+            meta[i][j].tooltip = -1;
         }
         top[i] = i*2;
     }
     rows = 0;
+    tooltips.clear();
 }
 
 // This message was added when someone had too many fonts for the text window
@@ -380,6 +382,7 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
     for(c = 0; c < MAX_COLS; c++) {
         text[r][c] = ' ';
         meta[r][c].link = NOT_A_LINK;
+        meta[r][c].tooltip = -1;
     }
 
     char fg = 'd';
@@ -388,6 +391,7 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
     int link = NOT_A_LINK;
     uint32_t data = 0;
     LinkFunction *f = NULL, *h = NULL;
+    int tooltipIdx = -1;
 
     c = 0;
     while(*fmt) {
@@ -450,6 +454,7 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
                     data = 0;
                     f = NULL;
                     h = NULL;
+                    tooltipIdx = -1;
                     break;
 
                 case 'F':
@@ -493,6 +498,20 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
                     data = (uint32_t)v;
                     break;
                 }
+                case 'T': {
+                    char *s = va_arg(vl, char *);
+                    if(strlen(s) > 0) {
+                        std::string tooltip = s;
+                        const auto it = std::find(tooltips.begin(), tooltips.end(), tooltip);
+                        if(it != tooltips.end()) {
+                            tooltipIdx = it - tooltips.begin();
+                        } else {
+                            tooltipIdx = int(tooltips.size());
+                            tooltips.push_back(std::move(tooltip));
+                        }
+                    }
+                    break;
+                }
                 case '%':
                     strcpy(buf, "%");
                     break;
@@ -514,6 +533,7 @@ void TextWindow::Printf(bool halfLine, const char *fmt, ...) {
                 meta[r][c].data = data;
                 meta[r][c].f = f;
                 meta[r][c].h = h;
+                meta[r][c].tooltip = tooltipIdx;
                 c++;
             }
         }
@@ -1132,8 +1152,24 @@ void TextWindow::MouseEvent(bool leftClick, bool leftDown, double x, double y) {
                 if(item.h) {
                     (item.h)(item.link, item.data);
                 }
-            } else {
-                window->SetCursor(Window::Cursor::POINTER);
+            }
+            if(hoveredButton == nullptr && item.tooltip < 0) {
+                window->SetTooltip("", 0, 0, 0, 0);
+            } else if (item.tooltip >= 0) {
+                size_t hoverStart = size_t(c);
+                while(meta[r][hoverStart].tooltip == item.tooltip) {
+                    if(hoverStart == 0) {
+                        break;
+                    }
+                    --hoverStart;
+                }
+                size_t hoverEnd = size_t(c) + 1;
+                while(hoverEnd < MAX_COLS && meta[r][hoverEnd].tooltip == item.tooltip) {
+                    ++hoverEnd;
+                }
+                window->SetTooltip(tooltips[item.tooltip], hoverStart * CHAR_WIDTH_ + LEFT_MARGIN,
+                                   (top[r] - scrollPos) * hh, (hoverEnd - hoverStart) * hoverStart * CHAR_WIDTH_ + CHAR_WIDTH_,
+                                   LINE_HEIGHT);
             }
         }
     }
