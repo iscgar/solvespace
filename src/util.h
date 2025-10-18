@@ -61,6 +61,11 @@ __attribute__((__format__ (__printf__, 1, 2)))
 #endif
 std::string ssprintf(const char *fmt, ...);
 
+enum class PadTruncationMode { NONE, TRUNCATE, TRUNCATE_WITH_ELLIPSIS };
+
+std::string PadString(std::string s, size_t maxSize, PadTruncationMode truncateMode = PadTruncationMode::NONE,
+                      char fill = ' ');
+
 inline bool IsReasonable(double x) {
     return std::isnan(x) || x > 1e11 || x < -1e11;
 }

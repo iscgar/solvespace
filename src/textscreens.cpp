@@ -632,13 +632,50 @@ list_items:
             const auto &param  = kv.second;
             const double value = SK.GetParam(hp)->val;
 
+            static constexpr size_t MAX_NAME_WIDTH = 10;
+            static constexpr int VALUE_WIDTH = 7;
+
+            std::string paddedName =
+                PadString(param.name, MAX_NAME_WIDTH, PadTruncationMode::TRUNCATE_WITH_ELLIPSIS);
+            std::string padding, tooltip;
+            if(paddedName.size() > param.name.size()) {
+                padding    = paddedName.substr(param.name.size());
+                paddedName = param.name;
+            } else if(paddedName.size() < param.name.size()) {
+                tooltip = param.name;
+            }
+
+            std::string formattedValue = ssprintf("%-*.3f", VALUE_WIDTH, value);
+            size_t truncatedChars = 0;
+            for(auto it = formattedValue.rbegin(); it != formattedValue.rend(); ++it) {
+                // Skip trailing whitespaces
+                if(*it == ' ') {
+                    continue;
+                }
+                if(*it == '0') {
+                    *it = ' ';
+                    ++truncatedChars;
+                } else {
+                    if(*it == '.') {
+                        *it = ' ';
+                        ++truncatedChars;
+                    }
+                    break;
+                }
+            }
+            if(formattedValue.size() > VALUE_WIDTH && truncatedChars > 0) {
+                formattedValue.resize(
+                    std::max(formattedValue.size() - truncatedChars, size_t(VALUE_WIDTH)));
+            }
+
             Printf(false,
-                   "%Bp   %Fd%Ll%f%D%s%E  %Fl%Ll%f%D%s%E %# %E [%Fl%Ll%f%Dchange%E] [%Fl%Ll%f%Ddel%E] ",
+                   "%Bp   %Fd%Ll%f%D%s%E  %Fl%Ll%f%D%T%s%E%s %s %E [%Fl%Ll%f%Dchange%E] [%Fl%Ll%f%Ddel%E] ",
                    (a & 1) ? 'd' : 'a',
                    &TextWindow::ScreenSetParamLock, hp,
                    param.locked ? LOCK_TRUE : LOCK_FALSE,
                    &TextWindow::ScreenEditParamName, hp,
-                   param.name.c_str(), value,
+                   tooltip.c_str(), paddedName.c_str(), padding.c_str(),
+                   formattedValue.c_str(),
                    &TextWindow::ScreenEditParamValue, hp,
                    &TextWindow::ScreenDeleteParam, hp);
             a++;

@@ -42,6 +42,20 @@ std::string ssprintf(const char *fmt, ...)
     return result;
 }
 
+std::string PadString(std::string s, size_t maxSize, PadTruncationMode truncateMode, char fill) {
+    if(s.size() < maxSize) {
+        s.resize(maxSize, fill);
+    } else if(s.size() > maxSize && truncateMode != PadTruncationMode::NONE) {
+        const size_t addedEllipsis = std::min(maxSize, size_t(3));
+        const size_t newSize =
+            maxSize -
+            (truncateMode == PadTruncationMode::TRUNCATE_WITH_ELLIPSIS ? addedEllipsis : 0);
+        s.resize(newSize);
+        s.resize(maxSize, '.');
+    }
+    return s;
+}
+
 char32_t utf8_iterator::operator*()
 {
     const uint8_t *it = (const uint8_t*) this->p;
