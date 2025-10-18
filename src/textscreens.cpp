@@ -669,12 +669,12 @@ list_items:
             }
 
             Printf(false,
-                   "%Bp   %Fd%Ll%f%D%s%E  %Fl%Ll%f%D%T%s%E%s %s %E [%Fl%Ll%f%Dchange%E] [%Fl%Ll%f%Ddel%E] ",
+                   "%Bp   %Fl%Ll%f%D%T%s%E%s  %Fd%Ll%f%D%s%E %s %E [%Fl%Ll%f%Dchange%E] [%Fl%Ll%f%Ddel%E] ",
                    (a & 1) ? 'd' : 'a',
-                   &TextWindow::ScreenSetParamLock, hp,
-                   param.locked ? LOCK_TRUE : LOCK_FALSE,
                    &TextWindow::ScreenEditParamName, hp,
                    tooltip.c_str(), paddedName.c_str(), padding.c_str(),
+                   &TextWindow::ScreenSetParamLock, hp,
+                   param.locked ? LOCK_TRUE : LOCK_FALSE,
                    formattedValue.c_str(),
                    &TextWindow::ScreenEditParamValue, hp,
                    &TextWindow::ScreenDeleteParam, hp);
