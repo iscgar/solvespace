@@ -513,6 +513,8 @@ bool SolveSpaceUI::LoadFromFile(const Platform::Path &filename, bool canCancel) 
             if(sv.g.type == Group::Type::LINKED)
                 sv.g.opA.v = 0;
 
+            sv.g.RegenerateRemapFreeList();
+
             SK.group.Add(&(sv.g));
             sv.g = {};
             sv.g.scale = 1; // default is 1, not 0; so legacy files need this

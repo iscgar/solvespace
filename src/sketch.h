@@ -161,6 +161,11 @@ struct EntityKeyEqual {
 };
 typedef std::unordered_map<EntityKey, EntityId, EntityKeyHash, EntityKeyEqual> EntityMap;
 
+struct RemapIdRange {
+    uint16_t start;
+    uint16_t size;
+};
+
 // A set of requests. Every request must have an associated group.
 class Group {
 public:
@@ -278,6 +283,8 @@ public:
     bool forceToMesh;
 
     EntityMap remap;
+    EntityMap shadowRemap;
+    std::vector<RemapIdRange> remapFreeList;
 
     Platform::Path linkFile;
     SMesh       impMesh;
@@ -315,6 +322,7 @@ public:
         REMAP_LATHE_ARC_CENTER = 1010,
     };
     hEntity Remap(hEntity in, int copyNumber);
+    void RegenerateRemapFreeList();
     void MakeExtrusionLines(EntityList *el, hEntity in);
     void MakeLatheCircles(EntityList *el, ParamList *param, hEntity in, Vector pt, Vector axis);
     void MakeLatheSurfacesSelectable(EntityList *el, hEntity in, Vector axis);

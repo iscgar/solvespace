@@ -863,15 +863,59 @@ void Group::GenerateEquations(IdList<Equation,hEquation> *l) {
 hEntity Group::Remap(hEntity in, int copyNumber) {
     auto it = remap.find({ in, copyNumber });
     if(it == remap.end()) {
-        // Due to the way the remap value is combined with the group handle into a 32-bit
-        // handle value to generate an entity handle, the mapped value must fit in a 16-bit
-        // variable.
-        // This limit can be lifted once the handle values are extended to 64-bit.
-        ssassert(remap.size() < (1 << 16) - 1, "Too many entities in group");
-        std::tie(it, std::ignore) =
-            remap.insert({ { in, copyNumber }, { (uint32_t)remap.size() + 1 } });
+        // shadowRemap is where the old remap table is moved at the beginning of regeneration,
+        // and is discarded at the end.
+        // This is done in order to keep the entity handles stable across regenerations, so
+        // if we fail to find an entity in remap, we try to look it up in shadowRemap as well
+        // and copy it from there into remap if found.
+        it = shadowRemap.find({ in, copyNumber });
+        if(it != shadowRemap.end()) {
+            remap.emplace(*it);
+        } else {
+            // Due to the way the remap value is combined with the group handle into a 32-bit
+            // handle value to generate an entity handle, the mapped value must fit in a 16-bit
+            // variable.
+            // This limit can be lifted once the handle values are extended to 64-bit.
+            ssassert(remapFreeList.size() > 0, "Too many entities in group");
+            // We use the last range because if we end up consuming this range it's cheaper to remove
+            // the last element from the free list than any other element
+            auto &range = remapFreeList.back();
+            std::tie(it, std::ignore) = remap.insert({{in, copyNumber}, {uint32_t(range.start)}});
+            if(range.size == 1) {
+                remapFreeList.pop_back();
+            } else {
+                ++range.start;
+                --range.size;
+            }
+        }
     }
     return h.entity(it->second.v);
+}
+
+void Group::RegenerateRemapFreeList() {
+    remapFreeList.clear();
+
+    // Gather the list of remap used IDs
+    std::vector<uint16_t> usedIds;
+    usedIds.reserve(remap.size());
+    for(const auto &it : remap) {
+        usedIds.push_back(it.second.v);
+    }
+    std::sort(usedIds.begin(), usedIds.end());
+
+    // Generate the remap free list
+    uint16_t expectedId = 0;
+    for(const auto id : usedIds) {
+        ssassert(id >= expectedId, "Duplicate remap handle found");
+        if(id > expectedId) {
+            remapFreeList.push_back({expectedId, uint16_t(id - expectedId)});
+        }
+        expectedId = id + 1;
+    }
+    // Add the last range if it's free
+    if(expectedId <= UINT16_MAX) {
+        remapFreeList.push_back({expectedId, uint16_t(UINT16_MAX - expectedId + 1)});
+    }
 }
 
 void Group::MakeExtrusionLines(EntityList *el, hEntity in) {

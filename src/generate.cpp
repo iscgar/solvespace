@@ -220,6 +220,10 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
             r.Generate(&SK.entity, &SK.param);
         }
 
+        // Move the existing remap table into shadowRemap in order to allow
+        // freeing unused ranges of handle IDs
+        g->shadowRemap = std::move(g->remap);
+
         // Regenerate the group
         g->Generate(&SK.entity, &SK.param);
 
@@ -324,6 +328,11 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree) {
         if(i >= first && i <= last) {
             Group *g = SK.GetGroup(hg);
             g->GenerateShellAndMesh();
+
+            // And discard shadowRemap, since it's no longer needed
+            g->shadowRemap.clear();
+            g->RegenerateRemapFreeList();
+
             g->clean = true;
         }
     }
